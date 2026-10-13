@@ -148,8 +148,18 @@ namespace Onda.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AutoRecovery")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("Closed")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Cohosts")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasDefaultValue("[]");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");

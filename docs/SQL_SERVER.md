@@ -20,6 +20,7 @@ Los scripts leen `scripts/sql-config.ps1`. Las migraciones se aplican explícita
   Chat/presencia/votos en memoria; no se inventan recuentos de oyentes.
 - Migraciones `CommunityModules` y `HardenAccountRecovery` aplicadas explícitamente en Contabo;
   la segunda introduce metadata de concurrencia del recovery hash, sin destruir catálogo.
+- `RoomContinuity`: columnas `AutoRecovery` (default false) y `Cohosts` (default JSON `[]`), preserva salas existentes.
 
 ## Contabo
 SQL Server 2025 Express en red Docker interna `stack_data`, base dedicada Onda, sin puerto SQL público.

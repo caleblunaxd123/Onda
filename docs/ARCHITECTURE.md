@@ -107,6 +107,9 @@ Sin pruebas físicas de audio, Bluetooth, llamadas, batería o background prolon
   cambios locales durante solicitudes; favoritos, colecciones y multimedia; historial optativo. Cuotas explícitas.
 - `Rooms.cs` + `RoomPresence.cs`: SignalR autenticado, validación por acción, permisos de anfitrión, invitación privada,
   chat limitado, votos por cuenta, bans por sala, transferencia de control y rotación de invitación.
+- `RoomContinuity.cs`: continuidad optativa, 60 s de margen y selección de coanfitrión/participante conectado.
+  Coanfitriones controlan reproducción/cola; solo anfitrión modera. `AutoRecovery` y `Cohosts` persistidos en SQL.
+  Migración conserva continuidad desactivada en salas anteriores. Cola JSON con prioridad fijada; votos consultables por usuario.
 - `RoomMedia.cs`: resuelve radios reales, IDs de YouTube en hosts oficiales y URLs HTTPS públicas de archivos compatibles.
   El servidor no descarga URLs arbitrarias. YouTube se reproduce con el iframe oficial, incluyendo video en música.
 - Native: WebView + reproductor de radio global. Web: iframe aislado. Reloj corregido con hora del servidor,
@@ -116,6 +119,8 @@ Sin pruebas físicas de audio, Bluetooth, llamadas, batería o background prolon
 - SecureStore en móvil; sesión web en sessionStorage por pestaña (sin localStorage), sobrevive recargas.
   Endpoints personales/comunidad/IA con `Cache-Control: no-store`.
 - UI organizada en `components` y `features/{library,account,rooms,home}`; SDK 57 exige hooks de navegación de `expo-router`.
+- UI de sala separada en coordinador, layout adaptable, paneles y presentación. Paleta de cine contextual;
+  reloj transportado como ancla para aplicar controles locales sin retroceder, desmontaje por fuente y autoplay bloqueado visible.
 
 ## Referencias técnicas consultadas
 - https://docs.expo.dev/versions/v57.0.0/sdk/audio/

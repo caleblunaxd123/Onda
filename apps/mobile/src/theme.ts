@@ -1,4 +1,5 @@
 import { useColorScheme } from 'react-native';
+import {createContext, createElement, useContext, type ReactNode} from 'react';
 import { useLibrary } from './library';
 export const tokens = {space: [0, 4, 8, 12, 16, 24, 32, 48], radius: {small: 12, card: 20, pill: 99}};
 
@@ -31,7 +32,16 @@ const dark: Palette = {
 
 export function useTheme(): Palette {
   const setting = useLibrary(s => s.theme); const system = useColorScheme();
-  return (setting === 'system' ? system : setting) === 'dark' ? dark : light;
+  const scoped = useContext(ThemeContext);
+  return scoped ?? ((setting === 'system' ? system : setting) === 'dark' ? dark : light);
+}
+
+export const cinemaPalette: Palette = {...dark, bg: '#080A10', surface: '#141720', surfaceAlt: '#1D212D',
+  text: '#F8FAFF', muted: '#A8ADBD', border: '#272B38', accentSoft: '#27203F',
+  headerGlow: 'linear-gradient(180deg, #17142B 0%, #080A10 100%)'};
+const ThemeContext = createContext<Palette | null>(null);
+export function ThemeScope({palette, children}: {palette?: Palette; children: ReactNode}) {
+  return createElement(ThemeContext.Provider, {value: palette ?? null}, children);
 }
 
 /** Mood palette from the owner's reference: soft tinted tiles with a saturated icon. */

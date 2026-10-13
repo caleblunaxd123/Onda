@@ -1,6 +1,6 @@
 # Roadmap — ONDA multimedia social
 
-## Implementado y desplegado (beta 0.2)
+## Implementado y desplegado (beta 0.3)
 - Catálogo SQL real, fuentes alternativas HTTPS, búsqueda por palabras/filtros, mapa, Radar, inicio y ánimos.
 - Biblioteca de radios/colecciones y multimedia, historial real, cola de radios, temas y perfil.
 - Salas públicas/privadas: invitación directa web/Android, invitados, chat, reacciones, propuestas/votos,
@@ -9,12 +9,15 @@
 - Cuenta opcional, recuperación por código, eliminación, sincronización con conflictos y consentimiento para historial.
 - Descubrimiento con IA local validado contra catálogo, fallback honesto; pasaporte de países escuchados.
 - HTTPS en Contabo/Cloudflare, backups cifrados/restauración real, APK con bundle y web pública.
+- Salas cinematográficas, modo cine, escritorio en dos columnas y móvil compacto; portadas reales, búsqueda de salas,
+  invitación copiable y enlaces pegables, selección desde guardados, chat con seguimiento y seek accesible.
+- Dos coanfitriones para reproducción/cola; moderación reservada al anfitrión. Continuidad optativa tras 60 s,
+  gracia para reconectar, prioridad a coanfitrión conectado. Cola fijada y estado de votos propio al reconectar.
 
 ## Próximo trabajo, en orden
 1. Cerrar beta física: audio audible, 30 min bloqueado, Bluetooth/llamadas, reconexión y TalkBack/texto grande;
    sincronía multimedia entre dos teléfonos en redes diferentes; medir errores y tiempos reales.
-2. Recuperación de salas cuando el anfitrión se desconecta: período de gracia, traspaso explicado y coanfitriones.
-   Evitar apropiación de salas y conservar el control al reconectar.
+2. Salas recientes, colecciones compartidas y ajustes editables de sala; medir la continuidad recién implementada.
 3. Voz opcional con WebRTC, push-to-talk, reducción de música al hablar, mute/bloqueo por usuario y controles claros;
    primero sala privada, con mediciones de latencia y batería.
 4. Colecciones compartidas y sesiones programadas: mezclar radio/música/video, permisos, enlaces y recordatorios optativos.
@@ -34,4 +37,4 @@ tras desconexión y retención semanal. Telemetría mínima, informada y sin alm
 Presencia/chat/votos en memoria en una sola instancia. Radio tiene buffers independientes.
 Recuperación requiere código privado; no SMTP/identidad de correo verificada. No todos los videos permiten embed.
 No hay integraciones de plataformas premium; implementarlas solo con APIs oficiales y permisos aplicables.
-93 pruebas backend y 54 móvil no sustituyen pruebas de Android físico ni certifican producción.
+95 pruebas backend y 56 móvil no sustituyen pruebas de Android físico ni certifican producción.

@@ -45,6 +45,7 @@ public sealed class OndaDbContext(DbContextOptions<OndaDbContext> options) : DbC
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).HasMaxLength(70);
             e.Property(x => x.InviteCode).HasMaxLength(12).IsUnicode(false);
+            e.Property(x => x.Cohosts).HasMaxLength(500).HasDefaultValue("[]");
             e.HasIndex(x => x.InviteCode).IsUnique();
             e.HasIndex(x => new {x.IsPrivate, x.Closed, x.UpdatedAt});
             e.Property(x => x.Version).IsConcurrencyToken();

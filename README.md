@@ -3,9 +3,9 @@
 
 Aplicación social de radio, música y video con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: **beta 0.2 desplegada**; faltan pruebas físicas para aceptar el MVP.
+Estado: **beta 0.3 desplegada**; faltan pruebas físicas para aceptar el MVP.
 
-Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.2.0).
+Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0).
 El APK incluye JavaScript, funciona sin Metro y usa HTTPS. Firma de depuración para beta interna; no es una publicación en tiendas.
 Continuación: [handoff para Claude Code](docs/CLAUDE_HANDOFF.md).
 
@@ -39,7 +39,7 @@ En emulador Android la API está en `http://10.0.2.2:5080`; en un dispositivo f�
 El tráfico HTTP solo se habilita en builds con APP_VARIANT=development. Preview/producción requieren API HTTPS.
 
 ## Probar en un teléfono Android real
-Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.2.0). No requiere PC ni Wi-Fi compartido.
+Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0). No requiere PC ni Wi-Fi compartido.
 También se puede generar una variante para pruebas locales:
 1. PC y teléfono en la misma red Wi‑Fi/LAN. Iniciar la API para la red: `scripts/start-api.ps1` (escucha en 0.0.0.0:5080).
 2. Permitir el puerto 5080 en el firewall de Windows (una vez, PowerShell como administrador):
@@ -60,8 +60,8 @@ Servidor `.\SQLEXPRESS`, autenticación Windows, base `Onda`. Tablas y consultas
 Las migraciones se aplican explícitamente, nunca al iniciar la API.
 
 ## Verificación
-- `npm run check:mobile` — TypeScript, ESLint y 54 pruebas.
-- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 93 pruebas, incluidas integraciones con SQL real y WebSockets.
+- `npm run check:mobile` — TypeScript, ESLint y 56 pruebas.
+- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 95 pruebas, incluidas integraciones con SQL real y WebSockets.
 - `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1` — catálogo real de extremo a extremo.
 - `curl http://localhost:5080/api/v1/catalog/status`
 

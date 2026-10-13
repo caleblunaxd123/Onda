@@ -1,5 +1,15 @@
 # Progreso — actualizado 2026-10-13
 
+## Beta 0.3: salas y diseño
+Diseño cinematográfico en sala/creación/reproducción, lobby con portadas reales y buscador, inicio renovado.
+Modo cine, disposición web en dos columnas, seek por teclado/gestos, chat con scroll automático.
+Copiar invitación, pegar enlace, elegir desde biblioteca; portadas en multimedia guardada.
+Coanfitriones (reproducción/cola), continuidad optativa tras 60 s, gracia de reconexión y moderación del dueño.
+Cola fijada/votos propios, anclas de tiempo sin salto por mute/roles, protección de eventos de reproductores retirados.
+Desplegada API cinema2, web y APK 0.3.0 con datos locales conservados. 95 backend y 56 móvil, sin errores de tipos/lint.
+Prueba pública real de takeover y Android/web con control desde coanfitrión.
+Correo pospuesto por el propietario hasta disponer de proveedor; voz/PiP/casting y pruebas físicas siguen pendientes.
+
 ## Beta 0.2 multimedia social, desplegada
 - Web y API públicas en Contabo/Cloudflare: https://onda.lunalav.pe y https://onda-api.lunalav.pe.
 - 68.031 emisoras almacenadas, 38.815 reproducibles HTTPS; sincronización completa del catálogo verificada.

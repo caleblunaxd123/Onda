@@ -5,8 +5,8 @@ import {isActive, player} from '../../player';
 import {useAuth} from '../account/session';
 import type {ChatMessage, Room} from './types';
 
-type RoomState = {room: Room | null; messages: ChatMessage[]; status: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed'; error: string; reaction: string; clockOffset: number; muted: string[]; audioMuted: boolean};
-export const useRoom = create<RoomState>(() => ({room: null, messages: [], status: 'idle', error: '', reaction: '', clockOffset: 0, muted: [], audioMuted: false}));
+type RoomState = {room: Room | null; messages: ChatMessage[]; status: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed'; error: string; reaction: string; clockOffset: number; muted: string[]; audioMuted: boolean; votes: string[]};
+export const useRoom = create<RoomState>(() => ({room: null, messages: [], status: 'idle', error: '', reaction: '', clockOffset: 0, muted: [], audioMuted: false, votes: []}));
 let connection: HubConnection | null = null;
 let generation = 0;
 let joinedCode: string | null = null;
@@ -15,7 +15,7 @@ const pauseAudio = () => {if (isActive(player.getSnapshot().state)) player.toggl
 function applyRoom(room: Room) {
   if (useRoom.getState().room && useRoom.getState().room?.id !== room.id) return;
   const old = useRoom.getState().room?.media;
-  useRoom.setState({room});
+  useRoom.setState(state => ({room, votes: state.votes.filter(id => room.queue.some(x => x.id === id))}));
   if (room.media.kind === 'radio' && room.media.station) {
     if (room.isPlaying && useRoom.getState().status === 'connected' && !useRoom.getState().audioMuted) {
       const current = player.getSnapshot();
@@ -28,7 +28,7 @@ function applyRoom(room: Room) {
 export async function leaveRoom() {
   generation++; const old = connection; connection = null; joinedCode = null;
   if (player.getSnapshot().station?.id === lastRadio) pauseAudio(); lastRadio = undefined;
-  useRoom.setState({room: null, messages: [], status: 'idle', error: '', reaction: '', audioMuted: false});
+  useRoom.setState({room: null, messages: [], status: 'idle', error: '', reaction: '', audioMuted: false, votes: []});
   if (old) await old.stop().catch(() => {});
 }
 export async function enterRoom(id: string, code?: string | null) {
@@ -50,6 +50,8 @@ export async function enterRoom(id: string, code?: string | null) {
     applyRoom(room);
     const messages = await hub.invoke<ChatMessage[]>('History', id);
     if (valid()) useRoom.setState({messages: messages.slice(-100)});
+    const votes = await hub.invoke<string[]>('MyVotes', id);
+    if (valid()) useRoom.setState({votes});
   };
   hub.on('State', (room: Room) => {if (valid()) applyRoom(room);});
   hub.on('Message', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: [...s.messages.filter(x => x.id !== message.id), message].slice(-100)}));});
@@ -59,7 +61,7 @@ export async function enterRoom(id: string, code?: string | null) {
   });
   const closed = (roomId: string) => {
     if (!valid() || roomId !== id) return;
-    pauseAudio(); useRoom.setState({status: 'closed', error: 'La sala se cerró o tu acceso fue retirado.'}); void hub.stop();
+    pauseAudio(); useRoom.setState({status: 'closed', error: 'La sala se cerró o tu acceso fue retirado.'});
   };
   hub.on('Closed', closed); hub.on('Kicked', closed);
   hub.on('Refresh', () => {if (valid()) void refreshRoom().catch(() => {});});
@@ -71,7 +73,11 @@ export async function enterRoom(id: string, code?: string | null) {
 }
 export async function roomCommand(method: string, ...args: unknown[]) {
   if (!connection || connection.state !== HubConnectionState.Connected || useRoom.getState().status !== 'connected') throw new Error('Espera a que la sala vuelva a conectarse.');
-  try {return await connection.invoke(method, ...args);}
+  try {
+    const result = await connection.invoke(method, ...args);
+    if (method === 'Vote' && typeof result === 'boolean') useRoom.setState(state => ({votes: result ? [...new Set([...state.votes, String(args[1])])] : state.votes.filter(x => x !== args[1])}));
+    return result;
+  }
   catch (error) {throw new Error(error instanceof Error ? error.message.replace(/^.*HubException:\s*/, '') : 'No se pudo completar.');}
 }
 export async function refreshRoom() {

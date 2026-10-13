@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react
 import { player, prepareAudio, usePlayer } from '../src/player';
 import { lookupStations } from '../src/catalog';
 import { libraryIds, useLibrary } from '../src/library';
-import { useTheme } from '../src/theme';
+import {cinemaPalette, ThemeScope, useTheme} from '../src/theme';
 import { deviceCountry } from '../src/region';
 import { Label, MiniPlayer } from '../src/ui';
 import {initializeSession} from '../src/features/account/session';
@@ -39,6 +39,10 @@ function syncCountry() {
 }
 
 export default function RootLayout() {
+  const segments = useSegments();
+  return <ThemeScope palette={['room', 'create-room', 'watch'].includes(segments[0] ?? '') ? cinemaPalette : undefined}><RootShell wide={['room', 'watch'].includes(segments[0] ?? '')}/></ThemeScope>;
+}
+function RootShell({wide}: {wide: boolean}) {
   const c = useTheme(); const [error, setError] = useState('');
   useLibraryRefresh();
   useLibraryCloudSync();
@@ -52,7 +56,7 @@ export default function RootLayout() {
     return () => {network(); app.remove(); hydration();};
   }, []);
   return <GestureHandlerRootView style={{flex: 1, backgroundColor: c.bg}}>
-    <View style={[{flex: 1}, Platform.OS === 'web' && {width: '100%', maxWidth: 480, alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: c.border}]}>
+    <View style={[{flex: 1}, Platform.OS === 'web' && {width: '100%', maxWidth: wide ? 1080 : 480, alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: c.border}]}>
       <SafeAreaProvider><QueryClientProvider client={queryClient}><SafeAreaView edges={['top']} style={{flex: 1, backgroundColor: c.bg}}>
         <StatusBar style={c.isDark ? 'light' : 'dark'}/>
         {error ? <View style={{padding: 16}}><Label>{error}</Label></View> : null}

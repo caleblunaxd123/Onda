@@ -27,6 +27,8 @@ builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<LibrarySyncService>();
 builder.Services.AddSingleton<RoomPresence>();
 builder.Services.AddScoped<RoomService>();
+builder.Services.AddSingleton<RoomContinuity>();
+builder.Services.AddHostedService(p => p.GetRequiredService<RoomContinuity>());
 builder.Services.AddHostedService<CommunityMaintenance>();
 builder.Services.AddScoped<MediaResolver>();
 builder.Services.AddHttpClient("media-metadata", c => c.Timeout = TimeSpan.FromSeconds(5));

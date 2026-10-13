@@ -33,6 +33,8 @@ public sealed class ListeningRoom
     public string InviteCode { get; set; } = "";
     public string Media { get; set; } = "{}";
     public string Queue { get; set; } = "[]";
+    public string Cohosts { get; set; } = "[]";
+    public bool AutoRecovery { get; set; }
     public bool IsPlaying { get; set; }
     public double PositionSeconds { get; set; }
     public DateTimeOffset PlaybackUpdatedAt { get; set; }

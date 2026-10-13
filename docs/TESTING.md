@@ -1,8 +1,8 @@
 # Pruebas
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
-  con `ONDA_TEST_SQL` definido). 93 pruebas; ninguna omitida en la validación Windows con SQL Server real.
-- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 54 pruebas.
+  con `ONDA_TEST_SQL` definido). 95 pruebas; ninguna omitida en la validación Windows con SQL Server real.
+- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 56 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
 - Compatibilidad: en apps/mobile `npx expo install --check`; bundling `npx expo export --platform android`.
@@ -75,3 +75,11 @@ ni segundo plano prolongado.
 7. Cerrar/reabrir la app: conservar colecciones y favoritos.
 8. Rehidratar almacenamiento anterior sin colecciones: conservar biblioteca previa.
 9. Probar formulario, teclado y hojas inferiores en tema claro/oscuro y con texto grande.
+
+## Beta 0.3
+Continuidad probada en SQL con reloj controlado y en Contabo con el margen real de 60 s.
+Reconexión dentro del margen conserva al anfitrión; opción desactivada impide takeover.
+Coanfitrión controla reproducción/cola y no puede cerrar/rotar invitaciones. Votos y prioridad fijada reales.
+Android 0.3 y web en la misma sala: pausa desde Android reflejada en web, chat y propuesta desde biblioteca.
+Capturas: android-cinema-room.png, web-cinema-room.png, web-cinema-queue.png.
+CI: corregida la comprobación nullable de map-style.ts observada en Linux.

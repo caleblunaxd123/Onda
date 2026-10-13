@@ -8,12 +8,13 @@ using Onda.Application;
 using Onda.Infrastructure;
 namespace Onda.Api;
 
-public sealed record QueueEntry(Guid Id, RoomMedia Media, Guid ProposedBy);
-public sealed record QueueView(Guid Id, RoomMedia Media, Guid ProposedBy, int Votes);
+public sealed record QueueEntry(Guid Id, RoomMedia Media, Guid ProposedBy, bool Pinned = false);
+public sealed record QueueView(Guid Id, RoomMedia Media, Guid ProposedBy, int Votes, bool Pinned);
 public sealed record RoomView(Guid Id, string Name, bool IsPrivate, Guid OwnerId, string? InviteCode, RoomMedia Media,
-    bool IsPlaying, double PositionSeconds, DateTimeOffset PlaybackUpdatedAt, long Version, RoomMember[] Members, QueueView[] Queue, DateTimeOffset ServerNow);
+    bool IsPlaying, double PositionSeconds, DateTimeOffset PlaybackUpdatedAt, long Version, RoomMember[] Members, QueueView[] Queue, DateTimeOffset ServerNow,
+    Guid[] Cohosts, bool AutoRecovery, DateTimeOffset? HostAbsentSince);
 public sealed record RoomSummary(Guid Id, string Name, bool IsPrivate, Guid OwnerId, RoomMedia Media, int Listeners);
-public sealed record CreateRoom(string? Name, bool IsPrivate, MediaInput Media);
+public sealed record CreateRoom(string? Name, bool IsPrivate, MediaInput Media, bool AutoRecovery = false);
 public sealed record PlaybackCommand(bool Playing, double PositionSeconds, long Version);
 public sealed record RoomReportRequest(Guid? AccountId, string? Reason);
 
@@ -21,9 +22,11 @@ public sealed class RoomService(OndaDbContext db, MediaResolver resolver, RoomPr
 {
     public static RoomMedia Media(ListeningRoom room) => JsonSerializer.Deserialize<RoomMedia>(room.Media)!;
     public static List<QueueEntry> Queue(ListeningRoom room) => JsonSerializer.Deserialize<List<QueueEntry>>(room.Queue) ?? [];
+    public static Guid[] Cohosts(ListeningRoom room) => string.IsNullOrWhiteSpace(room.Cohosts) ? [] : JsonSerializer.Deserialize<Guid[]>(room.Cohosts) ?? [];
     public RoomView View(ListeningRoom room, bool includeInvite = true) => new(room.Id, room.Name, room.IsPrivate, room.OwnerId,
         includeInvite ? room.InviteCode : null, Media(room), room.IsPlaying, room.PositionSeconds, room.PlaybackUpdatedAt, room.Version,
-        presence.Members(room.Id), Queue(room).Select(x => new QueueView(x.Id, x.Media, x.ProposedBy, presence.Votes(room.Id, x.Id))).ToArray(), clock.GetUtcNow());
+        presence.Members(room.Id), Queue(room).Select(x => new QueueView(x.Id, x.Media, x.ProposedBy, presence.Votes(room.Id, x.Id), x.Pinned)).ToArray(), clock.GetUtcNow(),
+        Cohosts(room), room.AutoRecovery, presence.HostAbsentSince(room.Id, room.OwnerId));
     public async Task<RoomSummary[]> ListAsync(Guid? user, bool mine, CancellationToken ct)
     {
         var cutoff = clock.GetUtcNow().AddHours(-24);
@@ -43,7 +46,7 @@ public sealed class RoomService(OndaDbContext db, MediaResolver resolver, RoomPr
         if (await db.ListeningRooms.CountAsync(x => x.OwnerId == owner && !x.Closed, ct) >= 3) return null;
         var media = await resolver.ResolveAsync(input.Media, ct); if (media is null) return null;
         var now = clock.GetUtcNow();
-        var room = new ListeningRoom {Id = Guid.NewGuid(), OwnerId = owner, Name = name, IsPrivate = input.IsPrivate, IsPlaying = true,
+        var room = new ListeningRoom {Id = Guid.NewGuid(), OwnerId = owner, Name = name, IsPrivate = input.IsPrivate, IsPlaying = true, AutoRecovery = input.AutoRecovery,
             InviteCode = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(6)),
             Media = JsonSerializer.Serialize(media), Version = 1, CreatedAt = now, UpdatedAt = now, PlaybackUpdatedAt = now};
         db.ListeningRooms.Add(room); await db.SaveChangesAsync(ct); return View(room);
@@ -101,11 +104,12 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
     }
     private void Limit(string action, int count = 8, int seconds = 10)
     {if (!presence.Allow(Account, action, count, seconds)) throw new HubException("Espera unos segundos antes de continuar.");}
-    private async Task<ListeningRoom> MemberAsync(Guid id, bool host = false)
+    private async Task<ListeningRoom> MemberAsync(Guid id, bool host = false, bool controller = false)
     {
         if (!presence.InRoom(Context.ConnectionId, id)) throw new HubException("Entra a la sala primero.");
         var room = await rooms.FindAsync(id, Ct) ?? throw new HubException("La sala está cerrada.");
         if (host && room.OwnerId != Account) throw new HubException("Solo el anfitrión puede usar este control.");
+        if (controller && room.OwnerId != Account && !RoomService.Cohosts(room).Contains(Account)) throw new HubException("Solo el anfitrión o un coanfitrión puede controlar la reproducción.");
         return room;
     }
     private async Task BroadcastAsync(Guid id)
@@ -155,7 +159,7 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
         var semaphore = presence.RoomLock(id); await semaphore.WaitAsync(Ct);
         try
         {
-            var room = await MemberAsync(id, true);
+            var room = await MemberAsync(id, controller: true);
             if (command.Version != room.Version || !double.IsFinite(command.PositionSeconds) || command.PositionSeconds is < 0 or > 86400) throw new HubException("Actualiza la sala antes de cambiar la reproducción.");
             room.IsPlaying = command.Playing; room.PositionSeconds = RoomService.Media(room).Kind == "radio" ? 0 : command.PositionSeconds;
             room.PlaybackUpdatedAt = clock.GetUtcNow(); await rooms.SaveAsync(room, Ct); await BroadcastAsync(id);
@@ -177,36 +181,69 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
         }
         finally {semaphore.Release();}
     }
-    public async Task Vote(Guid id, Guid item)
+    public async Task<Guid[]> MyVotes(Guid id) {var room = await MemberAsync(id); var ids = RoomService.Queue(room).Select(x => x.Id).ToHashSet(); return presence.MyVotes(id, Account).Where(ids.Contains).ToArray();}
+    public async Task<bool> Vote(Guid id, Guid item)
     {
-        Limit("vote", 12, 10); var room = await MemberAsync(id);
-        if (!RoomService.Queue(room).Any(x => x.Id == item)) throw new HubException("Esa propuesta ya no está en la lista.");
-        presence.Vote(id, item, Account); await BroadcastAsync(id);
+        Limit("vote", 12, 10); var gate = presence.RoomLock(id); await gate.WaitAsync(Ct);
+        try {
+            var room = await MemberAsync(id);
+            if (!RoomService.Queue(room).Any(x => x.Id == item)) throw new HubException("Esa propuesta ya no está en la lista.");
+            presence.Vote(id, item, Account); await BroadcastAsync(id); return presence.MyVotes(id, Account).Contains(item);
+        } finally {gate.Release();}
+    }
+    public async Task PinQueued(Guid id, Guid item)
+    {
+        Limit("change", 6, 10); var semaphore = presence.RoomLock(id); await semaphore.WaitAsync(Ct);
+        try
+        {
+            var room = await MemberAsync(id, controller: true); var queue = RoomService.Queue(room);
+            var target = queue.FirstOrDefault(x => x.Id == item) ?? throw new HubException("La propuesta ya no existe.");
+            room.Queue = JsonSerializer.Serialize(queue.Select(x => x with {Pinned = x.Id == item && !target.Pinned}));
+            await rooms.SaveAsync(room, Ct); await BroadcastAsync(id);
+        }
+        finally {semaphore.Release();}
     }
     public async Task PlayQueued(Guid id, Guid item)
     {
         Limit("change", 6, 10); var semaphore = presence.RoomLock(id); await semaphore.WaitAsync(Ct);
         try
         {
-            var room = await MemberAsync(id, true); var queue = RoomService.Queue(room);
+            var room = await MemberAsync(id, controller: true); var queue = RoomService.Queue(room);
             var selected = queue.FirstOrDefault(x => x.Id == item) ?? throw new HubException("La propuesta ya no existe.");
             room.Media = JsonSerializer.Serialize(selected.Media); queue.Remove(selected); room.Queue = JsonSerializer.Serialize(queue);
-            room.PositionSeconds = 0; room.IsPlaying = true; room.PlaybackUpdatedAt = clock.GetUtcNow(); presence.ForgetItem(id, item);
-            await rooms.SaveAsync(room, Ct); await BroadcastAsync(id);
+            room.PositionSeconds = 0; room.IsPlaying = true; room.PlaybackUpdatedAt = clock.GetUtcNow();
+            await rooms.SaveAsync(room, Ct); presence.ForgetItem(id, item); await BroadcastAsync(id);
         }
         finally {semaphore.Release();}
     }
     public async Task RemoveQueued(Guid id, Guid item)
     {
-        Limit("change", 6, 10); var room = await MemberAsync(id, true); var queue = RoomService.Queue(room);
-        queue.RemoveAll(x => x.Id == item); room.Queue = JsonSerializer.Serialize(queue); presence.ForgetItem(id, item);
-        await rooms.SaveAsync(room, Ct); await BroadcastAsync(id);
+        Limit("change", 6, 10); var gate = presence.RoomLock(id); await gate.WaitAsync(Ct);
+        try {
+            var room = await MemberAsync(id, controller: true); var queue = RoomService.Queue(room);
+            queue.RemoveAll(x => x.Id == item); room.Queue = JsonSerializer.Serialize(queue);
+            await rooms.SaveAsync(room, Ct); presence.ForgetItem(id, item); await BroadcastAsync(id);
+        } finally {gate.Release();}
     }
     public async Task TransferHost(Guid id, Guid account)
     {
         Limit("host", 3, 30); var room = await MemberAsync(id, true);
         if (!presence.Members(id).Any(x => x.Id == account)) throw new HubException("El nuevo anfitrión debe estar en la sala.");
-        room.OwnerId = account; await rooms.SaveAsync(room, Ct); await BroadcastAsync(id);
+        room.OwnerId = account; room.Cohosts = JsonSerializer.Serialize(RoomService.Cohosts(room).Where(x => x != account));
+        await rooms.SaveAsync(room, Ct); await BroadcastAsync(id);
+    }
+    public async Task SetCohost(Guid id, Guid account, bool enabled)
+    {
+        Limit("cohost", 6, 30); var semaphore = presence.RoomLock(id); await semaphore.WaitAsync(Ct);
+        try
+        {
+            var room = await MemberAsync(id, true); var cohosts = RoomService.Cohosts(room).ToList();
+            if (account == room.OwnerId || enabled && !presence.Members(id).Any(x => x.Id == account)) throw new HubException("Elige otra persona conectada a la sala.");
+            if (enabled && !cohosts.Contains(account)) {if (cohosts.Count >= 2) throw new HubException("Puedes tener hasta 2 coanfitriones."); cohosts.Add(account);}
+            if (!enabled) cohosts.Remove(account);
+            room.Cohosts = JsonSerializer.Serialize(cohosts); await rooms.SaveAsync(room, Ct); await BroadcastAsync(id);
+        }
+        finally {semaphore.Release();}
     }
     public async Task RotateInvite(Guid id)
     {
@@ -219,7 +256,9 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
         Limit("moderation", 6, 30); var room = await MemberAsync(id, true);
         if (account == Account || !presence.Members(id).Any(x => x.Id == account)) throw new HubException("Selecciona otra persona de la sala.");
         if (!await db.RoomBans.AnyAsync(x => x.RoomId == id && x.AccountId == account, Ct))
-        {db.RoomBans.Add(new() {RoomId = id, AccountId = account}); await db.SaveChangesAsync(Ct);}
+        {db.RoomBans.Add(new() {RoomId = id, AccountId = account});}
+        room.Cohosts = JsonSerializer.Serialize(RoomService.Cohosts(room).Where(x => x != account));
+        await rooms.SaveAsync(room, Ct);
         await Clients.User(account.ToString()).SendAsync("Kicked", id);
         presence.RevokeRoom(account, id); await BroadcastAsync(id);
     }

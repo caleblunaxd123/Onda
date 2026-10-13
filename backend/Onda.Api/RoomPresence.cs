@@ -12,6 +12,7 @@ public sealed class RoomPresence(TimeProvider clock)
     private readonly Dictionary<Guid, Queue<RoomMessage>> messages = [];
     private readonly Dictionary<(Guid, Guid), HashSet<Guid>> votes = [];
     private readonly Dictionary<(Guid, string), Queue<DateTimeOffset>> rate = [];
+    private readonly Dictionary<Guid, (Guid Owner, DateTimeOffset Since)> missingOwners = [];
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> locks = new();
     public SemaphoreSlim RoomLock(Guid id) => locks.GetOrAdd(id, _ => new(1, 1));
     public void Connect(string id, Guid account, string session, string name, Action abort)
@@ -34,6 +35,17 @@ public sealed class RoomPresence(TimeProvider clock)
     public RoomMember[] Members(Guid room)
     {lock (gate) return connections.Values.Where(c => c.Room == room).DistinctBy(c => c.Account).Select(c => new RoomMember(c.Account, c.Name)).ToArray();}
     public int Count(Guid room) => Members(room).Length;
+    public DateTimeOffset? HostAbsentSince(Guid room, Guid owner)
+    {
+        lock (gate)
+        {
+            if (connections.Values.Any(x => x.Room == room && x.Account == owner) || !connections.Values.Any(x => x.Room == room))
+            {missingOwners.Remove(room); return null;}
+            if (!missingOwners.TryGetValue(room, out var missing) || missing.Owner != owner)
+                missingOwners[room] = missing = (owner, clock.GetUtcNow());
+            return missing.Since;
+        }
+    }
     public Guid[] ActiveRooms() {lock (gate) return connections.Values.Select(c => c.Room).OfType<Guid>().Distinct().ToArray();}
     public void RevokeRoom(Guid account, Guid room)
     {
@@ -71,6 +83,8 @@ public sealed class RoomPresence(TimeProvider clock)
     {lock (gate) {if (!votes.TryGetValue((room, item), out var users)) votes[(room, item)] = users = []; if (!users.Add(account)) users.Remove(account); return users.Count;}}
     public int Votes(Guid room, Guid item)
     {lock (gate) return votes.TryGetValue((room, item), out var users) ? users.Count : 0;}
+    public Guid[] MyVotes(Guid room, Guid account)
+    {lock (gate) return votes.Where(x => x.Key.Item1 == room && x.Value.Contains(account)).Select(x => x.Key.Item2).ToArray();}
     public void ForgetItem(Guid room, Guid item) {lock (gate) votes.Remove((room, item));}
     public Guid[] Revoke(Guid account, string? session = null)
     {
@@ -87,5 +101,5 @@ public sealed class RoomPresence(TimeProvider clock)
         foreach (var abort in aborts) abort(); return rooms;
     }
     public void Close(Guid room)
-    {lock (gate) {messages.Remove(room); foreach (var key in votes.Keys.Where(x => x.Item1 == room).ToArray()) votes.Remove(key);}}
+    {lock (gate) {messages.Remove(room); missingOwners.Remove(room); foreach (var key in votes.Keys.Where(x => x.Item1 == room).ToArray()) votes.Remove(key);}}
 }

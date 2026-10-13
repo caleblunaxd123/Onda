@@ -1,4 +1,4 @@
-# Continuación para Claude Code — ONDA 0.2
+# Continuación para Claude Code — ONDA 0.3
 
 ## Prompt listo para usar
 
@@ -14,14 +14,14 @@ README.md y docs/{PROGRESS,ARCHITECTURE,ROADMAP,TESTING,DEPLOYMENT,DEPENDENCIES,
 Verifica la implementación: no vuelvas a crear módulos que ya funcionan ni uses datos sociales falsos.
 
 Web https://onda.lunalav.pe; API https://onda-api.lunalav.pe; APK beta público en
-https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.2.0. Contabo, Cloudflare, Caddy, SQL Server Express,
+https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0. Contabo, Cloudflare, Caddy, SQL Server Express,
 Ollama local. .NET 10, Expo SDK 57, React Native 0.86.3. SQL Server es decisión del propietario;
 no lo sustituyas por PostgreSQL.
 
 Prioridad inmediata: cerrar validación en Android físico y dos dispositivos en redes diferentes;
 reproducción audible, sincronía multimedia, reconexión, batería, 30 min bloqueado,
 Bluetooth/llamadas, TalkBack/texto grande y estados de error claros.
-Después implementa recuperación de sala al desconectarse el anfitrión (gracia/coanfitrión),
+Recuperación de sala y coanfitriones ya están implementados. Continúa con
 voz opcional WebRTC con controles simples y música atenuada, colecciones compartidas y
 sesiones programadas. Avanza por incrementos funcionales verificables según ROADMAP.
 No presentes Netflix, Disney+ o Spotify como soportados sin integración oficial funcional.
@@ -31,7 +31,7 @@ Mejora el recorrido: elegir contenido -> crear sala -> invitar -> entrar -> prop
 -> escuchar/ver -> guardar -> volver. Evita formularios innecesarios, controles ambiguos,
 audio duplicado y acciones del anfitrión que un invitado pueda ejecutar. Privacidad predeterminada.
 
-Ejecuta npm run check:mobile y scripts/test-api.ps1; referencia 54 móvil y 93 backend
+Ejecuta npm run check:mobile y scripts/test-api.ps1; referencia 56 móvil y 95 backend
 (SQL real, cuentas y dos clientes SignalR). Usa scripts/sql-config.ps1 para SDK .NET local.
 SDK 57 usa hooks de navegación de expo-router, no @react-navigation/native.
 Instala paquetes nativos con Expo; no edites android/ios generados a mano.
@@ -61,8 +61,18 @@ pruebas, push y despliegue ya autorizados; pregunta solo por información impres
 - Web/Android usan la API pública; APK con clave de depuración para beta, pendiente firma privada para tiendas.
 
 ## Pendientes operativos
-No hay SMTP/correo verificado, voz RTC, coanfitriones automáticos, PiP/casting, premium providers,
+No hay SMTP/correo verificado, voz RTC, PiP/casting, premium providers,
 moderación operativa con panel/admin ni alertas externas. Backup diario cifrado y restore probados;
 copia externa manual en PC, pendiente automatizar fuera del VPS. Pruebas físicas/auditoría pendientes.
 Los videos pueden rechazar embeds. Radio no promete sincronía exacta por muestra.
 La sesión web está en sessionStorage por pestaña; no es una sesión permanente entre navegadores.
+
+## Incremento 0.3: salas y diseño
+Sala cinematográfica oscura, modo cine, web en dos columnas y móvil compacto, seek con teclado/gestos,
+chat con seguimiento de mensajes, portadas de contenido real, buscador de salas, invitación copiable,
+pegado de enlaces y contenido guardado. Hasta dos coanfitriones con permisos de reproducción/cola;
+moderación solo del anfitrión. Continuidad optativa: 60 s de gracia, prioridad a coanfitrión conectado;
+reconectar antes conserva al anfitrión. Salas anteriores mantienen continuidad desactivada.
+Cola con prioridad fijada y votos personales recuperados al reconectar. Sincronización con anclas de tiempo
+para evitar saltos al silenciar/cambiar roles. 95 pruebas backend y 56 móvil.
+El propietario indicó continuar primero con salas/diseño; todavía no tiene proveedor de correo transaccional.
