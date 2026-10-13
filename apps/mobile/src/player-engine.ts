@@ -1,10 +1,12 @@
 import type { PlaybackState, Station } from './types';
 export type NativeStatus = {playing: boolean; loaded: boolean; buffering: boolean; error?: boolean; finished?: boolean};
 export type Handle = {play(): void; pause(): void; dispose(): void};
+export type StationQueue = {stations: Station[]; title: string};
 export type Snapshot = {
   station: Station | null; state: PlaybackState; error: string | null; sleepAt: number | null;
   /** Stream currently tried and its position among the station's HTTPS sources. */
   streamUrl: string | null; source: number; sources: number; attempt: number;
+  queue: Station[]; queueIndex: number; queueTitle: string;
 };
 export type Factory = (station: Station, streamUrl: string, onStatus: (status: NativeStatus) => void) => Handle;
 
@@ -25,7 +27,7 @@ const idle = {streamUrl: null, source: 0, sources: 0, attempt: 0};
  * generation counter discards late events from released handles, so only one stream can be active.
  */
 export class PlayerEngine {
-  snapshot: Snapshot = {station: null, state: 'idle', error: null, sleepAt: null, ...idle};
+  snapshot: Snapshot = {station: null, state: 'idle', error: null, sleepAt: null, queue: [], queueIndex: -1, queueTitle: '', ...idle};
   private listeners = new Set<() => void>();
   private handle?: Handle;
   private generation = 0;
@@ -46,15 +48,32 @@ export class PlayerEngine {
     this.generation++; clearTimeout(this.retry); clearTimeout(this.watchdog); this.watchdog = undefined;
     this.handle?.dispose(); this.handle = undefined;
   }
-  select = (station: Station) => {
+  select = (station: Station, context?: StationQueue) => {
+    const seen = new Set<string>();
+    const queue = (context?.stations ?? [station]).filter(s => {
+      if (seen.has(s.id)) return false;
+      seen.add(s.id); return true;
+    }).slice(0, 600);
+    let queueIndex = queue.findIndex(s => s.id === station.id);
+    if (queueIndex < 0) {queue.unshift(station); if (queue.length > 600) queue.pop(); queueIndex = 0;}
+    else queue[queueIndex] = station;
     this.release(); this.wanted = true;
     this.sourceList = streamSources(station); this.sourceIndex = 0; this.sourceAttempts = 0; this.totalAttempts = 0;
-    this.update({station, error: null, sources: this.sourceList.length, source: 0, attempt: 0, streamUrl: this.sourceList[0] ?? null});
+    this.update({station, queue, queueIndex, queueTitle: context?.title ?? '', error: null, sources: this.sourceList.length, source: 0, attempt: 0, streamUrl: this.sourceList[0] ?? null});
     if (this.sourceList.length === 0) {this.wanted = false; this.update({state: 'error', error: 'Esta emisora no ofrece una transmisión HTTPS compatible.'}); return;}
     this.connect();
   };
   /** Manual retry after an error: starts again from the first source. */
-  retryNow = () => {if (this.snapshot.station) this.select(this.snapshot.station);};
+  retryNow = () => {
+    if (this.snapshot.station) this.select(this.snapshot.station, {stations: this.snapshot.queue, title: this.snapshot.queueTitle});
+  };
+  /** Navigation never wraps or starts another stream at the end of a queue. */
+  skip = (direction: -1 | 1) => {
+    const next = this.snapshot.queue[this.snapshot.queueIndex + direction];
+    if (next) this.select(next, {stations: this.snapshot.queue, title: this.snapshot.queueTitle});
+  };
+  next = () => this.skip(1);
+  previous = () => this.skip(-1);
   private armWatchdog() {
     if (!this.watchdog) this.watchdog = setTimeout(() => {this.watchdog = undefined; this.fail();}, CONNECT_TIMEOUT_MS);
   }
@@ -115,7 +134,7 @@ export class PlayerEngine {
   toggle = () => {
     if (['playing', 'connecting', 'buffering'].includes(this.snapshot.state)) {
       this.wanted = false; this.release(); this.watchdog = undefined; this.update({state: 'paused', error: null});
-    } else if (this.snapshot.station) this.select(this.snapshot.station);
+    } else this.retryNow();
   };
   setOnline = (online: boolean) => {
     if (this.online === online) return;

@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { AppState, Platform, View } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
-import { player, prepareAudio } from '../src/player';
+import { player, prepareAudio, usePlayer } from '../src/player';
 import { lookupStations } from '../src/catalog';
 import { libraryIds, useLibrary } from '../src/library';
 import { useTheme } from '../src/theme';
 import { deviceCountry } from '../src/region';
-import { Label } from '../src/ui';
+import { Label, MiniPlayer } from '../src/ui';
 const queryClient = new QueryClient();
 const REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;
 
@@ -59,7 +59,15 @@ export default function RootLayout() {
           <Stack.Screen name="settings"/>
           <Stack.Screen name="onboarding" options={{animation: 'fade', gestureEnabled: false}}/>
         </Stack>
+        <StackPlayerDock/>
       </SafeAreaView></QueryClientProvider></SafeAreaProvider>
     </View>
   </GestureHandlerRootView>;
+}
+
+/** Keep audio controls available in Search and Settings as well as the tab screens. */
+function StackPlayerDock() {
+  const segments = useSegments(); const c = useTheme(); const station = usePlayer().station;
+  if (!station || !segments.length || segments[0] === '(tabs)' || segments[0] === 'player' || segments[0] === 'onboarding') return null;
+  return <SafeAreaView edges={['bottom']} style={{backgroundColor: c.bg}}><MiniPlayer/></SafeAreaView>;
 }

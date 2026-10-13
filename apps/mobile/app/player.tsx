@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Share, TextInput, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Platform, Pressable, ScrollView, Share, TextInput, View, type ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { sendReport, useStationFeed, type ReportKind } from '../src/catalog';
@@ -14,7 +14,7 @@ export default function FullPlayer() {
   const c = useTheme(); const s = usePlayer();
   const station = s.station;
   const similar = useStationFeed({tag: station?.tags[0], order: 'discover', exclude: station ? [station.id] : []}, {limit: 8, enabled: !!station?.tags[0]});
-  const [sheet, setSheet] = useState<'timer' | 'report' | 'collection' | null>(null);
+  const [sheet, setSheet] = useState<'timer' | 'report' | 'collection' | 'queue' | null>(null);
   const close = () => router.canGoBack() ? router.back() : router.replace('/');
   if (!station) return <View style={{flex: 1, backgroundColor: c.bg, padding: 20}}>
     <IconButton icon="chevron-down" plain label="Cerrar reproductor" onPress={close}/>
@@ -28,7 +28,7 @@ export default function FullPlayer() {
         <View style={{flexDirection: 'row', alignSelf: 'stretch', alignItems: 'center'}}>
           <IconButton icon="chevron-down" plain tint="#FFFFFF" label="Cerrar reproductor" onPress={close}/>
           <Label style={{flex: 1, textAlign: 'center', color: '#D7DEF2', fontSize: 12, letterSpacing: 2, fontWeight: '700'}}>AHORA SUENA</Label>
-          <Favorite station={station} size={24}/>
+          <Favorite station={station} size={24} tint="#FFFFFF"/>
         </View>
         <View style={{width: 300, height: 290, alignItems: 'center', justifyContent: 'center'}}>
           <SoundWaves size={232} color="#7FE7E3" state={s.state === 'playing' && !s.error ? 'playing' : s.state === 'connecting' || s.state === 'buffering' ? 'connecting' : 'idle'}/>
@@ -48,17 +48,24 @@ export default function FullPlayer() {
           <Label style={{color: '#D7DEF2', fontSize: 14}}>{flag(station.countryCode)} {[station.country, station.region].filter(Boolean).join(' · ')}</Label>
           {station.tags.length > 0 && <Label style={{color: '#B9C3DE', fontSize: 13}}>{station.tags.slice(0, 3).map(tagLabel).join(' · ')}</Label>}
         </View>
+        {s.queue.length > 1 && <Pressable accessibilityRole="button" accessibilityLabel="Ver lista de emisoras" onPress={() => setSheet('queue')} style={{minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, borderRadius: 99, backgroundColor: '#FFFFFF18', maxWidth: '100%'}}>
+          <Ionicons name="list-outline" size={17} color="#FFFFFF"/><Label numberOfLines={1} style={{color: '#FFFFFF', fontSize: 12, fontWeight: '600', flexShrink: 1}}>{s.queueTitle || 'Tu selección'} · {s.queueIndex + 1} de {s.queue.length}</Label>
+        </Pressable>}
         <View style={{flexDirection: 'row', alignItems: 'center', gap: 34}}>
-          <IconButton icon="share-social-outline" plain tint="#FFFFFF" label="Compartir emisora" onPress={() => {void Share.share({message: `${station.name} — ${station.homepage ?? station.streamUrl}`}).catch(() => {});}}/>
+          <IconButton icon="play-skip-back" plain tint="#FFFFFF" label="Emisora anterior" disabled={s.queueIndex <= 0} onPress={player.previous}/>
           <View style={{borderRadius: 50, boxShadow: '0px 8px 24px rgba(0,0,0,0.35)'} as ViewStyle}><PlayButton size={80} active={active} label={active ? 'Pausar transmisión' : 'Reproducir transmisión'} onPress={player.toggle}/></View>
-          <IconButton icon="albums-outline" plain tint="#FFFFFF" label="Guardar en una colección" onPress={() => setSheet('collection')}/>
+          <IconButton icon="play-skip-forward" plain tint="#FFFFFF" label="Emisora siguiente" disabled={s.queueIndex >= s.queue.length - 1} onPress={player.next}/>
+        </View>
+        <View style={{flexDirection: 'row', gap: 20, justifyContent: 'center'}}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Compartir emisora" onPress={() => {void Share.share({message: `${station.name} — ${station.homepage ?? station.streamUrl}`}).catch(() => {});}} style={{minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6}}><Ionicons name="share-social-outline" size={18} color="#FFFFFF"/><Label style={{fontSize: 12, color: '#FFFFFF'}}>Compartir</Label></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Guardar en una colección" onPress={() => setSheet('collection')} style={{minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6}}><Ionicons name="albums-outline" size={18} color="#FFFFFF"/><Label style={{fontSize: 12, color: '#FFFFFF'}}>Guardar</Label></Pressable>
         </View>
         {s.state === 'error' && <Pressable accessibilityRole="button" onPress={player.retryNow} style={{flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 99, paddingHorizontal: 16, paddingVertical: 10}}><Ionicons name="refresh" size={18} color="#1B2257"/><Label style={{color: '#1B2257', fontWeight: '700'}}>Reintentar</Label></Pressable>}
         {s.sources > 1 && <Label style={{color: '#B9C3DE', fontSize: 12}}>Fuente {s.source} de {s.sources}{s.state === 'connecting' && s.attempt > 1 ? ` · intento ${s.attempt}` : ''}</Label>}
       </View>
 
       <View style={{paddingHorizontal: 20, paddingTop: 18, gap: 18}}>
-        <Card style={{flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 14}}>
+        <Card style={{flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-around', gap: 12, paddingVertical: 14}}>
           <Option icon="timer-outline" label="Temporizador" value={s.sleepAt ? new Date(s.sleepAt).toLocaleTimeString('es', {hour: '2-digit', minute: '2-digit'}) : 'Apagado'} onPress={() => setSheet('timer')}/>
           <Option icon="pulse-outline" label="Calidad" value={[station.codec, station.bitrate > 0 ? station.bitrate + ' kbps' : ''].filter(Boolean).join(' · ') || 'Sin datos'}/>
           <Option icon="flag-outline" label="Reportar" value="Problema" onPress={() => setSheet('report')}/>
@@ -72,7 +79,7 @@ export default function FullPlayer() {
         </Card>
         {station.tags[0] && <>
           <SectionTitle title="En una frecuencia similar"/>
-          {similar.isPending ? <ActivityIndicator color={c.primary}/> : <View>{similar.items.slice(0, 5).map(x => <StationRow key={x.id} station={x}/>)}</View>}
+          {similar.isPending ? <ActivityIndicator color={c.primary}/> : <View>{similar.items.slice(0, 5).map(x => <StationRow key={x.id} station={x} queue={{stations: similar.items, title: 'En una frecuencia similar'}}/>)}</View>}
         </>}
       </View>
     </ScrollView>
@@ -82,13 +89,18 @@ export default function FullPlayer() {
       {s.sleepAt && <ActionRow icon="close-circle-outline" label="Apagar temporizador" onPress={() => {player.setSleep(0); setSheet(null);}}/>}
     </Sheet>}
     {sheet === 'collection' && <CollectionPicker station={station} onClose={() => setSheet(null)}/>}
+    {sheet === 'queue' && <Sheet title={s.queueTitle || 'Tu selección'} scroll={false} onClose={() => setSheet(null)}>
+      <Muted style={{marginBottom: 8}}>{s.queue.length} emisoras · Elige tu próxima frecuencia</Muted>
+      <FlatList data={s.queue} keyExtractor={item => item.id} style={{maxHeight: 460}} initialNumToRender={10}
+        renderItem={({item}) => <StationRow station={item} selected={item.id === station.id} queue={{stations: s.queue, title: s.queueTitle}} onPress={() => {player.select(item, {stations: s.queue, title: s.queueTitle}); setSheet(null);}}/>}/>
+    </Sheet>}
     {sheet === 'report' && <ReportSheet station={station} streamUrl={s.streamUrl} onClose={() => setSheet(null)}/>}
   </View>;
 }
 
 function Option({icon, label, value, onPress}: {icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string; onPress?: () => void}) {
   const c = useTheme();
-  return <Pressable accessibilityRole={onPress ? 'button' : 'text'} disabled={!onPress} onPress={onPress} style={({pressed}) => ({alignItems: 'center', gap: 4, minWidth: 90, opacity: pressed ? .6 : 1})}>
+  return <Pressable accessibilityRole={onPress ? 'button' : 'text'} disabled={!onPress} onPress={onPress} style={({pressed}) => ({flex: 1, alignItems: 'center', gap: 4, minWidth: 76, minHeight: 64, opacity: pressed ? .6 : 1})}>
     <Ionicons name={icon} size={22} color={c.primaryText}/><Label style={{fontSize: 13, fontWeight: '700'}}>{label}</Label><Muted numberOfLines={1} style={{fontSize: 12}}>{value}</Muted>
   </Pressable>;
 }

@@ -257,6 +257,45 @@ public sealed class SqlCatalogTests : IAsyncLifetime
         Assert.Equal(["latin", "salsa"], station.Tags.Select(t => t.Tag).Order());
     }
 
+    [SkippableFact] public async Task SearchMatchesAllWordsAcrossNameRegionCountryAndGenres()
+    {
+        await using var db = await MigratedAsync();
+        var services = new Services(db, new FakeSource([]));
+        var fixtures = new[] {
+            Row(1, name: "Radio Oxígeno", tags: "rock", votes: 5) with { State = "Lima" },
+            Row(2, name: "Radio Andina", tags: "news", votes: 10) with { State = "Arequipa" },
+            Row(3, name: "Radio Rock", country: "ES", tags: "rock", votes: 100) with { State = "Madrid" },
+        };
+        await services.Store.UpsertAsync(fixtures.Select(row => StationMapper.ToEntity(row, DateTimeOffset.UtcNow)!).ToList(), CancellationToken.None);
+        foreach (var text in new[] { "oxigeno peru", "LIMA radio", "rock español Perú" })
+        {
+            var page = await services.Queries.SearchAsync(new StationFilter { Text = text }, null, 10, CancellationToken.None);
+            Assert.Equal("Radio Oxígeno", Assert.Single(page.Items).Name);
+            Assert.Equal(1, page.Total);
+        }
+        var news = await services.Queries.SearchAsync(new StationFilter { Text = "noticias Arequipa" }, null, 10, CancellationToken.None);
+        Assert.Equal("Radio Andina", Assert.Single(news.Items).Name);
+        Assert.Empty((await services.Queries.SearchAsync(new StationFilter { Text = "***" }, null, 10, CancellationToken.None)).Items);
+    }
+
+    [SkippableFact] public async Task SearchRanksExactNamesBeforePopularityAndPagesConsistently()
+    {
+        await using var db = await MigratedAsync();
+        var services = new Services(db, new FakeSource([]));
+        await services.Store.UpsertAsync(new[] {
+            Row(1, name: "LOS 40", votes: 1), Row(2, name: "LOS 40 Classic", votes: 100),
+            Row(3, name: "Otra LOS 40", votes: 300),
+        }.Select(row => StationMapper.ToEntity(row, DateTimeOffset.UtcNow)!).ToList(), CancellationToken.None);
+        var first = await services.Queries.SearchAsync(new StationFilter { Text = "los40" }, null, 1, CancellationToken.None);
+        Assert.Equal("LOS 40", Assert.Single(first.Items).Name);
+        Assert.Equal(3, first.Total);
+        Assert.True(CatalogCursor.TryDecode(first.NextCursor, out var cursor));
+        var remaining = await services.Queries.SearchAsync(new StationFilter { Text = "los40" }, cursor, 10, CancellationToken.None);
+        Assert.Equal(2, remaining.Items.Count);
+        Assert.DoesNotContain(remaining.Items, item => item.Id == first.Items[0].Id);
+        Assert.False(remaining.HasMore);
+    }
+
     [SkippableFact] public async Task ReportsArePersistedOnlyForKnownStations()
     {
         await using var db = await MigratedAsync();

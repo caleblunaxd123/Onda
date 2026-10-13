@@ -1,0 +1,9 @@
+[Unit]
+Description=ONDA encrypted SQL backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/onda/backup.py
+UMask=0077

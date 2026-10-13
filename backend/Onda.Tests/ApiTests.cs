@@ -15,6 +15,7 @@ public class ApiTests
 
     private sealed class FakeCatalog(bool fail) : ICatalogQueries
     {
+        public int StatusReads { get; private set; }
         public StationFilter? LastFilter { get; private set; }
         public CatalogCursor? LastCursor { get; private set; }
         public Task<StationPage> SearchAsync(StationFilter filter, CatalogCursor? cursor, int limit, CancellationToken ct)
@@ -30,7 +31,11 @@ public class ApiTests
         public Task<IReadOnlyList<LabeledFacet>> LanguagesAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<LabeledFacet>>([]);
         public Task<IReadOnlyList<LabeledFacet>> TagsAsync(CancellationToken ct) => Task.FromResult<IReadOnlyList<LabeledFacet>>([]);
         public Task<IReadOnlyList<Station>> LookupAsync(IReadOnlyList<Guid> ids, CancellationToken ct) => Task.FromResult<IReadOnlyList<Station>>([Fixture]);
-        public Task<CatalogStatus> StatusAsync(CancellationToken ct) => Task.FromResult(new CatalogStatus("catalog", 1, 1, null, null, null, "Radio Browser"));
+        public Task<CatalogStatus> StatusAsync(CancellationToken ct)
+        {
+            StatusReads++;
+            return Task.FromResult(new CatalogStatus("catalog", 1, 1, null, null, null, "Radio Browser"));
+        }
     }
 
     private sealed class FakeReports : IStationReports
@@ -58,6 +63,19 @@ public class ApiTests
                 s.AddScoped<IStationReports>(_ => reports ?? new FakeReports());
             });
         });
+
+    [Fact] public async Task CatalogStatusIsNeverServedFromOutputCache()
+    {
+        var catalog = new FakeCatalog(false);
+        await using var app = Factory(catalog); using var client = app.CreateClient();
+        for (var i = 0; i < 2; i++)
+        {
+            using var response = await client.GetAsync("/api/v1/catalog/status");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.False(response.Headers.Contains("Age"));
+        }
+        Assert.Equal(2, catalog.StatusReads);
+    }
 
     [Theory]
     [InlineData("limit=0")] [InlineData("limit=101")] [InlineData("offset=-1")] [InlineData("country=PER")] [InlineData("country=12")]

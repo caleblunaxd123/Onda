@@ -9,6 +9,7 @@ import { greeting, moods, useTheme } from '../../src/theme';
 import { isActive, player, usePlayer } from '../../src/player';
 import { BrandHeader, Page, Label, Muted, StationRow, Artwork, Loading, Message, SectionTitle, StationTile, IconButton, LiveBadge, flag, tagLabel, cardStyle } from '../../src/ui';
 import type { Station } from '../../src/types';
+import {DestinationShelf} from '../../src/features/home/destinations';
 
 export default function Home() {
   const c = useTheme(); const hydrated = useLibraryHydrated(); const onboarded = useLibrary(s => s.onboarded);
@@ -68,9 +69,9 @@ function HomeContent() {
     {featured.stale && <Muted style={{marginTop: -10}}>Mostrando el catálogo guardado: Radio Browser no respondió hace un momento.</Muted>}
 
     {library.history.length > 0 && <>
-      <SectionTitle title="Continuar escuchando" action="Ver todo" onPress={() => router.push('/library')}/>
+      <SectionTitle title="Continuar escuchando" action="Ver todo" onPress={() => router.push({pathname: '/library', params: {section: 'history'}})}/>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap: 12}} style={{marginHorizontal: -20}} contentInset={{left: 20}}>
-        <View style={{width: 8}}/>{uniqueBroadcasts(library.history).slice(0, 10).map(s => <StationTile key={s.id} station={s}/>)}<View style={{width: 8}}/>
+        <View style={{width: 8}}/>{uniqueBroadcasts(library.history).slice(0, 10).map(s => <StationTile key={s.id} station={s} queue={{stations: uniqueBroadcasts(library.history), title: 'Historial'}}/>)}<View style={{width: 8}}/>
       </ScrollView>
     </>}
 
@@ -88,16 +89,17 @@ function HomeContent() {
 
     <SectionTitle title={tag ? `${moods.find(m => m.tag === tag)?.name} · en ${countryName}` : `Populares en ${countryName}`} action="Ver todo" onPress={() => router.push({pathname: '/search', params: {country: library.country, tag}})}/>
     {popular.isPending ? <Loading rows={4}/> : popular.isError ? <Message title="No pudimos cargar esta sección" body={popular.error.message} retry={() => popular.refetch()}/> :
-      popular.items.length ? <View>{popular.items.slice(0, 5).map(s => <StationRow key={s.id} station={s}/>)}</View> :
+      popular.items.length ? <View>{popular.items.slice(0, 5).map(s => <StationRow key={s.id} station={s} queue={{stations: popular.items, title: tag ? moods.find(m => m.tag === tag)?.name ?? tag : `Radios de ${countryName}`}}/>)}</View> :
       <Muted>No hay emisoras de este ánimo en {countryName}. Prueba otro ánimo o explora el mundo.</Muted>}
 
     {genre && genreFeed.items.length > 0 && <>
       <SectionTitle title={genreTitle} action="Explorar" onPress={() => router.push({pathname: '/search', params: genreWorldNeeded ? {tag: genre} : {tag: genre, country: library.country}})}/>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap: 12}} style={{marginHorizontal: -20}}>
-        <View style={{width: 8}}/>{genreFeed.items.slice(0, 10).map(s => <StationTile key={s.id} station={s}/>)}<View style={{width: 8}}/>
+        <View style={{width: 8}}/>{genreFeed.items.slice(0, 10).map(s => <StationTile key={s.id} station={s} queue={{stations: genreFeed.items, title: genreLabel}}/>)}<View style={{width: 8}}/>
       </ScrollView>
     </>}
 
+    {countries.data && <DestinationShelf countries={countries.data} current={library.country} seed={seed}/>}
     <Pressable accessibilityRole="button" accessibilityLabel="Abrir el mapa de emisoras" onPress={() => router.push('/world')} style={({pressed}) => [cardStyle(c), {padding: 20, gap: 6, flexDirection: 'row', alignItems: 'center', opacity: pressed ? .8 : 1}]}>
       <View style={{flex: 1, gap: 4}}><Label style={{fontSize: 18, fontWeight: '800'}}>Un mundo por escuchar</Label><Muted>{countries.data ? `${countries.data.length} países con radio. Explóralos en el mapa.` : 'Explora emisoras por país y ciudad.'}</Muted></View>
       <View style={{width: 56, height: 56, borderRadius: 28, backgroundColor: c.primary + '1A', alignItems: 'center', justifyContent: 'center'}}><Ionicons name="earth" size={30} color={c.primaryText}/></View>
@@ -114,7 +116,7 @@ function FeaturedCarousel({stations, width}: {stations: Station[]; width: number
       {stations.map(station => {
         const current = playback.station?.id === station.id;
         const active = current && isActive(playback.state);
-        return <Pressable key={station.id} accessibilityRole="button" accessibilityLabel={(active ? 'Pausar ' : 'Escuchar ') + station.name} onPress={() => current ? player.toggle() : player.select(station)}
+        return <Pressable key={station.id} accessibilityRole="button" accessibilityLabel={(active ? 'Pausar ' : 'Escuchar ') + station.name} onPress={() => current ? player.toggle() : player.select(station, {stations, title: 'Radios destacadas'})}
           style={{width, minHeight: 180, borderRadius: 24, padding: 18, overflow: 'hidden', backgroundColor: c.featuredFallback, experimental_backgroundImage: c.featured} as ViewStyle}>
           <View pointerEvents="none" style={{position: 'absolute', width: 200, height: 200, borderRadius: 100, right: -60, top: -70, backgroundColor: '#FFFFFF10'}}/>
           <View style={{flexDirection: 'row', gap: 16, alignItems: 'center'}}>

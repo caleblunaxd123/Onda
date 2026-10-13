@@ -3,20 +3,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Station } from './types';
-const fold = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-const streamKey = (url: string) => url.replace(/^https?:\/\//i, '').replace(/[?#].*$/, '').replace(/\/+$/, '').toLowerCase();
+import type {LibrarySort} from './features/library/selectors';
+const streamKey = (url: string) => url.trim().replace(/#.*$/, '')
+  .replace(/^(https?):\/\/([^/]+)/i, (_match, scheme: string, host: string) => `${scheme.toLowerCase()}://${host.toLowerCase()}`)
+  .replace(/\/+$/, '');
+const streamKeys = (station: Station) => [station.streamUrl, ...(station.streams ?? [])].filter(Boolean).map(streamKey);
 
 /**
- * Same broadcast even when the catalog lists it twice: same id, same stream URL, or same name in the same country.
- * Radio Browser contains such duplicates under different ids.
+ * Same broadcast: stable id or a shared verified stream. Names alone cannot identify regional stations.
+ * Path case and query parameters are significant: one endpoint can serve multiple radio channels.
  */
 export const sameBroadcast = (a: Station, b: Station) =>
-  a.id === b.id || streamKey(a.streamUrl) === streamKey(b.streamUrl) ||
-  (fold(a.name) === fold(b.name) && a.countryCode === b.countryCode);
+  a.id === b.id || streamKeys(a).some(key => streamKeys(b).includes(key));
 
 /** Keeps the first occurrence of each broadcast, preserving order. */
-export const uniqueBroadcasts = (items: Station[]) =>
-  items.filter((station, index) => items.findIndex(other => sameBroadcast(other, station)) === index);
+export const uniqueBroadcasts = (items: Station[]) => {
+  const ids = new Set<string>(); const streams = new Set<string>(); const result: Station[] = [];
+  for (const station of items) {
+    const keys = streamKeys(station);
+    const duplicate = ids.has(station.id) || keys.some(key => streams.has(key));
+    ids.add(station.id); keys.forEach(key => streams.add(key));
+    if (!duplicate) result.push(station);
+  }
+  return result;
+};
 
 export const prependUnique = (items: Station[], station: Station, limit = 100) =>
   [station, ...items.filter(s => !sameBroadcast(s, station))].slice(0, limit);
@@ -38,6 +48,7 @@ export const collectionName = (name: string) => name.trim().replace(/\s+/g, ' ')
 type Library = {
   favorites: Station[]; history: Station[]; searches: string[]; collections: Collection[];
   country: string; theme: 'dark' | 'light' | 'system';
+  librarySort: LibrarySort; setLibrarySort: (sort: LibrarySort) => void;
   /** auto: follows the country detected from the device time zone; manual: chosen in Settings. */
   countryMode: 'auto' | 'manual';
   syncDeviceCountry: (code: string) => void; followDeviceCountry: (code: string) => void;
@@ -56,6 +67,7 @@ type Library = {
 };
 export const useLibrary = create<Library>()(persist((set) => ({
   favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'system', countryMode: 'auto',
+  librarySort: 'saved', setLibrarySort: librarySort => set({librarySort}),
   syncDeviceCountry: code => set(x => x.countryMode === 'auto' && x.country !== code ? {country: code} : {}),
   followDeviceCountry: code => set({countryMode: 'auto', country: code}),
   onboarded: false, likedTags: [], refreshedAt: 0,

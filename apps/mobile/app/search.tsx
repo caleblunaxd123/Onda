@@ -5,17 +5,17 @@ import { useCountries, useLanguages, usePlaces, useStationFeed, useTags } from '
 import { useLibrary } from '../src/library';
 import { useTheme } from '../src/theme';
 import { Ionicons } from '../src/icons';
-import { Chip, EmptyState, ListFooter, Loading, Message, Muted, OptionPicker, ScreenHeader, SearchField, SectionTitle, StationRow, Label, flag, fold, formatCount } from '../src/ui';
+import { Chip, EmptyState, ListFooter, Loading, Message, Muted, OptionPicker, ScreenHeader, SearchField, SectionTitle, StationRow, Label, flag, fold, formatCount, matchesText } from '../src/ui';
 
 type Tab = 'all' | 'stations' | 'countries' | 'genres' | 'places';
 const tabs: {id: Tab; label: string}[] = [{id: 'all', label: 'Todo'}, {id: 'stations', label: 'Emisoras'}, {id: 'countries', label: 'Países'}, {id: 'genres', label: 'Géneros'}, {id: 'places', label: 'Ciudades'}];
 
 export default function Search() {
   const c = useTheme();
-  const params = useLocalSearchParams<{country?: string; tag?: string; q?: string}>();
+  const params = useLocalSearchParams<{country?: string; tag?: string; q?: string; tab?: Tab}>();
   const [text, setText] = useState(params.q ?? '');
   const [q, setQ] = useState(params.q ?? '');
-  const [tab, setTab] = useState<Tab>('all');
+  const [tab, setTab] = useState<Tab>(tabs.some(item => item.id === params.tab) ? params.tab! : 'all');
   const [country, setCountry] = useState(params.country ?? '');
   const [tag, setTag] = useState(params.tag ?? '');
   const [language, setLanguage] = useState('');
@@ -28,9 +28,9 @@ export default function Search() {
   const anyFilter = !!(q || country || tag || language || region);
   const feed = useStationFeed(filters, {limit: 30, enabled: anyFilter || tab === 'stations'});
   const needle = fold(q);
-  const countryMatches = useMemo(() => (countries.data ?? []).filter(x => !needle || fold(x.name).includes(needle)), [countries.data, needle]);
-  const tagMatches = useMemo(() => (tags.data ?? []).filter(x => !needle || fold(x.label).includes(needle) || x.value.includes(needle)), [tags.data, needle]);
-  const placeMatches = useMemo(() => (places.data ?? []).filter(x => !needle || fold(x.name).includes(needle)), [places.data, needle]);
+  const countryMatches = useMemo(() => (countries.data ?? []).filter(x => matchesText(`${x.name} ${x.code}`, needle)), [countries.data, needle]);
+  const tagMatches = useMemo(() => (tags.data ?? []).filter(x => matchesText(`${x.label} ${x.value}`, needle)), [tags.data, needle]);
+  const placeMatches = useMemo(() => (places.data ?? []).filter(x => matchesText(x.name, needle)), [places.data, needle]);
   const countryName = countries.data?.find(x => x.code === country)?.name ?? country;
   const clear = () => {setCountry(''); setTag(''); setLanguage(''); setRegion(''); setText('');};
   const chooseCountry = (code: string) => {setCountry(code); setRegion(''); setText(''); setTab('stations');};
@@ -46,7 +46,7 @@ export default function Search() {
   ].filter(Boolean) as {key: string; label: string; remove: () => void}[];
 
   const header = <View style={{gap: 12, paddingBottom: 8}}>
-    <SearchField value={text} onChange={setText} onSubmit={commit} autoFocus={!params.country && !params.tag} placeholder="Emisora, país, ciudad o género" label="Buscar emisoras"/>
+    <SearchField value={text} onChange={setText} onSubmit={commit} autoFocus={!params.country && !params.tag && !params.tab} placeholder="Emisora, país, ciudad o género" label="Buscar emisoras"/>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap: 8}}>{tabs.map(t => <Chip key={t.id} label={t.label} selected={tab === t.id} onPress={() => setTab(t.id)}/>)}</ScrollView>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap: 8, alignItems: 'center'}}>
       {active.map(f => <Chip key={f.key} label={f.label} selected onRemove={f.remove}/>)}
@@ -61,7 +61,7 @@ export default function Search() {
 
   const stationList = (title: string) => <FlatList data={feed.items} keyExtractor={s => s.id} ListHeaderComponent={<>{header}<View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 4, paddingBottom: 4}}><Label accessibilityRole="header" style={{fontSize: 18, lineHeight: 24, fontWeight: '800'}}>{title}</Label>{feed.total !== null && <Muted accessibilityLiveRegion="polite">{formatCount(feed.total)} {feed.total === 1 ? 'emisora' : 'emisoras'}</Muted>}</View></>}
     contentContainerStyle={{paddingHorizontal: 20, paddingBottom: 24}} keyboardShouldPersistTaps="handled" onEndReachedThreshold={0.6} onEndReached={feed.loadMore}
-    renderItem={({item}) => <StationRow station={item}/>}
+    renderItem={({item}) => <StationRow station={item} queue={{stations: feed.items, title: q ? `Búsqueda: ${q}` : countryName ? `Radios de ${countryName}` : 'Explorar emisoras'}}/>}
     ListEmptyComponent={feed.isPending ? <Loading rows={6}/> : feed.isError ? <Message title="No pudimos buscar" body={feed.error.message} retry={() => feed.refetch()}/> :
       <EmptyState icon="search-outline" title="Sin resultados" body={`No hay emisoras ${q ? `para «${q}» ` : ''}${active.length ? 'con estos filtros' : ''}. Prueba un nombre más corto o quita algún filtro.`}>
         {active.length > 0 && <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center'}}>{active.map(f => <Chip key={f.key} label={f.label} onRemove={f.remove}/>)}</View>}
@@ -86,7 +86,7 @@ export default function Search() {
     renderItem={({item}) => <FacetRow icon="location-outline" label={item.name} detail={`${formatCount(item.count)} emisoras`} selected={item.name === region} onPress={() => choosePlace(item.name)}/>}/>;
   else body = <FlatList data={q ? feed.items.slice(0, 6) : []} keyExtractor={s => s.id} contentContainerStyle={{paddingHorizontal: 20, paddingBottom: 24}} keyboardShouldPersistTaps="handled"
     ListHeaderComponent={<>{header}{q ? <SectionTitle title="Emisoras" action={feed.items.length > 6 ? 'Ver todas' : undefined} onPress={() => setTab('stations')}/> : null}</>}
-    renderItem={({item}) => <StationRow station={item}/>}
+    renderItem={({item}) => <StationRow station={item} queue={{stations: feed.items, title: `Búsqueda: ${q}`}}/>}
     ListEmptyComponent={q ? (feed.isPending ? <Loading/> : feed.isError ? <Message title="No pudimos buscar" body={feed.error.message} retry={() => feed.refetch()}/> : <Muted style={{paddingVertical: 8}}>Ninguna emisora se llama así. Mira países y géneros abajo.</Muted>) : null}
     ListFooterComponent={<View style={{gap: 14, paddingTop: 14}}>
       {(!q || countryMatches.length > 0) && <SectionTitle title="Países" action="Ver todos" onPress={() => setTab('countries')}/>}

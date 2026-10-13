@@ -1,10 +1,16 @@
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Onda.Api;
 using Onda.Application;
 using Onda.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
+// Docker mounts this file read-only; credentials stay out of image layers and environment dumps.
+if (builder.Configuration["ConnectionStringFile"] is { Length: > 0 } connectionFile)
+    builder.Configuration["ConnectionStrings:Onda"] = File.ReadAllText(connectionFile).Trim();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    ProxyHeaders.Configure(options, builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? []));
 builder.Logging.AddJsonConsole();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
@@ -28,14 +34,15 @@ builder.Services.AddRateLimiter(o =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new() { PermitLimit = 10, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
 });
 var app = builder.Build();
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 if (app.Environment.IsDevelopment()) app.UseCors("LocalWebPreview");
 app.UseRateLimiter();
 app.UseOutputCache();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
-app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health/live", () => Results.Ok(new { status = "ok" })).CacheOutput(p => p.NoCache());
 app.MapGet("/health/ready", async (OndaDbContext db, CancellationToken ct) =>
-    await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ready" }) : Results.StatusCode(503));
+    await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ready" }) : Results.StatusCode(503)).CacheOutput(p => p.NoCache());
 
 var api = app.MapGroup("/api/v1");
 api.MapGet("/stations", async (HttpRequest request, ICatalogQueries catalog, CancellationToken ct) =>
@@ -68,7 +75,7 @@ api.MapGet("/facets/tags", async (ICatalogQueries catalog, CancellationToken ct)
 api.MapGet("/facets/places", async (string? country, ICatalogQueries catalog, CancellationToken ct) =>
     StationQueryParser.CountryCode(country) is { } code ? Results.Ok(new { items = await catalog.PlacesAsync(code, ct) })
         : Results.Problem("Indica un país con código de dos letras.", statusCode: 400)).CacheOutput("facets");
-api.MapGet("/catalog/status", async (ICatalogQueries catalog, CancellationToken ct) => Results.Ok(await catalog.StatusAsync(ct)));
+api.MapGet("/catalog/status", async (ICatalogQueries catalog, CancellationToken ct) => Results.Ok(await catalog.StatusAsync(ct))).CacheOutput(p => p.NoCache());
 api.MapPost("/stations/{id:guid}/reports", async (Guid id, ReportRequest body, IStationReports reports, CancellationToken ct) =>
 {
     if (body.Kind is null || !ReportKinds.All.Contains(body.Kind) || body.Message?.Length > 500 || body.AppVersion?.Length > 30 || body.Platform?.Length > 20 ||
