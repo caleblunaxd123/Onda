@@ -47,7 +47,7 @@ Timer diario `onda-backup.timer` 03:40 UTC, persistente, retraso aleatorio ≤10
 VERIFYONLY, cifrado AES-256-CBC/PBKDF2 200.000, SHA256; retención 14 días conservando los dos más recientes.
 Archivos: `/opt/stack/backups/sql/onda`; clave privada `/opt/onda/secrets/backup.key`.
 `--restore-check` descifra/restaura en `OndaBackupCheck`, valida catálogo y elimina su propia DB de comprobación.
-Última restauración verificada: `Onda-20261013T190917Z.bak.enc`, ya con esquema de comunidad.
+Última restauración verificada: `Onda-20261013T232735Z.bak.enc`, ya con esquema de comunidad y continuidad.
 Copia externa manual comprobada en `.tools/backups` del PC del propietario (ignorada por Git); clave protegida
 con DPAPI CurrentUser. No hay todavía copia externa automática ni alertas operativas externas.
 No publicar backups, credenciales, tokens ni archivos `.env`.
