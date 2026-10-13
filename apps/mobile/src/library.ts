@@ -6,10 +6,29 @@ export const prependUnique = (items: Station[], station: Station, limit = 100) =
   [station, ...items.filter(s => s.id !== station.id)].slice(0, limit);
 
 export type Collection = { id: string; name: string; stations: Station[] };
+
+/**
+ * Replaces saved snapshots with fresher catalog data, matched by stable id. Never removes, reorders or adds
+ * stations: favorites, history and collections survive catalog updates and stations missing from the catalog.
+ */
+export function refreshSnapshots<T extends {stations: Station[]}>(lists: {favorites: Station[]; history: Station[]; collections: T[]}, updated: Station[]) {
+  const byId = new Map(updated.map(s => [s.id, s]));
+  const swap = (items: Station[]) => items.map(s => byId.get(s.id) ?? s);
+  return {favorites: swap(lists.favorites), history: swap(lists.history), collections: lists.collections.map(c => ({...c, stations: swap(c.stations)}))};
+}
+export const libraryIds = (lists: {favorites: Station[]; history: Station[]; collections: {stations: Station[]}[]}) =>
+  [...new Set([...lists.favorites, ...lists.history, ...lists.collections.flatMap(c => c.stations)].map(s => s.id))];
 export const collectionName = (name: string) => name.trim().replace(/\s+/g, ' ').slice(0, 50);
 type Library = {
   favorites: Station[]; history: Station[]; searches: string[]; collections: Collection[];
   country: string; theme: 'dark' | 'light' | 'system';
+  /** auto: follows the country detected from the device time zone; manual: chosen in Settings. */
+  countryMode: 'auto' | 'manual';
+  syncDeviceCountry: (code: string) => void; followDeviceCountry: (code: string) => void;
+  /** First-run choices; genres the person said they like (used for discovery). */
+  onboarded: boolean; likedTags: string[]; refreshedAt: number;
+  finishOnboarding: (country: string, tags: string[], mode?: 'auto' | 'manual') => void; setLikedTags: (tags: string[]) => void;
+  refreshStations: (updated: Station[]) => void;
   toggle: (station: Station) => void; remember: (station: Station) => void;
   setCountry: (country: string) => void; setTheme: (theme: Library['theme']) => void;
   rememberSearch: (text: string) => void; clear: () => void;
@@ -20,10 +39,16 @@ type Library = {
   removeFromCollection: (id: string, stationId: string) => void;
 };
 export const useLibrary = create<Library>()(persist((set) => ({
-  favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'system',
+  favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'system', countryMode: 'auto',
+  syncDeviceCountry: code => set(x => x.countryMode === 'auto' && x.country !== code ? {country: code} : {}),
+  followDeviceCountry: code => set({countryMode: 'auto', country: code}),
+  onboarded: false, likedTags: [], refreshedAt: 0,
+  finishOnboarding: (country, tags, mode = 'manual') => set({country, countryMode: mode, likedTags: tags.slice(0, 8), onboarded: true}),
+  setLikedTags: tags => set({likedTags: tags.slice(0, 8)}),
+  refreshStations: updated => set(x => ({...refreshSnapshots(x, updated), refreshedAt: Date.now()})),
   toggle: s => set(x => ({ favorites: x.favorites.some(f => f.id === s.id) ? x.favorites.filter(f => f.id !== s.id) : prependUnique(x.favorites, s, 500) })),
   remember: s => set(x => ({ history: prependUnique(x.history, s) })),
-  setCountry: country => set({country}), setTheme: theme => set({theme}),
+  setCountry: country => set({country, countryMode: 'manual'}), setTheme: theme => set({theme}),
   rememberSearch: text => set(x => ({searches: [text, ...x.searches.filter(s => s !== text)].filter(Boolean).slice(0, 12)})),
   createCollection: input => {
     const name = collectionName(input);
@@ -45,4 +70,12 @@ export const useLibrary = create<Library>()(persist((set) => ({
   removeFromCollection: (id, stationId) => set(x => ({collections: x.collections.map(c => c.id === id
     ? {...c, stations: c.stations.filter(s => s.id !== stationId)} : c)})),
   clear: () => set({favorites: [], history: [], searches: [], collections: []}),
-}), {name: 'onda-library-v1', storage: createJSONStorage(() => AsyncStorage)}));
+}), {
+  name: 'onda-library-v1', storage: createJSONStorage(() => AsyncStorage),
+  // Libraries saved before onboarding existed already chose a country: do not show onboarding again.
+  merge: (persisted, current) => {
+    const saved = (persisted ?? {}) as Partial<Library>;
+    const existing = !!saved.favorites?.length || !!saved.history?.length || !!saved.collections?.length;
+    return {...current, ...saved, onboarded: saved.onboarded ?? existing};
+  },
+}));

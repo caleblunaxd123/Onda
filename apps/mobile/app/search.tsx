@@ -1,24 +1,118 @@
-import { useEffect, useState } from 'react';
-import { TextInput, View, Pressable, ScrollView } from 'react-native';
-import { Ionicons } from '../src/icons';
-import { useStations } from '../src/catalog';
-import { useTheme } from '../src/theme';
+import { useEffect, useMemo, useState } from 'react';
+import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { useCountries, useLanguages, usePlaces, useStationFeed, useTags } from '../src/catalog';
 import { useLibrary } from '../src/library';
-import { Page, Label, Button, StationRow, Loading, Message, SectionTitle } from '../src/ui';
-const countries=[['US','🇺🇸','Estados Unidos'],['GB','🇬🇧','Reino Unido'],['DE','🇩🇪','Alemania'],['ES','🇪🇸','España'],['PE','🇵🇪','Perú'],['JP','🇯🇵','Japón']];
+import { useTheme } from '../src/theme';
+import { Ionicons } from '../src/icons';
+import { Chip, EmptyState, ListFooter, Loading, Message, Muted, OptionPicker, ScreenHeader, SearchField, SectionTitle, StationRow, Label, flag, fold, formatCount } from '../src/ui';
+
+type Tab = 'all' | 'stations' | 'countries' | 'genres' | 'places';
+const tabs: {id: Tab; label: string}[] = [{id: 'all', label: 'Todo'}, {id: 'stations', label: 'Emisoras'}, {id: 'countries', label: 'Países'}, {id: 'genres', label: 'Géneros'}, {id: 'places', label: 'Ciudades'}];
+
 export default function Search() {
- const c=useTheme();const [text,setText]=useState('');const [query,setQuery]=useState('');const [offset,setOffset]=useState(0);
- const [country,setCountry]=useState('');const [tag,setTag]=useState('');const [language,setLanguage]=useState('');
- const searches=useLibrary(s=>s.searches);const remember=useLibrary(s=>s.rememberSearch);
- useEffect(()=>{const timer=setTimeout(()=>{setQuery(text.trim());setOffset(0);},350);return()=>clearTimeout(timer);},[text]);
- const result=useStations({q:query,country:country||undefined,tag,language,offset});
- return <Page><View style={{backgroundColor:c.surface,borderRadius:14,flexDirection:'row',alignItems:'center',paddingHorizontal:14,gap:8}}><Ionicons name="search" color={c.muted} size={18}/><TextInput accessibilityLabel="Nombre de emisora" placeholder="Encuentra lo que te gusta" placeholderTextColor={c.muted} value={text} onChangeText={setText} onSubmitEditing={()=>remember(text.trim())} style={{color:c.text,flex:1,paddingVertical:13,minHeight:50}}/>{!!text&&<Pressable accessibilityLabel="Limpiar búsqueda" accessibilityRole="button" onPress={()=>setText('')} style={{padding:8}}><Ionicons name="close-circle" size={20} color={c.muted}/></Pressable>}</View>
- <ScrollView horizontal contentContainerStyle={{gap:8}} showsHorizontalScrollIndicator={false}><Button title="Todo" secondary={!!(country||tag||language)} onPress={()=>{setCountry('');setTag('');setLanguage('');setOffset(0);}}/>{['spanish','english','japanese'].map((l,i)=><Button key={l} title={['Español','Inglés','Japonés'][i]} secondary={language!==l} onPress={()=>{setLanguage(language===l?'':l);setOffset(0);}}/>)}</ScrollView>
- {!text&&searches.length>0&&<><SectionTitle title="Búsquedas recientes"/><ScrollView horizontal contentContainerStyle={{gap:8}}>{searches.map(s=><Button key={s} title={s} secondary onPress={()=>setText(s)}/>)}</ScrollView></>}
- <SectionTitle title="Emisoras"/>
- {result.isPending?<Loading/>:result.isError?<Message title="No pudimos buscar" body={result.error.message} retry={()=>result.refetch()}/>:result.data.items.length===0?<Message title="Sin resultados" body="Prueba un nombre más corto o elimina algún filtro."/>:result.data.items.map(s=><StationRow key={s.id} station={s}/>)}
- <View style={{flexDirection:'row',gap:12}}>{offset>0&&<Button title="Anterior" secondary onPress={()=>setOffset(Math.max(0,offset-30))}/>}{(result.data?.items.length??0)>0&&offset<9960&&<Button title="Más emisoras" secondary onPress={()=>{remember(query);setOffset(offset+30);}}/>}</View>
- <SectionTitle title="Países"/><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:20}}>{countries.map(([code,flag,name])=><Pressable key={code} accessibilityRole="button" accessibilityState={{selected:country===code}} onPress={()=>{setCountry(country===code?'':code);setOffset(0);}} style={{width:76,alignItems:'center',gap:8}}><View style={{width:58,height:58,borderRadius:29,alignItems:'center',justifyContent:'center',backgroundColor:c.surface,borderWidth:2,borderColor:country===code?c.primary:'transparent'}}><Label style={{fontSize:30,lineHeight:40}}>{flag}</Label></View><Label style={{fontSize:11,lineHeight:16,textAlign:'center'}}>{name}</Label></Pressable>)}</ScrollView>
- <SectionTitle title="Géneros"/><View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{['rock','salsa','jazz','classical','pop','news','80s','electronic'].map(g=><Button key={g} title={g} secondary={tag!==g} onPress={()=>{setTag(tag===g?'':g);setOffset(0);}}/>)}</View>
- </Page>;
+  const c = useTheme();
+  const params = useLocalSearchParams<{country?: string; tag?: string; q?: string}>();
+  const [text, setText] = useState(params.q ?? '');
+  const [q, setQ] = useState(params.q ?? '');
+  const [tab, setTab] = useState<Tab>('all');
+  const [country, setCountry] = useState(params.country ?? '');
+  const [tag, setTag] = useState(params.tag ?? '');
+  const [language, setLanguage] = useState('');
+  const [region, setRegion] = useState('');
+  const [picker, setPicker] = useState<'language' | null>(null);
+  const searches = useLibrary(s => s.searches); const remember = useLibrary(s => s.rememberSearch);
+  useEffect(() => {const timer = setTimeout(() => setQ(text.trim()), 350); return () => clearTimeout(timer);}, [text]);
+  const countries = useCountries(); const tags = useTags(); const languages = useLanguages(); const places = usePlaces(country || undefined);
+  const filters = {q: q || undefined, country: country || undefined, tag: tag || undefined, language: language || undefined, region: region || undefined};
+  const anyFilter = !!(q || country || tag || language || region);
+  const feed = useStationFeed(filters, {limit: 30, enabled: anyFilter || tab === 'stations'});
+  const needle = fold(q);
+  const countryMatches = useMemo(() => (countries.data ?? []).filter(x => !needle || fold(x.name).includes(needle)), [countries.data, needle]);
+  const tagMatches = useMemo(() => (tags.data ?? []).filter(x => !needle || fold(x.label).includes(needle) || x.value.includes(needle)), [tags.data, needle]);
+  const placeMatches = useMemo(() => (places.data ?? []).filter(x => !needle || fold(x.name).includes(needle)), [places.data, needle]);
+  const countryName = countries.data?.find(x => x.code === country)?.name ?? country;
+  const clear = () => {setCountry(''); setTag(''); setLanguage(''); setRegion(''); setText('');};
+  const chooseCountry = (code: string) => {setCountry(code); setRegion(''); setText(''); setTab('stations');};
+  const chooseTag = (value: string) => {setTag(value); setText(''); setTab('stations');};
+  const choosePlace = (name: string) => {setRegion(name); setText(''); setTab('stations');};
+  const commit = () => {if (text.trim().length >= 2) remember(text.trim());};
+
+  const active = [
+    country && {key: 'country', label: `${flag(country)} ${countryName}`, remove: () => {setCountry(''); setRegion('');}},
+    region && {key: 'region', label: region, remove: () => setRegion('')},
+    tag && {key: 'tag', label: tags.data?.find(t => t.value === tag)?.label ?? tag, remove: () => setTag('')},
+    language && {key: 'language', label: languages.data?.find(l => l.value === language)?.label ?? language, remove: () => setLanguage('')},
+  ].filter(Boolean) as {key: string; label: string; remove: () => void}[];
+
+  const header = <View style={{gap: 12, paddingBottom: 8}}>
+    <SearchField value={text} onChange={setText} onSubmit={commit} autoFocus={!params.country && !params.tag} placeholder="Emisora, país, ciudad o género" label="Buscar emisoras"/>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap: 8}}>{tabs.map(t => <Chip key={t.id} label={t.label} selected={tab === t.id} onPress={() => setTab(t.id)}/>)}</ScrollView>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap: 8, alignItems: 'center'}}>
+      {active.map(f => <Chip key={f.key} label={f.label} selected onRemove={f.remove}/>)}
+      <Chip label={language ? 'Cambiar idioma' : 'Idioma'} icon="language-outline" onPress={() => setPicker('language')}/>
+      {active.length > 0 && <Pressable accessibilityRole="button" onPress={clear} hitSlop={8} style={{paddingHorizontal: 6, minHeight: 38, justifyContent: 'center'}}><Label style={{color: c.primaryText, fontWeight: '700', fontSize: 13}}>Limpiar filtros</Label></Pressable>}
+    </ScrollView>
+    {!text && searches.length > 0 && tab === 'all' && !anyFilter && <View style={{gap: 8}}>
+      <SectionTitle title="Búsquedas recientes"/>
+      <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8}}>{searches.slice(0, 8).map(s => <Chip key={s} label={s} icon="time-outline" onPress={() => setText(s)}/>)}</View>
+    </View>}
+  </View>;
+
+  const stationList = (title: string) => <FlatList data={feed.items} keyExtractor={s => s.id} ListHeaderComponent={<>{header}<View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 4, paddingBottom: 4}}><Label accessibilityRole="header" style={{fontSize: 18, lineHeight: 24, fontWeight: '800'}}>{title}</Label>{feed.total !== null && <Muted accessibilityLiveRegion="polite">{formatCount(feed.total)} {feed.total === 1 ? 'emisora' : 'emisoras'}</Muted>}</View></>}
+    contentContainerStyle={{paddingHorizontal: 20, paddingBottom: 24}} keyboardShouldPersistTaps="handled" onEndReachedThreshold={0.6} onEndReached={feed.loadMore}
+    renderItem={({item}) => <StationRow station={item}/>}
+    ListEmptyComponent={feed.isPending ? <Loading rows={6}/> : feed.isError ? <Message title="No pudimos buscar" body={feed.error.message} retry={() => feed.refetch()}/> :
+      <EmptyState icon="search-outline" title="Sin resultados" body={`No hay emisoras ${q ? `para «${q}» ` : ''}${active.length ? 'con estos filtros' : ''}. Prueba un nombre más corto o quita algún filtro.`}>
+        {active.length > 0 && <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center'}}>{active.map(f => <Chip key={f.key} label={f.label} onRemove={f.remove}/>)}</View>}
+      </EmptyState>}
+    ListFooterComponent={<ListFooter feed={feed}/>}/>;
+
+  const languagePicker = picker === 'language' && <OptionPicker title="Idioma" selected={language} onClose={() => setPicker(null)} onSelect={setLanguage}
+    loading={languages.isPending} error={languages.error?.message} retry={() => languages.refetch()}
+    options={(languages.data ?? []).map(l => ({value: l.value, label: l.label, detail: formatCount(l.count)}))}/>;
+
+  let body;
+  if (tab === 'stations' || (tab === 'all' && anyFilter && (country || tag || language || region))) body = stationList(anyFilter ? 'Emisoras' : 'Más escuchadas');
+  else if (tab === 'countries') body = <FlatList data={countryMatches} keyExtractor={x => x.code} ListHeaderComponent={header} contentContainerStyle={{paddingHorizontal: 20, paddingBottom: 24}} keyboardShouldPersistTaps="handled" initialNumToRender={20}
+    ListEmptyComponent={countries.isPending ? <Loading/> : countries.isError ? <Message title="No pudimos cargar los países" body={countries.error.message} retry={() => countries.refetch()}/> : <Muted>Ningún país coincide.</Muted>}
+    renderItem={({item}) => <FacetRow leading={flag(item.code)} label={item.name} detail={`${formatCount(item.count)} emisoras`} selected={item.code === country} onPress={() => chooseCountry(item.code)}/>}/>;
+  else if (tab === 'genres') body = <FlatList data={tagMatches} keyExtractor={x => x.value} ListHeaderComponent={header} contentContainerStyle={{paddingHorizontal: 20, paddingBottom: 24}} keyboardShouldPersistTaps="handled"
+    ListEmptyComponent={tags.isPending ? <Loading/> : tags.isError ? <Message title="No pudimos cargar los géneros" body={tags.error.message} retry={() => tags.refetch()}/> : <Muted>Ningún género coincide.</Muted>}
+    renderItem={({item}) => <FacetRow icon="musical-notes-outline" label={item.label} detail={`${formatCount(item.count)} emisoras`} selected={item.value === tag} onPress={() => chooseTag(item.value)}/>}/>;
+  else if (tab === 'places') body = <FlatList data={country ? placeMatches : []} keyExtractor={x => x.name} ListHeaderComponent={header} contentContainerStyle={{paddingHorizontal: 20, paddingBottom: 24}} keyboardShouldPersistTaps="handled"
+    ListEmptyComponent={!country ? <EmptyState icon="business-outline" title="Elige primero un país" body="Las ciudades y regiones vienen de Radio Browser y se agrupan por país."><Chip label="Ver países" selected onPress={() => setTab('countries')}/></EmptyState>
+      : places.isPending ? <Loading/> : places.isError ? <Message title="No pudimos cargar las ciudades" body={places.error.message} retry={() => places.refetch()}/> : <Muted>No hay ciudades registradas para {countryName}.</Muted>}
+    renderItem={({item}) => <FacetRow icon="location-outline" label={item.name} detail={`${formatCount(item.count)} emisoras`} selected={item.name === region} onPress={() => choosePlace(item.name)}/>}/>;
+  else body = <FlatList data={q ? feed.items.slice(0, 6) : []} keyExtractor={s => s.id} contentContainerStyle={{paddingHorizontal: 20, paddingBottom: 24}} keyboardShouldPersistTaps="handled"
+    ListHeaderComponent={<>{header}{q ? <SectionTitle title="Emisoras" action={feed.items.length > 6 ? 'Ver todas' : undefined} onPress={() => setTab('stations')}/> : null}</>}
+    renderItem={({item}) => <StationRow station={item}/>}
+    ListEmptyComponent={q ? (feed.isPending ? <Loading/> : feed.isError ? <Message title="No pudimos buscar" body={feed.error.message} retry={() => feed.refetch()}/> : <Muted style={{paddingVertical: 8}}>Ninguna emisora se llama así. Mira países y géneros abajo.</Muted>) : null}
+    ListFooterComponent={<View style={{gap: 14, paddingTop: 14}}>
+      {(!q || countryMatches.length > 0) && <SectionTitle title="Países" action="Ver todos" onPress={() => setTab('countries')}/>}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap: 14}}>
+        {(q ? countryMatches : [...(countries.data ?? [])].sort((a, b) => b.count - a.count)).slice(0, 12).map(x => <Pressable key={x.code} accessibilityRole="button" accessibilityLabel={x.name} onPress={() => chooseCountry(x.code)} style={{width: 72, alignItems: 'center', gap: 6}}>
+          <View style={{width: 58, height: 58, borderRadius: 29, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: c.border}}><Text style={{fontSize: 30}}>{flag(x.code)}</Text></View>
+          <Muted numberOfLines={2} style={{fontSize: 11, lineHeight: 14, textAlign: 'center', color: c.text}}>{x.name}</Muted>
+        </Pressable>)}
+        {countries.isPending && <Loading rows={1}/>}
+      </ScrollView>
+      {(!q || tagMatches.length > 0) && <SectionTitle title="Géneros" action="Ver todos" onPress={() => setTab('genres')}/>}
+      <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8}}>{tagMatches.slice(0, 14).map(t => <Chip key={t.value} label={t.label} onPress={() => chooseTag(t.value)}/>)}</View>
+    </View>}/>;
+
+  return <View style={{flex: 1, backgroundColor: c.bg}}>
+    <ScreenHeader title="Buscar" subtitle="Encuentra lo que te gusta" back/>
+    {body}
+    {languagePicker}
+  </View>;
+}
+
+function FacetRow({label, detail, leading, icon, selected, onPress}: {label: string; detail: string; leading?: string; icon?: React.ComponentProps<typeof Ionicons>['name']; selected: boolean; onPress: () => void}) {
+  const c = useTheme();
+  return <Pressable accessibilityRole="button" accessibilityState={{selected}} onPress={onPress} style={({pressed}) => ({minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderColor: c.border, opacity: pressed ? .6 : 1})}>
+    {leading ? <Text style={{fontSize: 24}}>{leading}</Text> : <Ionicons name={icon!} size={22} color={c.primaryText}/>}
+    <Label numberOfLines={1} style={{flex: 1, fontWeight: selected ? '700' : '500'}}>{label}</Label><Muted>{detail}</Muted>
+    <Ionicons name={selected ? 'checkmark-circle' : 'chevron-forward'} size={18} color={selected ? c.primaryText : c.muted}/>
+  </Pressable>;
 }

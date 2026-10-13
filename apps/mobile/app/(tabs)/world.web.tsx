@@ -1,48 +1,85 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, ScrollView } from 'react-native';
-import { Map as BrowserMap, NavigationControl, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl';
+import { View } from 'react-native';
+import { Map as BrowserMap, NavigationControl, setWorkerUrl, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useStations } from '../../src/catalog';
 import { useTheme } from '../../src/theme';
-import { Label, Button, StationRow, Loading, Message } from '../../src/ui';
-import type { Station } from '../../src/types';
+import { Muted, ScreenHeader } from '../../src/ui';
+import { WorldPanel, clusterColor, clusterRadius, useWorldExplorer, type Bounds } from '../../src/world';
+import { useMapStyle } from '../../src/map-style';
 
 export default function WorldWeb() {
- const c=useTheme(); const [country,setCountry]=useState(''); const [selected,setSelected]=useState<Station|null>(null);
- const [error,setError]=useState(''); const catalog=useStations({country});
- const container=useRef<HTMLDivElement>(null); const map=useRef<BrowserMap|null>(null);
- const stations=useRef<Station[]>([]);
- useEffect(()=>{stations.current=catalog.data?.items??[];},[catalog.data]);
- useEffect(()=>{
-  if(!container.current)return;
-  setWorkerUrl('/vendor/maplibre-gl-worker.mjs');
-  let instance:BrowserMap;
-  try { instance=new BrowserMap({container:container.current,style:process.env.EXPO_PUBLIC_MAP_STYLE??'https://demotiles.maplibre.org/style.json',center:[0,15],zoom:1}); }
-  // MapLibre can fail synchronously when the browser has no WebGL context.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  catch {setError('No se pudo iniciar el mapa en este navegador. Puedes explorar la lista.');return;}
-  map.current=instance;
-  instance.addControl(new NavigationControl(),'top-right');
-  instance.on('load',()=>{
-   instance.addSource('stations',{type:'geojson',data:features(stations.current),cluster:true,clusterRadius:50});
-   instance.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-color':'#29D3CF','circle-radius':['case',['has','point_count'],18,8],'circle-stroke-color':'#172644','circle-stroke-width':2}});
-   instance.addLayer({id:'counts',type:'symbol',source:'stations',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#0B1326'}});
-  });
-  instance.on('click','stations',async event=>{
-   const feature=event.features?.[0]; if(!feature||feature.geometry.type!=='Point')return;
-   if(feature.properties?.cluster){const zoom=await (instance.getSource('stations') as GeoJSONSource).getClusterExpansionZoom(Number(feature.properties.cluster_id));instance.easeTo({center:feature.geometry.coordinates as [number,number],zoom});}
-   else setSelected(stations.current.find(s=>s.id===feature.properties?.id)??null);
-  });
-  instance.on('error',()=>setError('Algunas capas del mapa no se pudieron cargar. La lista sigue disponible.'));
-  const observer=new ResizeObserver(()=>instance.resize());observer.observe(container.current);
-  return ()=>{observer.disconnect();instance.remove();map.current=null;};
- },[]);
- useEffect(()=>{(map.current?.getSource('stations') as GeoJSONSource|undefined)?.setData(features(catalog.data?.items??[]));},[catalog.data]);
- return <View style={{flex:1,backgroundColor:c.bg}}><View style={{padding:16,gap:12}}><Label style={{fontSize:26,fontWeight:'800'}}>El mundo, en directo.</Label><ScrollView horizontal contentContainerStyle={{gap:8}}>{[['','Mundo'],['PE','Perú'],['JP','Japón'],['US','EE. UU.'],['ES','España'],['BR','Brasil']].map(([code,name])=><Button key={code} title={name} secondary={country!==code} onPress={()=>{setCountry(code);setSelected(null);}}/>)}</ScrollView></View>
- <div ref={container} aria-label="Mapa de emisoras" style={{flex:1,minHeight:240,width:'100%'}}/>
- <View style={{backgroundColor:c.surface,padding:20,borderTopLeftRadius:28,borderTopRightRadius:28,maxHeight:250,gap:8}}><Label style={{fontWeight:'800'}}>{country||'El mundo'} · Emisoras</Label><Label style={{fontSize:11,lineHeight:16,color:c.muted}}>Coordenadas del catálogo; no representan transmisores verificados. Hasta 30 resultados.</Label>{!!error&&<Label style={{fontSize:12,color:c.live}}>{error}</Label>}
- {catalog.isPending?<Loading/>:catalog.isError?<Message title="Catálogo no disponible" body={catalog.error.message} retry={()=>catalog.refetch()}/>:selected?<StationRow station={selected}/>:<ScrollView>{catalog.data?.items.map(s=><StationRow key={s.id} station={s}/>)}</ScrollView>}</View></View>;
-}
-function features(stations:Station[]):GeoJSON.FeatureCollection<GeoJSON.Point> {
- return {type:'FeatureCollection',features:stations.filter(s=>s.latitude!==null&&s.longitude!==null).map(s=>({type:'Feature',id:s.id,properties:{id:s.id},geometry:{type:'Point',coordinates:[s.longitude!,s.latitude!]}}))};
+  const c = useTheme(); const explorer = useWorldExplorer();
+  const [error, setError] = useState('');
+  const container = useRef<HTMLDivElement>(null);
+  const map = useRef<BrowserMap | null>(null);
+  const latest = useRef(explorer);
+  useEffect(() => {latest.current = explorer;});
+  const centered = useRef(false);
+  const style = useMapStyle(c.isDark);
+  const fit = (bounds: Bounds | null) => {if (bounds) map.current?.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: 40, duration: 900});};
+
+  useEffect(() => {
+    if (!container.current || !style) return;
+    setWorkerUrl('/vendor/maplibre-gl-worker.mjs');
+    let instance: BrowserMap;
+    try {instance = new BrowserMap({container: container.current, style, center: [-30, 10], zoom: 1, attributionControl: {compact: true}});}
+    // MapLibre can fail synchronously when the browser has no WebGL context.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    catch {setError('No se pudo iniciar el mapa en este navegador. Puedes explorar con la lista.'); return;}
+    map.current = instance;
+    instance.addControl(new NavigationControl({showCompass: false}), 'top-right');
+    const report = () => {
+      const b = instance.getBounds();
+      latest.current.onViewport([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], instance.getZoom());
+    };
+    instance.on('load', () => {
+      instance.addSource('stations', {type: 'geojson', data: latest.current.features});
+      instance.addLayer({id: 'clusters', type: 'circle', source: 'stations', filter: ['>', ['get', 'count'], 1], paint: {'circle-color': clusterColor as never, 'circle-radius': clusterRadius as never, 'circle-opacity': 0.92, 'circle-stroke-width': 3, 'circle-stroke-color': '#FFFFFF'}});
+      instance.addLayer({id: 'cluster-count', type: 'symbol', source: 'stations', filter: ['>', ['get', 'count'], 1], layout: {'text-field': ['get', 'label'], 'text-size': 12, 'text-font': ['Noto Sans Bold'], 'text-allow-overlap': true}, paint: {'text-color': '#FFFFFF'}});
+      instance.addLayer({id: 'points', type: 'circle', source: 'stations', filter: ['==', ['get', 'count'], 1], paint: {'circle-color': '#0E9AA8', 'circle-radius': 7, 'circle-stroke-width': 2, 'circle-stroke-color': '#FFFFFF'}});
+      instance.addLayer({id: 'selected', type: 'circle', source: 'stations', filter: ['==', ['get', 'stationId'], '-'], paint: {'circle-color': '#E5384F', 'circle-radius': 11, 'circle-stroke-width': 3, 'circle-stroke-color': '#FFFFFF'}});
+      report();
+      const {countries, preferred} = latest.current;
+      const bounds = countries.data?.find(x => x.code === preferred)?.bounds;
+      if (!centered.current && bounds) {centered.current = true; instance.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: 40, duration: 900});}
+    });
+    instance.on('moveend', report);
+    const onPoint = (event: MapMouseEvent & {features?: GeoJSON.Feature[]}) => {
+      const feature = event.features?.[0];
+      if (!feature || feature.geometry.type !== 'Point') return;
+      const id = feature.properties?.stationId as string | undefined;
+      if (id) latest.current.select(id);
+      else instance.easeTo({center: feature.geometry.coordinates as [number, number], zoom: Math.min(instance.getZoom() + 2.5, 14)});
+    };
+    for (const layer of ['clusters', 'points']) {
+      instance.on('click', layer, onPoint);
+      instance.on('mouseenter', layer, () => {instance.getCanvas().style.cursor = 'pointer';});
+      instance.on('mouseleave', layer, () => {instance.getCanvas().style.cursor = '';});
+    }
+    instance.on('error', () => setError('Algunas capas del mapa no se pudieron cargar. La lista sigue disponible.'));
+    const observer = new ResizeObserver(() => instance.resize()); observer.observe(container.current);
+    return () => {observer.disconnect(); instance.remove(); map.current = null;};
+  }, [style]);
+
+  useEffect(() => {(map.current?.getSource('stations') as GeoJSONSource | undefined)?.setData(explorer.features);}, [explorer.features]);
+  useEffect(() => {if (map.current?.getLayer('selected')) map.current.setFilter('selected', ['==', ['get', 'stationId'], explorer.selectedId ?? '-']);}, [explorer.selectedId]);
+  // Start on the preferred country (from settings or time zone, never GPS) once both the map and the bounds are ready.
+  useEffect(() => {
+    if (centered.current || !explorer.countries.data || !map.current?.loaded()) return;
+    centered.current = true;
+    fit(explorer.countries.data.find(x => x.code === explorer.preferred)?.bounds ?? null);
+  }, [explorer.countries.data, explorer.preferred]);
+
+  return <View style={{flex: 1, backgroundColor: c.bg}}>
+    <ScreenHeader title="Explorar el mundo" subtitle="Toca un grupo para acercarte o una emisora para escucharla"/>
+    <div ref={container} aria-label="Mapa de emisoras" style={{flex: 1, minHeight: 220, width: '100%'}}/>
+    {!!error && <Muted style={{color: c.live, paddingHorizontal: 20, paddingTop: 4}}>{error}</Muted>}
+    <View style={{flex: 1.15}}>
+      <WorldPanel explorer={explorer}
+        onFocusStation={s => {if (s.latitude !== null && s.longitude !== null) map.current?.flyTo({center: [s.longitude, s.latitude], zoom: Math.max(map.current.getZoom(), 7)});}}
+        onFocusCountry={fit}
+        onFocusPlace={(lat, lon) => map.current?.flyTo({center: [lon, lat], zoom: 8})}
+        onReset={() => map.current?.flyTo({center: [-30, 10], zoom: 1})}/>
+    </View>
+  </View>;
 }

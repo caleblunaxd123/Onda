@@ -51,5 +51,10 @@
     "preweb": "node scripts/prepare-web.cjs",
     "export:web": "node scripts/prepare-web.cjs && expo export --platform web"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "xcode": {
+      "uuid": "^11.1.1"
+    }
+  }
 }

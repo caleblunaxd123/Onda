@@ -3,6 +3,19 @@ on: [push, pull_request]
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      # Real SQL Server for the integration tests (each test creates and drops its own database).
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_SQL_PASSWORD || 'Ci_Only_Onda_2026!' }}
+        ports: ['1433:1433']
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"
+          --health-interval 10s --health-timeout 5s --health-retries 12
+    env:
+      ONDA_TEST_SQL: Server=localhost,1433;User Id=sa;Password=${{ secrets.CI_SQL_PASSWORD || 'Ci_Only_Onda_2026!' }};TrustServerCertificate=true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

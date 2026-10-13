@@ -64,3 +64,31 @@ it('clears all library data including collections while keeping preferences',()=
  expect(useLibrary.getState().collections).toEqual([]);
  expect(useLibrary.getState().country).toBe('JP');expect(useLibrary.getState().theme).toBe('light');
 });
+it('refreshes saved snapshots from the catalog without removing or reordering stations',()=>{
+ const id=useLibrary.getState().createCollection('Viajes')!;
+ useLibrary.getState().toggle(station);useLibrary.getState().toggle({...station,id:'gone'});
+ useLibrary.getState().remember(station);useLibrary.getState().addToCollection(id,station);
+ useLibrary.getState().refreshStations([{...station,name:'Fixture renovada',streams:['https://example.com/alt']}]);
+ const s=useLibrary.getState();
+ expect(s.favorites.map(x=>x.id)).toEqual(['gone','a']);
+ expect(s.favorites[1].name).toBe('Fixture renovada');
+ expect(s.history[0].streams).toEqual(['https://example.com/alt']);
+ expect(s.collections[0].stations[0].name).toBe('Fixture renovada');
+ expect(s.refreshedAt).toBeGreaterThan(0);
+});
+it('does not show onboarding again to people upgrading with an existing library',async()=>{
+ storage.getItem.mockResolvedValueOnce(JSON.stringify({state:{favorites:[station],history:[],searches:[],country:'JP',theme:'dark'},version:0}));
+ await useLibrary.persist.rehydrate();
+ expect(useLibrary.getState().onboarded).toBe(true);
+ expect(useLibrary.getState().country).toBe('JP');
+ storage.getItem.mockResolvedValueOnce(JSON.stringify({state:{favorites:[],history:[],searches:[],country:'PE',theme:'system'},version:0}));
+ useLibrary.setState({onboarded:false});await useLibrary.persist.rehydrate();
+ expect(useLibrary.getState().onboarded).toBe(false);
+});
+it('follows the device country automatically until the person chooses one',()=>{
+ useLibrary.setState({country:'PE',countryMode:'auto'});
+ useLibrary.getState().syncDeviceCountry('CL');expect(useLibrary.getState().country).toBe('CL');
+ useLibrary.getState().setCountry('JP');expect(useLibrary.getState().countryMode).toBe('manual');
+ useLibrary.getState().syncDeviceCountry('PE');expect(useLibrary.getState().country).toBe('JP');
+ useLibrary.getState().followDeviceCountry('PE');expect(useLibrary.getState()).toMatchObject({country:'PE',countryMode:'auto'});
+});

@@ -1,5 +1,76 @@
 # Progreso — 2026-10-12
 
+## Continuación: catálogo, exploración, reproducción y rediseño
+Base: commit 6e5ee85 (colecciones de la sesión anterior, confirmadas por separado para conservarlas).
+
+### Catálogo y paginación (prioridad 1)
+- `/api/v1/stations` devuelve `items`, `nextCursor`, `hasMore`, `source`, `total` (solo recuento real) y `stale`.
+- Modo en vivo: `FilteredPaginator` avanza por registros consumidos de Radio Browser; una página filtrada vacía con
+  `hasMore` no termina la lista; presupuesto de 4 solicitudes y 10 s; cancelación propagada.
+- Cliente: `useStationFeed` acumula sin duplicados y en orden, sigue hasta 3 páginas vacías, tope de 600 en memoria,
+  timeout propio, estados de carga/error/reintento y pie «Cargar más». Mundo y Radar usan carga progresiva.
+- Solo HTTPS; si `url_resolved` es HTTP y `url` oficial es HTTPS, se usa la oficial.
+
+### Catálogo persistente (prioridad 2)
+- Migración `RelationalCatalog` (convierte el JSON anterior; `Down` lo reconstruye). Tablas Stations, StationTags,
+  StationLanguages, SyncRuns, StationReports; índices de búsqueda, país, variantes y geográficos.
+- Sincronización completa reanudable, por lotes, con bloqueo SQL y respaldo fila a fila. Primera ejecución real:
+  **92.022 registros procesados, 67.991 emisoras** (43.923 HTTPS, 14.841 geolocalizadas, 9.046 variantes no principales,
+  6.547 «inestables», 0 «caídas» con una sola observación). Se probó la reanudación real tras detener la API.
+- Facetas reales: 242 países, ciudades por país, 200 idiomas y 200 géneros con etiquetas en español.
+- Respaldo a SQL cuando falla la fuente; atribución a Radio Browser en Ajustes, mapa y reproductor.
+
+### Explorar el mundo (prioridad 3)
+- Consulta por área visible con debounce de 400 ms y cancelación; clusters agregados en SQL con recuentos exactos;
+  zoom al tocar un grupo; selección sincronizada mapa↔lista; selector de país (límites reales) y ciudad;
+  «Sin ubicación» para emisoras sin coordenadas. Android (MapLibre RN) y web (MapLibre GL JS) comparten lógica.
+- Mapa OpenFreeMap con etiquetas en español; centrado inicial en el país de la persona, sin GPS.
+
+### Búsqueda y descubrimiento (prioridad 4)
+- Búsqueda paginada por nombre/ciudad con filtros combinables de país, idioma, género y ciudad; pestañas
+  Todo/Emisoras/Países/Géneros/Ciudades; chips activos, «Limpiar filtros», búsquedas recientes, estados vacíos útiles.
+- Ranking `Recommendations` conectado: perfil local (favoritos, colecciones, historial), semilla diaria, muestra de la
+  cola larga y diversificación. Inicio y Radar priorizan el país detectado (zona horaria) con respaldo mundial.
+- Onboarding de país y géneros. Sin oyentes, canciones, cuentas ni IA simulados.
+
+### Reproducción y calidad (prioridad 5)
+- Fuentes alternativas (principal + variantes HTTPS), 2 intentos por fuente (4 con una sola), máximo 6, reintento manual.
+- Un único stream al cambiar rápido (probado con 20 cambios). Estados «Conectando…», «Cargando audio…», «En vivo».
+- Temporizador comprobado también en eventos nativos (corrige un fallo real detectado por las pruebas: el mismo
+  evento volvía a marcar «reproduciendo»). Lockscreen con `isLiveStream` y limpieza de controles al liberar.
+- Reportes de problemas persistidos en SQL con alcance explicado en la app; probado desde el emulador.
+- Favoritos y colecciones se refrescan con datos del catálogo una vez al día sin perder emisoras.
+
+### Diseño
+- Rediseño completo según la referencia: cabeceras uniformes, tarjeta destacada con degradado, ánimos en pastel,
+  filas con estado real, hojas inferiores, miniplayer flotante, reproductor inmersivo con ondas y ecualizador
+  decorativos (solo con reproducción real; respetan «reducir movimiento»), temas claro/oscuro.
+- Saludo según hora local; el emulador estaba en GMT y se ajustó a America/Lima.
+
+### Verificado realmente
+| Control | Resultado |
+|---|---|
+| Backend `dotnet test` (Release, SQL Server Express) | 62/62 aprobadas (10 de integración SQL) |
+| Móvil TypeScript, ESLint, Vitest | Correcto, sin avisos; 36/36 aprobadas |
+| Migraciones en `.\SQLEXPRESS` base `Onda` | Aplicadas; readiness 200 |
+| smoke-api.ps1 -Report | PASS: modo catálogo, 38.788 reproducibles, Perú total 310, 4 páginas sin duplicados, celdas = total |
+| Emulador Android (Development Build existente) | Pantallas verificadas con capturas en docs/screenshots |
+| Web (navegador integrado) | Mapa, clusters, zoom y lista verificados |
+| NuGet vulnerable | Ninguno |
+| npm audit | 22 avisos (antes 29); ver DEPENDENCIES.md |
+
+No verificado: audio audible, Bluetooth, llamadas, batería, memoria, background prolongado, TalkBack, dispositivo físico.
+
+### Pendiente o bloqueado
+- Pruebas físicas de TESTING.md; proveedor de mapas con licencia para producción; búsqueda de texto completo.
+- Cuentas, sincronización de biblioteca, salas e IA no iniciadas (siguen las condiciones del roadmap).
+- Revisión de reportes: solo se almacenan; falta herramienta interna de moderación.
+- Avisos npm sin parche compatible con SDK 57.
+
+---
+Historial anterior:
+
+
 ## Continuación: biblioteca y emulador Android
 - Repositorio descargado desde origin/main, commit base 7baa666.
 - Biblioteca con Favoritos, Historial y Colecciones, búsqueda local y estados vacíos.

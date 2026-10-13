@@ -1,25 +1,78 @@
-import { useRef, useState } from 'react';
-import { FlatList, Share, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Share, View, type ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '../../src/icons';
-import { useStations } from '../../src/catalog';
-import { player, usePlayer } from '../../src/player';
+import { useCountries, useStationFeed } from '../../src/catalog';
+import { daySeed, listeningProfile } from '../../src/discovery';
+import { useLibrary } from '../../src/library';
+import { isActive, player, usePlayer } from '../../src/player';
 import { useTheme } from '../../src/theme';
-import { Label, Heading, Artwork, Favorite, Loading, Message, IconButton } from '../../src/ui';
+import { Label, Muted, Artwork, Chip, Favorite, Loading, Message, IconButton, ScreenHeader, LiveBadge, PlayButton, flag, tagLabel, cardStyle, stateLabels } from '../../src/ui';
+
 export default function Radar() {
- const c=useTheme();const result=useStations();const playback=usePlayer();const [height,setHeight]=useState(500);const enabled=useRef(false);
- return <View style={{flex:1,backgroundColor:c.bg}} onLayout={e=>setHeight(e.nativeEvent.layout.height)}>
- {result.isPending?<Loading/>:result.isError?<Message title="Radar sin señal" body={result.error.message} retry={()=>result.refetch()}/>:!result.data.items.length?<Message title="Sin emisoras disponibles" body="Intenta otra búsqueda."/>:<FlatList data={result.data.items} pagingEnabled keyExtractor={s=>s.id} showsVerticalScrollIndicator={false} onMomentumScrollEnd={e=>{const index=Math.round(e.nativeEvent.contentOffset.y/height);const s=result.data.items[index];if(s&&enabled.current)player.select(s);}} renderItem={({item,index})=>{
- const active=playback.station?.id===item.id&&['playing','connecting','buffering'].includes(playback.state);
- return <View style={{height,paddingHorizontal:24,paddingTop:22,paddingBottom:12,alignItems:'center',gap:14}}>
- <Label style={{fontSize:11,letterSpacing:3,color:c.muted}}>RADIO RADAR · {String(index+1).padStart(2,'0')}</Label>
- <View style={{alignSelf:'stretch',height:Math.min(245,height*.4),marginTop:15}}>
- <View style={{position:'absolute',left:24,right:24,top:-14,height:80,borderRadius:22,backgroundColor:c.accent+'38'}}/><View style={{position:'absolute',left:10,right:10,top:-7,height:80,borderRadius:22,backgroundColor:c.accent+'70'}}/>
- <View style={{flex:1,backgroundColor:c.surface,borderRadius:22,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:c.border}}><Artwork station={item} size={Math.min(190,height*.31)}/></View></View>
- <View style={{alignItems:'center',gap:4}}><View style={{backgroundColor:c.surface,borderRadius:8,paddingHorizontal:10,paddingVertical:2}}><Label style={{fontSize:11,fontWeight:'700',color:c.primary}}>{item.country.toUpperCase()}</Label></View><Heading>{item.name}</Heading><Label style={{fontSize:13,color:c.muted}}>{item.tags.slice(0,3).join(' · ')||item.language}</Label></View>
- <View style={{flexDirection:'row',alignItems:'center',gap:30}}><Favorite station={item}/><IconButton large icon={active?'pause':'play'} label={active?'Pausar':'Sintonizar '+item.name} onPress={()=>{enabled.current=true;if(active)player.toggle();else player.select(item);}}/><IconButton icon="share-social-outline" label="Compartir" onPress={()=>{void Share.share({message:item.name+' — '+item.streamUrl}).catch(()=>{});}}/></View>
- <View style={{alignItems:'center',gap:2}}><Label onPress={()=>{if(playback.station?.id!==item.id)player.select(item);router.push('/player');}} accessibilityRole="button" style={{fontSize:12,color:c.primary,padding:10}}>Información de la emisora</Label><Label style={{fontSize:11,color:c.muted}}>Desliza para la siguiente emisora</Label><Ionicons name="chevron-down" size={20} color={c.muted}/></View>
- </View>;
- }}/>}
- </View>;
+  const c = useTheme(); const playback = usePlayer(); const [height, setHeight] = useState(0);
+  const [seed, setSeed] = useState(daySeed());
+  const [autoTune, setAutoTune] = useState(false);
+  const library = useLibrary();
+  const profile = useMemo(() => listeningProfile(library.favorites, library.history, library.collections), [library.favorites, library.history, library.collections]);
+  const [scope, setScope] = useState<'country' | 'world'>('country');
+  const countries = useCountries();
+  const countryName = countries.data?.find(x => x.code === library.country)?.name ?? library.country;
+  const feed = useStationFeed({order: 'discover', seed, country: scope === 'country' ? library.country : undefined,
+    boostTags: [...new Set([...profile.tags, ...library.likedTags])].slice(0, 5), boostCountries: [library.country, ...profile.countries], exclude: profile.recent}, {limit: 20});
+  return <View style={{flex: 1, backgroundColor: c.bg}}>
+    <ScreenHeader title="Radio Radar" subtitle={autoTune ? 'Sintonía automática: suena al deslizar' : 'Desliza y descubre nuevas emisoras'}>
+      <IconButton icon={autoTune ? 'radio' : 'radio-outline'} tint={autoTune ? c.primaryText : undefined} label={autoTune ? 'Desactivar sintonía automática' : 'Activar sintonía automática al deslizar'} onPress={() => setAutoTune(!autoTune)}/>
+      <IconButton icon="shuffle" label="Barajar el radar" onPress={() => setSeed(Math.floor(Math.random() * 1e9))}/>
+    </ScreenHeader>
+    <View style={{flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 4}}>
+      <Chip label={`${flag(library.country)} ${countryName}`} selected={scope === 'country'} onPress={() => setScope('country')}/>
+      <Chip label="🌍 Todo el mundo" selected={scope === 'world'} onPress={() => setScope('world')}/>
+    </View>
+    <View style={{flex: 1}} onLayout={e => setHeight(e.nativeEvent.layout.height)}>
+      {feed.isPending || !height ? <View style={{padding: 20}}><Loading rows={4}/></View> :
+        feed.isError ? <View style={{padding: 20}}><Message title="Radar sin señal" body={feed.error.message} retry={() => feed.refetch()}/></View> :
+        !feed.items.length ? <View style={{padding: 20}}><Message title="Sin emisoras disponibles" body={scope === 'country' ? `No encontramos más emisoras en ${countryName}. Prueba «Todo el mundo».` : 'Prueba a barajar el radar.'} icon="radio-outline"/></View> :
+        <FlatList data={feed.items} pagingEnabled keyExtractor={s => s.id} showsVerticalScrollIndicator={false} getItemLayout={(_, index) => ({length: height, offset: height * index, index})}
+          onEndReachedThreshold={3} onEndReached={feed.loadMore} windowSize={3} initialNumToRender={2} maxToRenderPerBatch={2}
+          onMomentumScrollEnd={e => {
+            const station = feed.items[Math.round(e.nativeEvent.contentOffset.y / height)];
+            // Streams are never preloaded; with auto-tune on, only the card that comes to rest starts playing.
+            if (station && autoTune && playback.station?.id !== station.id) player.select(station);
+          }}
+          ListFooterComponent={feed.isFetchingNextPage ? <View style={{height: 80, justifyContent: 'center'}}><ActivityIndicator color={c.primary}/></View> : null}
+          renderItem={({item, index}) => {
+            const current = playback.station?.id === item.id; const active = current && isActive(playback.state);
+            const art = Math.min(220, height * .34);
+            return <View style={{height, paddingHorizontal: 24, paddingTop: 18, paddingBottom: 12, alignItems: 'center', gap: 14}}>
+              <View style={{alignSelf: 'stretch', height: art + 64, marginTop: 14}}>
+                <View style={{position: 'absolute', left: 36, right: 36, top: -16, height: 80, borderRadius: 26, backgroundColor: c.accent + '30'}}/>
+                <View style={{position: 'absolute', left: 18, right: 18, top: -8, height: 80, borderRadius: 26, backgroundColor: c.accent + '55'}}/>
+                <View style={[cardStyle(c), {flex: 1, borderRadius: 26, alignItems: 'center', justifyContent: 'center', paddingTop: 22, overflow: 'hidden', backgroundColor: c.featuredFallback, experimental_backgroundImage: c.featured} as ViewStyle]}>
+                  <Artwork station={item} size={art}/>
+                  <Label style={{position: 'absolute', top: 12, left: 16, fontSize: 11, letterSpacing: 2, color: '#D7DEF2', fontWeight: '700'}}>RADAR · {String(index + 1).padStart(2, '0')}</Label>
+                </View>
+              </View>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: c.surface, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: c.border}}>
+                <Label style={{fontSize: 14}}>{flag(item.countryCode)}</Label><Label style={{fontSize: 12, fontWeight: '700', color: c.primaryText, letterSpacing: 1}}>{(item.country || 'Mundo').toUpperCase()}</Label>
+              </View>
+              <View style={{alignItems: 'center', gap: 4}}>
+                <Label numberOfLines={2} style={{fontSize: 26, lineHeight: 32, fontWeight: '800', textAlign: 'center'}}>{item.name}</Label>
+                <Muted numberOfLines={1} style={{fontSize: 14}}>{[item.region, ...item.tags.slice(0, 2).map(tagLabel)].filter(Boolean).join(' · ') || item.language}</Muted>
+              </View>
+              <View style={{minHeight: 26, justifyContent: 'center'}}>{current && playback.state === 'playing' ? <LiveBadge/> : current ? <Muted style={{color: playback.state === 'error' ? c.live : c.muted}}>{playback.error ?? stateLabels[playback.state]}</Muted> : null}</View>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 28}}>
+                <Favorite station={item} size={26}/>
+                <PlayButton size={76} active={active} label={active ? 'Pausar ' + item.name : 'Sintonizar ' + item.name} onPress={() => current ? player.toggle() : player.select(item)}/>
+                <IconButton icon="share-social-outline" plain label={'Compartir ' + item.name} onPress={() => {void Share.share({message: `${item.name} — ${item.homepage ?? item.streamUrl}`}).catch(() => {});}}/>
+              </View>
+              <View style={{flex: 1}}/>
+              <View style={{alignItems: 'center', gap: 2}}>
+                <Label accessibilityRole="button" onPress={() => {if (!current) player.select(item); router.push('/player');}} style={{fontSize: 13, color: c.primaryText, fontWeight: '600', padding: 8}}>Ver información de la emisora</Label>
+                <Ionicons name="chevron-up" size={18} color={c.muted}/><Muted style={{fontSize: 12}}>Desliza para la siguiente emisora</Muted>
+              </View>
+            </View>;
+          }}/>}
+    </View>
+  </View>;
 }

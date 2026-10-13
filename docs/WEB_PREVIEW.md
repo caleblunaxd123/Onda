@@ -9,7 +9,8 @@ Terminal 2: `npm --prefix apps/mobile run web -- --localhost`.
 Abrir http://localhost:8081. Para entrar desde otro dispositivo se necesita configuración adicional.
 
 La API permite CORS únicamente a localhost/127.0.0.1:8081, y solo en Development.
-SQL Server mantiene Encrypt=true y TrustServerCertificate=false en el script de vista web.
+SQL Server mantiene Encrypt=true. Con SQL Server Express local (certificado autofirmado) los scripts usan
+TrustServerCertificate=true; en un servidor con certificado válido, definir ConnectionStrings__Onda con false.
 El servidor web genera/copía worker, módulo compartido y fuente de iconos desde las dependencias
 instaladas mediante scripts/prepare-web.cjs. No se suben node_modules ni copias generadas a Git.
 Estas dependencias conservan sus licencias originales (MapLibre BSD-3, Ionicons MIT).
@@ -17,6 +18,9 @@ Estas dependencias conservan sus licencias originales (MapLibre BSD-3, Ionicons 
 Audio comienza con una acción del usuario. Algunas radios/HLS pueden no funcionar en todos los
 navegadores por codecs o políticas del origen; no se retransmite audio desde el backend.
 Favoritos se guardan en almacenamiento local del navegador y no se sincronizan con el teléfono.
+El mapa web (world.web.tsx) comparte con Android la lógica de viewport, clusters del servidor, panel y selección
+(src/world.tsx). Verificado en el navegador integrado: centrado en el país, clusters, zoom al tocar y lista sincronizada.
+En Windows las banderas emoji se muestran como letras (limitación de las fuentes del sistema).
 El temporizador, Bluetooth, notificación y segundo plano deben validarse en Android real.
 
 Exportación web: `npm --prefix apps/mobile run export:web`.

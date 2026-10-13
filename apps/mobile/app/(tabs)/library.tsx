@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useLibrary } from '../../src/library';
 import { useTheme } from '../../src/theme';
 import { Ionicons } from '../../src/icons';
-import { Page, Heading, Label, Button, StationRow, Artwork, Card, IconButton, SectionTitle } from '../../src/ui';
+import { Page, Heading, Label, Button, StationRow, Artwork, Card, IconButton, SectionTitle, ScreenHeader, cardStyle } from '../../src/ui';
 
 type Section = 'favorites' | 'history' | 'collections';
 const sections = [{id: 'favorites', label: 'Favoritos'}, {id: 'history', label: 'Historial'}, {id: 'collections', label: 'Colecciones'}] as const;
@@ -36,11 +36,11 @@ export default function Library() {
     }
     Keyboard.dismiss(); setEditing(false); setQuery('');
   };
-  return <Page>
-    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}><Heading>Tu biblioteca</Heading><IconButton icon="add" label="Crear colección" onPress={() => {setSection('collections'); setSelectedId(null); setName(''); setError(''); setEditing(true); setDeleting(false);}}/></View>
-    <Label style={{color: c.muted, fontSize: 14, marginTop: -10}}>Las radios que hacen tu día.</Label>
-    <View accessibilityRole="tablist" style={{flexDirection: 'row', padding: 4, borderRadius: 99, backgroundColor: c.surface, gap: 4}}>
-      {sections.map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected: section === item.id}} onPress={() => {setSection(item.id); setSelectedId(null); setQuery(''); setEditing(false); setDeleting(false);}} style={{flex: 1, minHeight: 44, borderRadius: 99, alignItems: 'center', justifyContent: 'center', backgroundColor: section === item.id ? c.primary : 'transparent'}}><Label style={{fontSize: 12, fontWeight: '700', color: section === item.id ? c.bg : c.muted}}>{item.label}</Label></Pressable>)}
+  return <View style={{flex: 1, backgroundColor: c.bg}}>
+    <ScreenHeader title="Tu biblioteca" subtitle="Las radios que hacen tu día"><IconButton icon="add" label="Crear colección" onPress={() => {setSection('collections'); setSelectedId(null); setName(''); setError(''); setEditing(true); setDeleting(false);}}/><IconButton icon="settings-outline" label="Ajustes" onPress={() => router.push('/settings')}/></ScreenHeader>
+    <Page>
+    <View accessibilityRole="tablist" style={{flexDirection: 'row', padding: 4, borderRadius: 99, backgroundColor: c.surface, gap: 4, borderWidth: 1, borderColor: c.border, marginTop: -6}}>
+      {sections.map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected: section === item.id}} onPress={() => {setSection(item.id); setSelectedId(null); setQuery(''); setEditing(false); setDeleting(false);}} style={{flex: 1, minHeight: 44, borderRadius: 99, alignItems: 'center', justifyContent: 'center', backgroundColor: section === item.id ? c.primary : 'transparent'}}><Label style={{fontSize: 12, fontWeight: '700', color: section === item.id ? c.onPrimary : c.muted}}>{item.label}</Label></Pressable>)}
     </View>
     {selected && <View style={{gap: 12}}>
       <Pressable accessibilityRole="button" onPress={() => {setSelectedId(null); setQuery(''); setEditing(false); setDeleting(false);}} style={{flexDirection: 'row', gap: 6, alignItems: 'center', minHeight: 44}}><Ionicons name="chevron-back" size={20} color={c.primary}/><Label style={{color: c.primary, fontSize: 14}}>Todas las colecciones</Label></Pressable>
@@ -51,7 +51,7 @@ export default function Library() {
     {(source.length > 0 || (section === 'collections' && !selected && library.collections.length > 0)) && <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, backgroundColor: c.surface, paddingHorizontal: 14}}><Ionicons name="search" size={18} color={c.muted}/><TextInput accessibilityLabel="Buscar en tu biblioteca" placeholder="Buscar en tu biblioteca" placeholderTextColor={c.muted} value={query} onChangeText={setQuery} style={{flex: 1, minHeight: 48, color: c.text}}/>{query ? <IconButton icon="close" label="Limpiar búsqueda" onPress={() => setQuery('')}/> : null}</View>}
     {section === 'collections' && !selected ? <>
       <SectionTitle title={`${library.collections.length} ${library.collections.length === 1 ? 'colección' : 'colecciones'}`} action="Nueva" onPress={edit}/>
-      <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 12}}>{collections.map((item, index) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={'Abrir colección '+item.name} onPress={() => {setSelectedId(item.id); setQuery(''); setEditing(false); setDeleting(false);}} style={{width: '47%', flexGrow: 1, backgroundColor: c.surface, borderRadius: 20, padding: 16, gap: 12}}>
+      <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 12}}>{collections.map((item, index) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={'Abrir colección '+item.name} onPress={() => {setSelectedId(item.id); setQuery(''); setEditing(false); setDeleting(false);}} style={[cardStyle(c), {width: '47%', flexGrow: 1, padding: 14, gap: 10}]}>
         <View style={{height: 100, borderRadius: 16, backgroundColor: (index % 2 ? c.accent : c.primary)+'18', alignItems: 'center', justifyContent: 'center'}}>{item.stations.length ? <Artwork station={item.stations[0]} size={76}/> : <Ionicons name="albums-outline" size={42} color={index % 2 ? c.accent : c.primary}/>}</View><View><Label numberOfLines={2} style={{fontWeight: '800'}}>{item.name}</Label><Label style={{fontSize: 12, color: c.muted}}>{item.stations.length} {item.stations.length === 1 ? 'emisora' : 'emisoras'}</Label></View>
       </Pressable>)}</View>
       {collections.length === 0 && <Empty icon="albums-outline" title={needle ? 'No hay coincidencias' : 'Una colección para cada momento'} body={needle ? 'Prueba con otro nombre.' : 'Agrupa tus emisoras para trabajar, viajar o desconectar.'}>{!needle && <Button title="Crear mi primera colección" onPress={edit}/>}</Empty>}
@@ -61,7 +61,8 @@ export default function Library() {
       {rows.length === 0 && <Empty icon={section === 'history' ? 'time-outline' : section === 'favorites' ? 'heart-outline' : 'albums-outline'} title={needle ? 'No hay coincidencias' : selected ? 'Dale sonido a tu colección' : section === 'favorites' ? 'Aquí viven tus favoritas' : 'Tu viaje empieza con una radio'} body={needle ? 'Prueba con otra emisora, país o género.' : selected ? 'Usa el botón + de cualquier emisora para guardarla en esta colección.' : section === 'favorites' ? 'Toca el corazón de una emisora y vuelve a encontrarla aquí.' : 'Las emisoras aparecen cuando comienza su reproducción.'}>{!needle && <Button title="Descubrir emisoras" onPress={() => router.push('/search')}/>}</Empty>}
     </>}
     <View style={{flexDirection: 'row', gap: 6, justifyContent: 'center', alignItems: 'center', paddingTop: 12}}><Ionicons name="phone-portrait-outline" size={14} color={c.muted}/><Label style={{color: c.muted, fontSize: 11}}>Guardado en este dispositivo · Modo invitado</Label></View>
-  </Page>;
+    </Page>
+  </View>;
 }
 
 function Empty({icon, title, body, children}: {icon: React.ComponentProps<typeof Ionicons>['name']; title: string; body: string; children?: React.ReactNode}) {

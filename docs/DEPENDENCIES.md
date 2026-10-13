@@ -1,26 +1,19 @@
-# Auditoría de dependencias — 2026-10-12
+# Auditoría de dependencias — 2026-10-12 (actualizada)
 
-NuGet: sin paquetes vulnerables detectados por la auditoría ejecutada, incluidas transitivas.
-El template inicial traía Microsoft.OpenApi 2.0.0 vulnerable; se actualizó a 2.12.2
-y Microsoft.AspNetCore.OpenApi a 10.0.12.
+NuGet: `dotnet list backend/Onda.slnx package --vulnerable --include-transitive` → sin paquetes vulnerables.
+Nuevo paquete de pruebas: Xunit.SkippableFact 1.5.85 (omitir pruebas SQL cuando no hay servidor).
 
-npm audit después de npm audit fix: **29 paquetes señalados, 19 high y 10 moderate**.
-La mayoría son propagaciones de estas cuatro dependencias:
+npm: **22 avisos (19 high, 3 moderate)**, antes 29. Se resolvió la cadena de `uuid` (GHSA-w5hq-g745-h8pq) con un
+override acotado `"overrides": {"xcode": {"uuid": "^11.1.1"}}`: xcode usa `require('uuid').v4()` y uuid 11.1.1
+mantiene salida CommonJS; se verificó la resolución y la generación de UUID. `npx expo install --check`: sin conflictos.
 
-- braces <=3.0.3: GHSA-vfj7-8cjw-p6xm; versión latest observada 3.0.3. Afecta cadena Metro.
-- node-forge <=1.4.0: GHSA-86w9-cpqp-85rv; latest observada 1.4.0. Afecta herramientas/certificados Expo.
-- uuid <11.1.1: GHSA-w5hq-g745-h8pq; transitiva de xcode.
-- decode-uri-component <=0.4.2: GHSA-vcc3-ghjq-m6fr; transitiva de query-string/Expo Router.
+Pendientes, sin corrección compatible con Expo SDK 57:
+- braces ≤3.0.3 (GHSA-vfj7-8cjw-p6xm): no existe versión corregida publicada; cadena de Metro (herramienta de desarrollo).
+- node-forge ≤1.4.0 (GHSA-86w9-cpqp-85rv): no existe versión corregida; herramientas/certificados de Expo CLI.
+- decode-uri-component ≤0.4.2 (GHSA-vcc3-ghjq-m6fr): la corrección exige expo-router 58 (otro SDK); 0.5 es solo ESM.
+Los avisos «high» de react-native, reanimated, worklets, maplibre-react-native y expo son propagaciones de esas
+cadenas en herramientas de compilación; npm propone degradar a Expo 44 / RN 0.72 con `--force`, lo que rompería el SDK.
 
-No se ejecutó audit fix --force: propone degradar Expo a 44 y cambiar Router a otro SDK.
-decode-uri-component 0.5 cambia a ESM mientras la dependencia actual usa require, por lo que
-no se impuso un override sin compatibilidad demostrada. Tampoco se modificó node_modules manualmente.
-
-Estado: pendiente de solución compatible y revisión de exposición antes de distribuir una beta pública.
-No afirmar que la app está lista para producción ni que la auditoría está limpia.
-Reproducir: npm --prefix apps/mobile audit; dotnet list backend/Onda.slnx package --vulnerable --include-transitive.
-
-Referencias: https://github.com/advisories/GHSA-vfj7-8cjw-p6xm,
-https://github.com/advisories/GHSA-86w9-cpqp-85rv,
-https://github.com/advisories/GHSA-w5hq-g745-h8pq,
-https://github.com/advisories/GHSA-vcc3-ghjq-m6fr.
+No se ejecutó `npm audit fix --force` ni se modificó node_modules manualmente.
+Estado: revisar de nuevo al actualizar a Expo SDK 58. No afirmar que la auditoría está limpia.
+Reproducir: `npm --prefix apps/mobile audit`; `dotnet list backend/Onda.slnx package --vulnerable --include-transitive`.

@@ -15,3 +15,21 @@
 - Certificado corporativo: NODE_USE_SYSTEM_CA=1 permite usar la cadena de confianza del sistema. No se desactivó TLS.
 - No exponer endpoints de usuario sin autorización: cuentas/social se implementarán antes de ofrecer sincronización.
 - SQL Server Developer en Compose exclusivamente para desarrollo; edición/licencia de producción por definir.
+
+## 2026-10-12 (continuación: catálogo, exploración y reproducción)
+- Base de desarrollo: SQL Server 2025 Express `.\SQLEXPRESS` del propietario (indicado por él). LocalDB queda como alternativa.
+  La base `Onda` se creó con las migraciones; no se tocaron otras bases de esa instancia. Express usa un certificado
+  autofirmado: localmente `Encrypt=true;TrustServerCertificate=true`. En producción, certificado válido y `false`.
+- Catálogo relacional en SQL Server con sincronización completa periódica desde Radio Browser (6 h), en vez de caché
+  por página. Cursores por registros consumidos para el modo en vivo. Ver ARCHITECTURE.md.
+- Etiquetas e idiomas con intercalación binaria: la intercalación por defecto (CI) consideraba iguales etiquetas que
+  C# distingue («islam» y «islam🕋», «straße» y «strasse») y bloqueaba la sincronización.
+- Variantes solo con criterios exactos verificables (homepage+país+nombre base, o stream idéntico); sin coincidencia difusa.
+- «Caída» exige 3 chequeos fallidos consecutivos y distintos; los reportes de usuarios no cambian el estado.
+- Clustering del mapa en el servidor (rejilla SQL) para mostrar recuentos reales, no los de una página cargada.
+- País de escucha detectado por la zona horaria del dispositivo (tzdb `zone.tab`, dominio público) sin GPS; el locale
+  es solo respaldo. Si la persona elige país en Ajustes, deja de cambiar automáticamente.
+- Mapa de desarrollo con OpenFreeMap (OSM, sin clave) y etiquetas `name:es`; revisar proveedor y condiciones antes de publicar.
+- Rediseño según docs/design-reference.png sin dependencias nativas nuevas (degradados con `experimental_backgroundImage`).
+- Ondas y ecualizador del reproductor: decorativos, ligados al estado real del reproductor, desactivados con «reducir movimiento».
+- Override npm `xcode > uuid ^11.1.1` (API CommonJS `v4()` compatible, verificado). Sin `audit fix --force`.

@@ -1,20 +1,39 @@
 # Sistema de diseño
-Tema oscuro: fondo #0B1326, superficie #172644, marca #29D3CF, acento #8769F6,
-en vivo #FF667C, texto #F5F8FF, secundario #A8BAD1.
-Tema claro: fondo #F7FAFF, superficie blanca, texto #14213C, marca #159FAD, violeta #7254D8.
-Texto secundario claro oscurecido para legibilidad. Sistema/oscuro/claro persistidos.
+Basado en la referencia del propietario (docs/design-reference.png). Tema claro como presentación principal,
+oscuro equivalente y automático (sistema) por defecto.
 
-Escala de espacios: 4, 8, 12, 16, 24, 32, 48.
-Radios: 12/24/99. Controles con área mínima aproximada de 48 px.
-Tipografía del sistema con escalado accesible. Etiquetas en controles y estados de carga.
-Logos de origen con fallback de icono; no se incluyen fotos sin licencia.
-Componentes iniciales en src/ui.tsx: Label, Page, Heading, Card, Button, Artwork,
-StationRow, Favorite, Loading, Message, MiniPlayer. Reproductor completo como pantalla.
-Validación visual en Android, contraste automatizado y lectores de pantalla: pendiente.
+## Color (src/theme.ts)
+| Token | Claro | Oscuro | Uso |
+|---|---|---|---|
+| bg | #F5F7FB | #0B1326 | Fondo de pantalla |
+| surface | #FFFFFF | #152241 | Tarjetas, barra inferior, campos |
+| surfaceAlt | #EDF2F8 | #1C2B4D | Botón secundario, esqueletos |
+| text / muted | #101A33 / #56667F | #F5F8FF / #A8BAD1 | Texto principal y secundario |
+| primary | #0E9AA8 | #2DD4CF | Rellenos (botón reproducir, chips activos) |
+| primaryText | #0A7A86 | #4FE0DB | Texto e iconos de acento (≥4,5:1 sobre surface) |
+| accent | #6F52E3 | #9B87FF | Violeta: radar, luna |
+| live | #E5384F | #FF5C74 | EN VIVO, errores |
+| featured | degradado 120° #101B44 → #2C2A78 → #7A2F7E | similar | Destacada, Radar, reproductor |
 
-## Referencia del propietario
-Ver design-reference.png. Inicio usa tarjeta editorial, saludo, búsqueda y carruseles;
-ocho estados de ánimo en dos filas; navegación inferior compacta con miniplayer encima.
-Radar usa profundidad por tarjetas superpuestas; reproductor centra logo circular y control principal;
-mapa mantiene panel inferior de esquinas redondeadas; búsqueda incluye países y géneros seleccionables.
-Los datos y estados corresponden a la app, sin simular cuentas, oyentes ni canciones de la referencia.
+Los degradados usan `experimental_backgroundImage` (RN 0.86, nueva arquitectura) con color de respaldo;
+las sombras, `boxShadow`. Sin dependencias nativas nuevas.
+
+## Tipografía y espaciado
+Fuente del sistema, escalado accesible limitado a 1,6×. Títulos de pantalla 26/32 (800), secciones 18/24 (800),
+cuerpo 15/21, secundario 13/18. Espacios 4, 8, 12, 16, 20, 24. Radios 12/16/20/24/99. Objetivos táctiles ≥44 px.
+
+## Componentes (src/ui.tsx)
+ScreenHeader (título, subtítulo, atrás, acciones) · Chip (filtro seleccionable/eliminable) · StationRow
+(logo, nombre, bandera + región + género, estado real, favorito, menú ⋮) · StationActions · Sheet (hoja inferior) ·
+OptionPicker (lista filtrable con recuentos reales) · SearchField · PlayButton · LiveBadge · StationStatus ·
+MiniPlayer flotante · StationTile · Loading (esqueletos) · Message · EmptyState · ListFooter · CollectionPicker.
+
+## Reglas de contenido
+- EN VIVO solo cuando el reproductor nativo informa reproducción; «Conectando…» y «Cargando audio…» son distintos.
+- Sin oyentes, canciones, cuentas, avatares ni métricas simuladas de la referencia.
+- Recuentos solo cuando son reales (total de la consulta o del área visible), nunca el tamaño de una página.
+- Saludo según la hora local del dispositivo: 05–11 «Buenos días», 12–18 «Buenas tardes», resto «Buenas noches».
+- Logos de origen con respaldo de iniciales coloreadas; banderas emoji del sistema.
+- Mapa de desarrollo: OpenFreeMap (liberty/dark, datos OSM con atribución). Revisar condiciones antes de publicar.
+
+Validación pendiente: TalkBack completo, texto grande extremo, contraste automatizado y tabletas.

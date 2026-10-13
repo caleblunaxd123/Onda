@@ -1,28 +1,38 @@
 # SQL Server
 
-Abrir SSMS, servidor `(localdb)\OndaDev`, autenticación Windows, base `Onda`.
-Instancia creada exclusivamente para ONDA; motor LocalDB detectado 17.0.1000.7.
+## Instancia de desarrollo
+- Servidor: `.\SQLEXPRESS` (SQL Server 2025 Express 17.0.1000.7, instancia del propietario), autenticación Windows.
+- Base: `Onda` (creada por `scripts/init-db.ps1`).
+- Alternativa: `$env:ONDA_SQL_SERVER='(localdb)\OndaDev'` antes de los scripts, o `scripts/init-localdb.ps1`.
+- Otra instancia: definir `ConnectionStrings__Onda` completo.
 
-Consulta del catálogo:
+Los scripts leen `scripts/sql-config.ps1`. Las migraciones se aplican explícitamente, nunca al iniciar la API:
+`powershell -ExecutionPolicy Bypass -File scripts/init-db.ps1`.
 
+## Tablas
+- `Stations`: catálogo normalizado (ver ARCHITECTURE.md).
+- `StationTags`, `StationLanguages`: géneros e idiomas (intercalación binaria).
+- `SyncRuns`: ejecuciones de sincronización (estado, offset consumido, latido, error).
+- `StationReports`: reportes de usuarios (tipo, comentario, URL de stream, versión, plataforma, estado `open`).
+
+## Consultas útiles (SSMS)
 ```sql
 USE Onda;
-SELECT Id,
-       JSON_VALUE(Payload, '$.Name') AS StationName,
-       JSON_VALUE(Payload, '$.CountryCode') AS CountryCode,
-       JSON_VALUE(Payload, '$.Codec') AS Codec,
-       JSON_VALUE(Payload, '$.StreamUrl') AS StreamUrl,
-       UpdatedAt
-FROM dbo.Stations
-ORDER BY UpdatedAt DESC;
+SELECT TOP 20 Name, CountryCode, Region, Availability, ClickCount, StreamUrl FROM Stations
+WHERE IsActive = 1 AND HasHttpsStream = 1 ORDER BY ClickCount DESC;
 
-SELECT * FROM dbo.__EFMigrationsHistory;
+SELECT Id, Status, NextOffset, Processed, Upserted, StartedAt, CompletedAt, LastError FROM SyncRuns ORDER BY Id DESC;
+
+SELECT Availability, COUNT(*) FROM Stations GROUP BY Availability;
+
+SELECT r.CreatedAt, s.Name, r.Kind, r.Message, r.Platform FROM StationReports r
+JOIN Stations s ON s.Id = r.StationId ORDER BY r.CreatedAt DESC;
+
+SELECT * FROM __EFMigrationsHistory;
 ```
 
-La tabla es una caché inicial de snapshots normalizados. El modelo de usuarios,
-favoritos sincronizados, colecciones y entidades sociales aún no está implementado.
-Favoritos e historial del modo invitado permanecen en el móvil.
-UTC en UpdatedAt; PK por UUID externo; upsert con HOLDLOCK para evitar carreras.
+## Pruebas de integración
+`scripts/test-api.ps1` ejecuta todas las pruebas backend; las de SQL crean y eliminan su propia base
+`OndaTest_<id>` en `ONDA_TEST_SQL` (por defecto la instancia configurada). En CI se usa un contenedor SQL Server.
 
-Cambiar instancia requiere solo ConnectionStrings__Onda y aplicar las migraciones EF.
-No reutilizar la autenticación sa del Compose de desarrollo en producción.
+No reutilizar la contraseña `sa` de Compose/CI en producción. La API no necesita permisos de creación de bases.

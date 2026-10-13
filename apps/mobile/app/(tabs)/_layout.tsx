@@ -3,15 +3,28 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '../../src/icons';
 import { useTheme } from '../../src/theme';
 import { Label, MiniPlayer } from '../../src/ui';
-const items = {index:{icon:'home-outline',title:'Inicio'},world:{icon:'earth-outline',title:'Mundo'},radar:{icon:'compass-outline',title:'Radar'},rooms:{icon:'people-outline',title:'Salas'},library:{icon:'albums-outline',title:'Biblioteca'}} as const;
+const items = {
+  index: {icon: 'home', title: 'Inicio'}, world: {icon: 'earth', title: 'Mundo'}, radar: {icon: 'radio', title: 'Radar'},
+  rooms: {icon: 'people', title: 'Salas'}, library: {icon: 'albums', title: 'Biblioteca'},
+} as const;
 export default function TabLayout() {
- const c=useTheme();
- return <Tabs screenOptions={{headerShown:false}} tabBar={({state,navigation,insets})=><View style={{backgroundColor:c.bg,paddingBottom:insets.bottom}}><MiniPlayer/><View style={{flexDirection:'row',borderTopWidth:1,borderTopColor:c.border,paddingTop:8}}>
- {state.routes.map((route,index)=>{
- const item=items[route.name as keyof typeof items];const focused=state.index===index;
- return <Pressable key={route.key} accessibilityRole="tab" accessibilityLabel={item.title} accessibilityState={{selected:focused}} onPress={()=>{const e=navigation.emit({type:'tabPress',target:route.key,canPreventDefault:true});if(!e.defaultPrevented)navigation.navigate(route.name);}} onLongPress={()=>navigation.emit({type:'tabLongPress',target:route.key})} style={{flex:1,minHeight:56,alignItems:'center',gap:4}}><Ionicons name={item.icon} size={22} color={focused?c.primary:c.muted}/><Label style={{fontSize:10,lineHeight:15,color:focused?c.primary:c.muted,fontWeight:focused?'700':'400'}}>{item.title}</Label></Pressable>;
- })}
- </View></View>}>
- <Tabs.Screen name="index"/><Tabs.Screen name="world"/><Tabs.Screen name="radar"/><Tabs.Screen name="rooms"/><Tabs.Screen name="library"/>
- </Tabs>;
+  const c = useTheme();
+  return <Tabs screenOptions={{headerShown: false, sceneStyle: {backgroundColor: c.bg}}} tabBar={({state, navigation, insets}) => <View style={{backgroundColor: c.bg, paddingBottom: Math.max(insets.bottom, 6)}}>
+    <MiniPlayer/>
+    <View accessibilityRole="tablist" style={{flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.border, paddingTop: 6, backgroundColor: c.surface}}>
+      {state.routes.map((route, index) => {
+        const item = items[route.name as keyof typeof items]; const focused = state.index === index;
+        return <Pressable key={route.key} accessibilityRole="tab" accessibilityLabel={item.title} accessibilityState={{selected: focused}}
+          onPress={() => {const e = navigation.emit({type: 'tabPress', target: route.key, canPreventDefault: true}); if (!focused && !e.defaultPrevented) navigation.navigate(route.name);}}
+          onLongPress={() => navigation.emit({type: 'tabLongPress', target: route.key})} style={{flex: 1, minHeight: 54, alignItems: 'center', justifyContent: 'center', gap: 2}}>
+          <View style={{width: 44, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? c.primary + '1F' : 'transparent'}}>
+            <Ionicons name={focused ? item.icon : `${item.icon}-outline`} size={21} color={focused ? c.primaryText : c.muted}/>
+          </View>
+          <Label style={{fontSize: 11, lineHeight: 14, color: focused ? c.primaryText : c.muted, fontWeight: focused ? '700' : '500'}}>{item.title}</Label>
+        </Pressable>;
+      })}
+    </View>
+  </View>}>
+    <Tabs.Screen name="index"/><Tabs.Screen name="world"/><Tabs.Screen name="radar"/><Tabs.Screen name="rooms"/><Tabs.Screen name="library"/>
+  </Tabs>;
 }

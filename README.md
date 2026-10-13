@@ -1,57 +1,57 @@
 # ONDA
 **El mundo suena aquí.**
 
-Aplicación móvil de radios con Expo / React Native y API ASP.NET Core 10.
-Base de datos: **SQL Server**, por decisión del propietario (12/10/2026).
-Estado: primera implementación funcional en desarrollo; **MVP todavía no aceptado**.
+Aplicación móvil de radios con Expo / React Native (SDK 57) y API ASP.NET Core 10.
+Base de datos: **SQL Server**, por decisión del propietario.
+Estado: implementación funcional en desarrollo; **MVP todavía no aceptado** (faltan pruebas físicas).
 
-## Ver la app en web
-Android/iOS siguen siendo los destinos nativos; la web permite revisar pantallas sin emulador.
-Iniciar la API y ejecutar `npm --prefix apps/mobile run web -- --localhost`.
-Abrir http://localhost:8081. Usa el mismo catálogo, biblioteca y reproductor global.
-El mapa web usa MapLibre GL JS; Android conserva MapLibre React Native.
-Los codecs y la reproducción en segundo plano del navegador no sustituyen las pruebas Android.
+## Qué incluye
+- Catálogo de ~68.000 emisoras de Radio Browser sincronizado en SQL Server (solo se reproducen streams HTTPS),
+  con paginación por cursor, recuentos reales, variantes y fuentes alternativas, y disponibilidad sin falsas «caídas».
+- Inicio personalizado por el país detectado (zona horaria del dispositivo, sin GPS), búsqueda con filtros
+  (país, ciudad, idioma, género), mapa por área visible con clusters, Radio Radar con carga progresiva,
+  reproductor global con reintentos y fuentes alternativas, reportes de problemas, biblioteca local con colecciones.
+- Diseño según docs/design-reference.png, tema claro/oscuro/automático. Capturas: docs/screenshots.
+- Sin cuentas, sincronización de biblioteca, salas ni IA todavía.
 
 ## Inicio en Windows
-Requisitos: Node 24, .NET SDK 10, SQL Server LocalDB, JDK y Android SDK para compilar Android.
-No usar Expo Go: MapLibre requiere Development Build.
+Requisitos: Node 22+, .NET SDK 10 (se usa `.tools/dotnet` si existe), SQL Server (por defecto `.\SQLEXPRESS`,
+autenticación Windows), JDK 17 y Android SDK para compilar Android. No usar Expo Go: MapLibre requiere Development Build.
 
 1. `npm --prefix apps/mobile ci`
-2. `powershell -ExecutionPolicy Bypass -File scripts/init-localdb.ps1`
-3. `powershell -ExecutionPolicy Bypass -File scripts/start-api.ps1`
-4. Copiar `apps/mobile/.env.example` a `apps/mobile/.env`.
-5. En `apps/mobile`: establecer `$env:APP_VARIANT='development'` y ejecutar `npm run android`.
-6. En siguientes sesiones: `npm run mobile`.
+2. `powershell -ExecutionPolicy Bypass -File scripts/init-db.ps1` (crea y migra la base `Onda`)
+3. `powershell -ExecutionPolicy Bypass -File scripts/start-api.ps1` (o `start-web-api.ps1` solo localhost).
+   La primera sincronización completa del catálogo empieza a los 15 s y tarda unos minutos;
+   mientras tanto la API consulta Radio Browser en vivo.
+4. Opcional: copiar `apps/mobile/.env.example` a `apps/mobile/.env`.
+5. En `apps/mobile`: `$env:APP_VARIANT='development'; npm run android` (compila e instala el Development Build).
+6. En siguientes sesiones: `npm run mobile` y abrir la app instalada.
 
-En emulador Android, la API está en `http://10.0.2.2:5080`.
-En dispositivo físico usar la IP LAN del PC, permitir únicamente la conexión de desarrollo en el firewall, y compartir red.
-El tráfico HTTP se habilita únicamente en builds con APP_VARIANT=development.
-Preview/producción requieren una API HTTPS.
+Otra instancia: `$env:ONDA_SQL_SERVER='(localdb)\OndaDev'` o `$env:ConnectionStrings__Onda='...'` antes de los scripts.
+En emulador Android la API está en `http://10.0.2.2:5080`; en un dispositivo físico, la IP LAN del PC.
+El tráfico HTTP solo se habilita en builds con APP_VARIANT=development. Preview/producción requieren API HTTPS.
+
+## Ver la app en web
+Con la API en marcha: `npm --prefix apps/mobile run web -- --localhost` y abrir http://localhost:8081.
+La web comparte pantallas y lógica; el mapa usa MapLibre GL JS. No sustituye las pruebas Android. Ver docs/WEB_PREVIEW.md.
 
 ## SQL Server / SSMS
-- Servidor: `(localdb)\OndaDev`
-- Autenticación: Windows
-- Base: `Onda`
+Servidor `.\SQLEXPRESS`, autenticación Windows, base `Onda`. Tablas y consultas útiles: docs/SQL_SERVER.md.
+Las migraciones se aplican explícitamente, nunca al iniciar la API.
 
-La instancia es exclusiva de este proyecto. No se modificaron instancias preexistentes.
-Las migraciones se ejecutan explícitamente, nunca automáticamente al iniciar la API.
-Para otro SQL Server configurar `ConnectionStrings__Onda` y ejecutar:
-`dotnet ef database update --project backend/Onda.Infrastructure --startup-project backend/Onda.Api`.
+## Verificación
+- `npm run check:mobile` — TypeScript, ESLint y 36 pruebas.
+- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 62 pruebas, incluidas 10 con SQL Server real.
+- `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1` — catálogo real de extremo a extremo.
+- `curl http://localhost:5080/api/v1/catalog/status`
+
+OpenAPI: `/openapi/v1.json` en Development.
 
 ## Estructura
 - apps/mobile: Expo Router, Zustand, TanStack Query, Expo Audio, MapLibre.
 - backend: API, Application, Domain, Infrastructure, Tests.
-- scripts: inicio local.
-- docs: decisiones, estado, pruebas y despliegue.
-- compose.yaml: entorno de desarrollo SQL Server + API (requiere Docker).
+- scripts: base de datos, API, pruebas y smoke test.
+- docs: arquitectura, decisiones, progreso, roadmap, pruebas, diseño, SQL Server, dependencias.
 
-## Verificación
-`npm run check:mobile`
-`npm run test:api`
-`curl http://localhost:5080/health/ready`
-`curl "http://localhost:5080/api/v1/stations?country=PE&limit=10"`
-
-OpenAPI: `/openapi/v1.json` en entorno Development.
-Biblioteca local con favoritos, historial y colecciones. Usa el botón + de una emisora para organizarla.
-No hay cuentas, sincronización de biblioteca, salas ni IA activadas todavía.
-Consultar [estado](docs/PROGRESS.md), [pruebas](docs/TESTING.md) y [roadmap](docs/ROADMAP.md).
+Catálogo: [Radio Browser](https://www.radio-browser.info) (comunitario). Mapa de desarrollo: OpenFreeMap / OpenStreetMap.
+Consultar [estado](docs/PROGRESS.md), [pruebas](docs/TESTING.md), [arquitectura](docs/ARCHITECTURE.md) y [roadmap](docs/ROADMAP.md).
