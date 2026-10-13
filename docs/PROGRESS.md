@@ -1,4 +1,25 @@
-# Progreso — 2026-10-12
+# Progreso — actualizado 2026-10-13
+
+## Beta 0.2 multimedia social, desplegada
+- Web y API públicas en Contabo/Cloudflare: https://onda.lunalav.pe y https://onda-api.lunalav.pe.
+- 68.031 emisoras almacenadas, 38.815 reproducibles HTTPS; sincronización completa del catálogo verificada.
+- Salas reales SignalR con invitados, privacidad, chat/reacciones, propuestas/votos, anfitrión/transferencia,
+  expulsión y reportes, reconexión, códigos renovables. Radio, YouTube/Music y archivos HTTPS compatibles.
+- Cuenta opcional, upgrade de invitado, recuperación por código privado, borrado y cloud library con conflictos.
+  Radios, colecciones y multimedia sincronizables; historial optativo; conserva datos locales de la versión anterior.
+- Asistente de descubrimiento con Qwen2.5 1.5B local y fallback por reglas; pasaporte de escuchas confirmadas.
+- Sesión nativa en SecureStore; web sessionStorage por pestaña para conservarla al recargar.
+- UI modular, biblioteca virtualizada, cola de radios, búsqueda por palabras y diseño inspirado en la referencia.
+- Pruebas: 93 backend sin omitidas con SQL real; 54 móvil, TypeScript/ESLint sin errores; web y APK compilados.
+- Pruebas HTTPS públicas con dos WebSockets: privados/roles, pausa/posición, chat, cola/votos, rotación/cierre;
+  cuenta invitada->registrada, revocación, media cloud, conflicto 409 y recuperación. Datos automáticos de QA eliminados.
+- Navegador y Android conectados por invitación a la misma sala; embed YouTube, guardado multimedia y biblioteca comprobados.
+- Backup diario cifrado y restauración real del esquema nuevo; copia externa manual al PC con clave DPAPI.
+- APK público con bundle, sin Metro; firma de depuración para beta. Pruebas físicas/tiendas aún pendientes.
+- npm: de 22 a 19 avisos high; decoder URI corregido con adaptador upstream MIT; tooling sin parche pendiente.
+- Continuación y prompt: [CLAUDE_HANDOFF.md](CLAUDE_HANDOFF.md). Estado operativo: [DEPLOYMENT.md](DEPLOYMENT.md).
+
+Las secciones siguientes conservan la historia del desarrollo; los datos de esta actualización son los vigentes.
 
 ## Actualización 2026-10-13: logo, diseño del modelo, segundo plano y APK
 - Logo oficial integrado (assets/brand): cabecera de marca en todas las pestañas, icono de app, icono adaptativo

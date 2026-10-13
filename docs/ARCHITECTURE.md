@@ -74,7 +74,8 @@ SyncIntervalHours, SyncPageSize, SyncPageDelayMs, SyncMaxPagesPerRun, SyncStartu
 `GET /api/v1/stations` (q, country, tag, language, region, bbox, geo, order, seed, boostTags, boostCountries,
 exclude, cursor, limit) · `GET /api/v1/stations/lookup?ids=` · `GET /api/v1/map` · `GET /api/v1/facets/{countries|
 languages|tags|places}` · `GET /api/v1/catalog/status` · `POST /api/v1/stations/{id}/reports` · `GET /api/v1/moods`.
-Límites: 240 solicitudes/min por IP; reportes 10 cada 10 min por IP. CORS solo para la vista web local (GET/POST).
+Límites: 240 solicitudes/min por IP; reportes 10 cada 10 min por IP. CORS limitado a la vista local en desarrollo
+y los dominios ONDA configurados en producción. Ver DEPLOYMENT.md.
 
 ## Móvil
 Expo SDK 57, Expo Router, TanStack Query, Zustand, Expo Audio, MapLibre (RN en Android, GL JS en web).
@@ -93,9 +94,28 @@ Expo SDK 57, Expo Router, TanStack Query, Zustand, Expo Audio, MapLibre (RN en A
   El layout raíz la refresca una vez al día con `/stations/lookup`.
 
 ## Límites conocidos
-Sin cuentas ni sincronización de biblioteca; sin salas ni IA. Búsqueda por subcadena (LocalDB/Express sin
-Full-Text). Temporizador dependiente del runtime JS. Variantes solo por criterios exactos (no difusos).
+Búsqueda por palabras y ranking de nombres, sin índice SQL Full-Text. Temporizador dependiente del runtime JS.
+Variantes solo por criterios exactos (no difusos). Salas en una instancia: presencia, votos y chat en memoria;
+cola/contenido/roles en SQL. No escalar a múltiples réplicas sin coordinar la presencia.
 Sin pruebas físicas de audio, Bluetooth, llamadas, batería o background prolongado.
+
+## Comunidad, multimedia y cuentas (0.2)
+- `Accounts.cs`: PBKDF2, tokens opacos almacenados como hashes, invitados 7 días, cuentas 30 días,
+  recuperación por código de un solo uso, bloqueo de intentos y borrado. No hay correo verificado/SMTP todavía.
+  Registro de invitado y recuperación usan transacciones compatibles con el retry de SQL y revocan sesiones anteriores.
+- `LibrarySync.cs`: payload JSON por cuenta con versión optimista. El móvil combina tres versiones y conserva
+  cambios locales durante solicitudes; favoritos, colecciones y multimedia; historial optativo. Cuotas explícitas.
+- `Rooms.cs` + `RoomPresence.cs`: SignalR autenticado, validación por acción, permisos de anfitrión, invitación privada,
+  chat limitado, votos por cuenta, bans por sala, transferencia de control y rotación de invitación.
+- `RoomMedia.cs`: resuelve radios reales, IDs de YouTube en hosts oficiales y URLs HTTPS públicas de archivos compatibles.
+  El servidor no descarga URLs arbitrarias. YouTube se reproduce con el iframe oficial, incluyendo video en música.
+- Native: WebView + reproductor de radio global. Web: iframe aislado. Reloj corregido con hora del servidor,
+  posición compartida y resync; radio en vivo tiene buffers independientes y no promete sincronía por muestra.
+- `DiscoveryAssistant.cs`: Qwen2.5 1.5B local vía Ollama; salida estructurada validada contra catálogo real,
+  fallback por reglas si ocupado/error/timeout. No transmite conversaciones a un servicio externo de IA.
+- SecureStore en móvil; sesión web en sessionStorage por pestaña (sin localStorage), sobrevive recargas.
+  Endpoints personales/comunidad/IA con `Cache-Control: no-store`.
+- UI organizada en `components` y `features/{library,account,rooms,home}`; SDK 57 exige hooks de navegación de `expo-router`.
 
 ## Referencias técnicas consultadas
 - https://docs.expo.dev/versions/v57.0.0/sdk/audio/

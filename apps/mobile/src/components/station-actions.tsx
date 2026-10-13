@@ -19,6 +19,7 @@ export function StationActions({station, onClose, onRemove, queue}: {station: St
   return <Sheet title={station.name} onClose={onClose}>
     <ActionRow icon="play-circle-outline" label="Escuchar ahora" onPress={() => {onClose(); player.select(station, queue);}}/>
     <ActionRow icon="albums-outline" label="Guardar en una colección" onPress={() => setPicker(true)}/>
+    <ActionRow icon="people-outline" label="Escuchar juntos en una sala" onPress={() => {onClose(); router.push({pathname: '/create-room', params: {stationId: station.id}});}}/>
     {onRemove && <ActionRow icon="remove-circle-outline" label="Quitar de esta colección" onPress={() => {onClose(); onRemove();}}/>}
     <ActionRow icon="share-social-outline" label="Compartir emisora" onPress={share}/>
     <ActionRow icon="information-circle-outline" label="Abrir en el reproductor" onPress={() => {onClose(); player.select(station, queue); router.push('/player');}}/>

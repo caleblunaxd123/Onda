@@ -2,7 +2,7 @@
   "expo": {
     "name": "ONDA",
     "slug": "onda",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "scheme": "onda",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -11,6 +11,7 @@
       "bundleIdentifier": "app.onda.radio"
     },
     "android": {
+      "versionCode": 2,
       "package": "app.onda.radio",
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
@@ -60,6 +61,7 @@
     },
     "icon": "./assets/icon.png",
     "web": {
+      "output": "single",
       "favicon": "./assets/favicon.png"
     }
   }

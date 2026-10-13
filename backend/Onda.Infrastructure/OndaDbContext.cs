@@ -9,9 +9,57 @@ public sealed class OndaDbContext(DbContextOptions<OndaDbContext> options) : DbC
     public DbSet<StationLanguage> StationLanguages => Set<StationLanguage>();
     public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
     public DbSet<StationReport> StationReports => Set<StationReport>();
+    public DbSet<ListenerAccount> ListenerAccounts => Set<ListenerAccount>();
+    public DbSet<ListenerSession> ListenerSessions => Set<ListenerSession>();
+    public DbSet<CloudLibrary> CloudLibraries => Set<CloudLibrary>();
+    public DbSet<ListeningRoom> ListeningRooms => Set<ListeningRoom>();
+    public DbSet<RoomBan> RoomBans => Set<RoomBan>();
+    public DbSet<CommunityReport> CommunityReports => Set<CommunityReport>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
+        model.Entity<ListenerAccount>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Email).HasMaxLength(254);
+            e.HasIndex(x => x.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
+            e.Property(x => x.DisplayName).HasMaxLength(40);
+            e.Property(x => x.PasswordHash).HasMaxLength(500);
+            e.Property(x => x.RecoveryHash).HasMaxLength(64).IsUnicode(false).IsConcurrencyToken();
+        });
+        model.Entity<ListenerSession>(e =>
+        {
+            e.HasKey(x => x.TokenHash);
+            e.Property(x => x.TokenHash).HasMaxLength(64).IsUnicode(false);
+            e.HasOne<ListenerAccount>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.ExpiresAt);
+        });
+        model.Entity<CloudLibrary>(e =>
+        {
+            e.HasKey(x => x.AccountId);
+            e.HasOne<ListenerAccount>().WithOne().HasForeignKey<CloudLibrary>(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(x => x.Version).IsConcurrencyToken();
+        });
+        model.Entity<ListeningRoom>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(70);
+            e.Property(x => x.InviteCode).HasMaxLength(12).IsUnicode(false);
+            e.HasIndex(x => x.InviteCode).IsUnique();
+            e.HasIndex(x => new {x.IsPrivate, x.Closed, x.UpdatedAt});
+            e.Property(x => x.Version).IsConcurrencyToken();
+        });
+        model.Entity<RoomBan>(e =>
+        {
+            e.HasKey(x => new {x.RoomId, x.AccountId});
+            e.HasOne<ListeningRoom>().WithMany().HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<CommunityReport>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.HasIndex(x => x.CreatedAt);
+        });
         model.Entity<StationEntity>(e =>
         {
             e.ToTable("Stations");

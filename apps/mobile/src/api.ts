@@ -14,7 +14,7 @@ const messages: Record<number, string> = {
 };
 
 /** Fetch with a hard timeout that also honours the caller's AbortSignal (TanStack Query cancellation). */
-export async function request<T>(path: string, {signal, timeoutMs = 15000, method = 'GET', body}: {signal?: AbortSignal; timeoutMs?: number; method?: 'GET' | 'POST'; body?: unknown} = {}): Promise<T> {
+export async function request<T>(path: string, {signal, timeoutMs = 15000, method = 'GET', body, token}: {signal?: AbortSignal; timeoutMs?: number; method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'; body?: unknown; token?: string} = {}): Promise<T> {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {timedOut = true; controller.abort();}, timeoutMs);
@@ -23,15 +23,15 @@ export async function request<T>(path: string, {signal, timeoutMs = 15000, metho
   try {
     const response = await fetch(apiBase + path, {
       method, signal: controller.signal,
-      headers: body ? {'Content-Type': 'application/json'} : undefined,
-      body: body ? JSON.stringify(body) : undefined,
+      headers: {...(body !== undefined ? {'Content-Type': 'application/json'} : {}), ...(token ? {Authorization: `Bearer ${token}`} : {})},
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!response.ok) {
       let detail = '';
       try {detail = ((await response.json()) as {detail?: string}).detail ?? '';} catch {/* not JSON */}
       throw new ApiError(messages[response.status] ?? (detail || 'No se pudo completar la solicitud.'), response.status);
     }
-    return await response.json() as T;
+    return response.status === 204 ? undefined as T : await response.json() as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
     if (timedOut) throw new ApiError(messages[408], 408);

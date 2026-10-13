@@ -7,9 +7,10 @@ import {Card, Label, Muted} from './primitives';
 import {Button} from './controls';
 import type {IconName} from './types';
 
-export function Loading({rows = 3}: {rows?: number}) {
+export function Loading({rows = 3, label = 'Cargando emisoras'}: {rows?: number; label?: string}) {
   const c = useTheme();
-  return <View accessibilityLabel="Cargando emisoras" accessibilityRole="progressbar" style={{gap: 14, paddingVertical: 8}}>
+  return <View accessibilityLabel={label} accessibilityRole="progressbar" style={{gap: 14, paddingVertical: 8}}>
+    {label !== 'Cargando emisoras' && <Muted>{label}</Muted>}
     {Array.from({length: rows}, (_, k) => <View key={k} style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}><View style={{width: 50, height: 50, borderRadius: 14, backgroundColor: c.surfaceAlt}}/><View style={{flex: 1, gap: 8}}><View style={{height: 12, width: '70%', borderRadius: 6, backgroundColor: c.surfaceAlt}}/><View style={{height: 10, width: '40%', borderRadius: 6, backgroundColor: c.surfaceAlt}}/></View></View>)}
   </View>;
 }

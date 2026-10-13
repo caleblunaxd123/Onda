@@ -10,6 +10,7 @@ import { isActive, player, usePlayer } from '../../src/player';
 import { BrandHeader, Page, Label, Muted, StationRow, Artwork, Loading, Message, SectionTitle, StationTile, IconButton, LiveBadge, flag, tagLabel, cardStyle } from '../../src/ui';
 import type { Station } from '../../src/types';
 import {DestinationShelf} from '../../src/features/home/destinations';
+import {SocialEntry} from '../../src/features/home/social-entry';
 
 export default function Home() {
   const c = useTheme(); const hydrated = useLibraryHydrated(); const onboarded = useLibrary(s => s.onboarded);
@@ -62,6 +63,7 @@ function HomeContent() {
       <Muted style={{fontSize: 14}}>El mundo suena aquí.</Muted>
     </View>
 
+    <SocialEntry/>
     {featured.isPending ? <View style={{height: 186, borderRadius: 24, backgroundColor: c.surfaceAlt}}/> :
       featured.isError ? <Message title="El catálogo no está disponible" body={featured.error.message} retry={() => featured.refetch()}/> :
       featuredItems.length ? <FeaturedCarousel stations={featuredItems} width={cardWidth}/> :

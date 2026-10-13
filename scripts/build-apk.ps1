@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$ApiUrl, [string]$Abis = 'arm64-v8a,armeabi-v7a')
+param([Parameter(Mandatory = $true)][string]$ApiUrl, [string]$Abis = 'arm64-v8a,armeabi-v7a,x86_64')
 # Test APK with embedded JS (no Metro). HTTPS builds disable cleartext traffic; HTTP is for LAN testing.
 # Signed with the debug key from the generated Android project; not for store distribution.
 $ErrorActionPreference = 'Stop'

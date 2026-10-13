@@ -4,12 +4,19 @@ from pathlib import Path
 from datetime import datetime, timezone
 import subprocess
 import shutil
+import sys
 
 shared = Path('/opt/stack/Caddyfile')
 before = shared.read_text()
-if 'onda-api.lunalav.pe' in before:
+route_file = Path(sys.argv[1] if len(sys.argv) > 1 else '/opt/onda/Caddyfile').resolve()
+if route_file.parent != Path('/opt/onda'):
+    raise SystemExit('Route source must be an ONDA file in /opt/onda.')
+addition = route_file.read_text()
+hostname = next(line.strip().split()[0] for line in addition.splitlines() if line.strip() and not line.strip().startswith('#'))
+if hostname not in ['onda-api.lunalav.pe', 'onda.lunalav.pe']:
+    raise SystemExit('Unexpected ONDA hostname.')
+if hostname + ' {' in before:
     raise SystemExit('ONDA proxy route already exists; review before updating.')
-addition = Path('/opt/onda/Caddyfile').read_text()
 candidate = Path('/opt/onda/Caddyfile.candidate')
 candidate.write_text(before + '\n' + addition)
 subprocess.run(['docker', 'cp', str(candidate), 'caddy:/tmp/onda-candidate'], check=True)

@@ -12,6 +12,8 @@ import { libraryIds, useLibrary } from '../src/library';
 import { useTheme } from '../src/theme';
 import { deviceCountry } from '../src/region';
 import { Label, MiniPlayer } from '../src/ui';
+import {initializeSession} from '../src/features/account/session';
+import {useLibraryCloudSync} from '../src/features/account/cloud-sync';
 const queryClient = new QueryClient();
 const REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;
 
@@ -39,7 +41,9 @@ function syncCountry() {
 export default function RootLayout() {
   const c = useTheme(); const [error, setError] = useState('');
   useLibraryRefresh();
+  useLibraryCloudSync();
   useEffect(() => {
+    void initializeSession();
     prepareAudio().catch(() => setError('No se pudo configurar el audio. Reinicia la aplicación.'));
     const network = NetInfo.addEventListener(s => {const connected = s.isConnected !== false && s.isInternetReachable !== false; onlineManager.setOnline(connected); player.setOnline(connected);});
     if (useLibrary.persist.hasHydrated()) syncCountry();
@@ -68,6 +72,6 @@ export default function RootLayout() {
 /** Keep audio controls available in Search and Settings as well as the tab screens. */
 function StackPlayerDock() {
   const segments = useSegments(); const c = useTheme(); const station = usePlayer().station;
-  if (!station || !segments.length || segments[0] === '(tabs)' || segments[0] === 'player' || segments[0] === 'onboarding') return null;
+  if (!station || !segments.length || segments[0] === '(tabs)' || segments[0] === 'player' || segments[0] === 'onboarding' || segments[0] === 'room' || segments[0] === 'watch') return null;
   return <SafeAreaView edges={['bottom']} style={{backgroundColor: c.bg}}><MiniPlayer/></SafeAreaView>;
 }

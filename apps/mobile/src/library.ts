@@ -4,6 +4,8 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Station } from './types';
 import type {LibrarySort} from './features/library/selectors';
+import type {RoomMedia} from './features/rooms/types';
+export type MediaBookmark = {id: string; media: RoomMedia};
 const streamKey = (url: string) => url.trim().replace(/#.*$/, '')
   .replace(/^(https?):\/\/([^/]+)/i, (_match, scheme: string, host: string) => `${scheme.toLowerCase()}://${host.toLowerCase()}`)
   .replace(/\/+$/, '');
@@ -47,7 +49,9 @@ export const libraryIds = (lists: {favorites: Station[]; history: Station[]; col
 export const collectionName = (name: string) => name.trim().replace(/\s+/g, ' ').slice(0, 50);
 type Library = {
   favorites: Station[]; history: Station[]; searches: string[]; collections: Collection[];
+  mediaFavorites: MediaBookmark[]; toggleMedia: (media: RoomMedia) => void;
   country: string; theme: 'dark' | 'light' | 'system';
+  syncAccountId: string | null; syncHistory: boolean; configureSync: (accountId: string | null, history?: boolean) => void;
   librarySort: LibrarySort; setLibrarySort: (sort: LibrarySort) => void;
   /** auto: follows the country detected from the device time zone; manual: chosen in Settings. */
   countryMode: 'auto' | 'manual';
@@ -67,6 +71,10 @@ type Library = {
 };
 export const useLibrary = create<Library>()(persist((set) => ({
   favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'system', countryMode: 'auto',
+  mediaFavorites: [], toggleMedia: media => set(x => ({mediaFavorites: x.mediaFavorites.some(item => item.media.url === media.url)
+    ? x.mediaFavorites.filter(item => item.media.url !== media.url)
+    : [{id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12), media}, ...x.mediaFavorites].slice(0, 100)})),
+  syncAccountId: null, syncHistory: false, configureSync: (syncAccountId, syncHistory = false) => set({syncAccountId, syncHistory}),
   librarySort: 'saved', setLibrarySort: librarySort => set({librarySort}),
   syncDeviceCountry: code => set(x => x.countryMode === 'auto' && x.country !== code ? {country: code} : {}),
   followDeviceCountry: code => set({countryMode: 'auto', country: code}),
@@ -97,7 +105,7 @@ export const useLibrary = create<Library>()(persist((set) => ({
       ? c.stations.map(s => s.id === station.id ? station : s) : [...c.stations, station]} : c)})),
   removeFromCollection: (id, stationId) => set(x => ({collections: x.collections.map(c => c.id === id
     ? {...c, stations: c.stations.filter(s => s.id !== stationId)} : c)})),
-  clear: () => set({favorites: [], history: [], searches: [], collections: []}),
+  clear: () => set({favorites: [], history: [], searches: [], collections: [], mediaFavorites: []}),
 }), {
   name: 'onda-library-v1', storage: createJSONStorage(() => AsyncStorage),
   // Libraries saved before onboarding existed already chose a country: do not show onboarding again.

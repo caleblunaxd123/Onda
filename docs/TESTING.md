@@ -1,8 +1,8 @@
 # Pruebas
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
-  con `ONDA_TEST_SQL` definido). 62 pruebas: 52 unitarias/API + 10 de integración con SQL Server real.
-- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 37 pruebas.
+  con `ONDA_TEST_SQL` definido). 93 pruebas; ninguna omitida en la validación Windows con SQL Server real.
+- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 54 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
 - Compatibilidad: en apps/mobile `npx expo install --check`; bundling `npx expo export --platform android`.
@@ -20,6 +20,18 @@
 | Biblioteca y región | actualización de instantáneas sin perder datos, compatibilidad con almacenamiento antiguo, país automático/manual, detección por zona horaria (library/region tests) |
 
 ## Verificación en emulador (2026-10-12)
+
+Actualización 13/10: APK 0.2 instalado con `adb install -r`, sin borrar datos, con WebView/SignalR y bundle incluido.
+Emulador x86_64: entrada por `onda://room?code=...`, sesión invitada, misma sala que web, estado/posición compartidos.
+Web pública: entrada por enlace sin cuenta, dos participantes, reproducción YouTube, pausa para todos y media guardada.
+Prueba CLI pública independiente con dos clientes SignalR: roles, privado, votos, chat, rotación y cierre; QA eliminada.
+Cloud SQL pública: upgrade preserva identidad, invalida tokens anteriores, guarda multimedia, rechaza versión stale y recupera.
+IA pública: engine `local-ai`, rock/PE, idioma no inferido por escribir en español, 8 estaciones reales.
+Backup cifrado descifrado y restaurado en DB aparte después de migrar comunidad; catálogo poblado verificado.
+La prueba automatizada del decoder URI incluye 20.000 secuencias UTF-8 malformadas sin división recursiva.
+
+Capturas: `android-social-home.png`, `android-social-room.png`, `web-room-two-participants.png` en `docs/screenshots`.
+Estos controles complementan, pero no sustituyen, la lista de pruebas físicas al final.
 Emulador `emulator-5554` Medium_Phone_API_36.1 con el Development Build existente (sin cambios nativos: no fue
 necesario recompilar). Zona horaria del emulador ajustada a America/Lima (estaba en GMT). API con SQL Server Express.
 Comprobado visualmente (capturas en docs/screenshots): Inicio claro/oscuro con saludo según hora local, destacada y

@@ -1,10 +1,12 @@
 {
   "name": "@onda/mobile",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "decode-uri-component": "file:vendor/decode-uri-component",
     "@expo/vector-icons": "^15.0.2",
     "@maplibre/maplibre-react-native": "^11.5.0",
+    "@microsoft/signalr": "^10.0.11",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "12.0.1",
     "@tanstack/react-query": "^5.104.2",
@@ -23,6 +25,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "maplibre-gl": "^6.14.0",
+    "onda": "file:../..",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -31,6 +34,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.2",
+    "react-native-webview": "13.16.1",
     "react-native-worklets": "0.10.1",
     "zustand": "^5.0.15"
   },
@@ -54,6 +58,7 @@
   },
   "private": true,
   "overrides": {
+    "decode-uri-component": "$decode-uri-component",
     "xcode": {
       "uuid": "^11.1.1"
     }
