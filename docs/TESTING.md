@@ -2,7 +2,7 @@
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
   con `ONDA_TEST_SQL` definido). 62 pruebas: 52 unitarias/API + 10 de integración con SQL Server real.
-- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 36 pruebas.
+- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 37 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
 - Compatibilidad: en apps/mobile `npx expo install --check`; bundling `npx expo export --platform android`.
@@ -28,6 +28,11 @@ selección mapa↔lista y reproducción; reproductor con ondas, «EN VIVO» tras
 Radar con alcance por país y carga progresiva más allá de la primera página; biblioteca con datos de la versión anterior
 conservados tras varios cierres forzados; ajustes con país automático y estado del catálogo.
 Web (navegador integrado, 375 px): mapa centrado en Perú, clusters, zoom y lista sincronizada.
+
+Segundo plano (2026-10-13): con la app fuera de pantalla 20 s, `dumpsys media_session` → PLAYING,
+`dumpsys audio` → AudioTrack de la app `started`, `dumpsys activity services` → AudioControlsService en primer plano.
+Comprobación de 4,5 min no concluyente (la app volvió a primer plano). Comandos para repetirla en un teléfono por USB:
+`adb shell dumpsys media_session`, `adb shell dumpsys audio`, `adb shell dumpsys activity services app.onda.radio`.
 
 Esto **no** sustituye las pruebas físicas: no se verificó audio audible, Bluetooth, llamadas, batería, memoria
 ni segundo plano prolongado.

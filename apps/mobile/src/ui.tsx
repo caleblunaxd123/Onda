@@ -7,7 +7,7 @@ import { useTheme, type Palette } from './theme';
 import { useLibrary } from './library';
 import { isActive, player, usePlayer } from './player';
 import type { Station } from './types';
-import { Equalizer } from './waves';
+import { Equalizer, Waveform } from './waves';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 export const stateLabels = {idle: 'Elige una emisora', connecting: 'Conectando…', buffering: 'Cargando audio…', playing: 'En vivo', paused: 'En pausa', error: 'Sin reproducción'};
@@ -33,6 +33,27 @@ export function ScreenHeader({title, subtitle, back, children}: PropsWithChildre
       {subtitle ? <Muted numberOfLines={1}>{subtitle}</Muted> : null}
     </View>
     {children}
+  </View>;
+}
+
+const logo = require('../assets/brand/onda-logo-header.png');
+
+/** Tab screen header from the owner's model: ONDA logo, brand waveform, optional title and trailing actions. */
+export function BrandHeader({title, subtitle, emoji, children}: PropsWithChildren<{title?: string; subtitle?: string; emoji?: string}>) {
+  const c = useTheme(); const playback = usePlayer();
+  return <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10, backgroundColor: c.bg, experimental_backgroundImage: c.headerGlow} as ViewStyle}>
+    <View pointerEvents="none" style={{position: 'absolute', right: 70, top: 6}}><Waveform active={playback.state === 'playing'} height={46} opacity={c.isDark ? 0.55 : 0.4}/></View>
+    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48}}>
+      <Image source={logo} accessibilityRole="header" accessibilityLabel="ONDA" resizeMode="contain" style={{width: 128, height: 36}}/>
+      <View style={{flexDirection: 'row', gap: 8}}>{children}</View>
+    </View>
+    {title ? <View style={{marginTop: 6}}>
+      <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+        <Label accessibilityRole="header" numberOfLines={1} style={{fontSize: 28, lineHeight: 34, fontWeight: '900', letterSpacing: -0.5, flexShrink: 1}}>{title}</Label>
+        {emoji ? <Text style={{fontSize: 24}}>{emoji}</Text> : null}
+      </View>
+      {subtitle ? <Muted numberOfLines={2} style={{fontSize: 13.5, lineHeight: 18}}>{subtitle}</Muted> : null}
+    </View> : null}
   </View>;
 }
 
@@ -94,9 +115,10 @@ export function Favorite({station, size = 22}: {station: Station; size?: number}
 
 const subtitleFor = (station: Station) => [station.region || station.country, station.tags[0] ? tagLabel(station.tags[0]) : station.codec].filter(Boolean).join(' · ');
 
-export function StationRow({station, onRemove, onPress, selected}: {station: Station; onRemove?: () => void; onPress?: () => void; selected?: boolean}) {
+export function StationRow({station, onRemove, onPress, selected, card}: {station: Station; onRemove?: () => void; onPress?: () => void; selected?: boolean; card?: boolean}) {
   const c = useTheme(); const [menu, setMenu] = useState(false);
-  return <View style={{flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 6, paddingHorizontal: selected ? 8 : 0, borderRadius: 16, backgroundColor: selected ? c.primary + '14' : 'transparent'}}>
+  return <View style={[{flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 6, paddingHorizontal: selected || card ? 8 : 0, borderRadius: 18, backgroundColor: selected ? c.primary + '14' : 'transparent'},
+    card && !selected && {backgroundColor: c.surface, boxShadow: c.shadow, marginBottom: 8, paddingVertical: 8} as ViewStyle, card && selected && {marginBottom: 8, paddingVertical: 8, borderWidth: 1, borderColor: c.primary + '55'}]}>
     <Pressable accessibilityRole="button" accessibilityLabel={(onPress ? 'Seleccionar ' : 'Escuchar ') + station.name} onPress={onPress ?? (() => player.select(station))} style={({pressed}) => ({flex: 1, flexDirection: 'row', gap: 12, alignItems: 'center', opacity: pressed ? .7 : 1})}>
       <Artwork key={station.id} station={station} size={50}/>
       <View style={{flex: 1, gap: 2}}>
@@ -210,7 +232,7 @@ export function MiniPlayer() {
       <Artwork key={s.station.id} station={s.station} size={42}/>
       <View style={{flex: 1}}>
         <Label numberOfLines={1} style={{fontWeight: '700', fontSize: 14}}>{s.station.name}</Label>
-        <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>{s.state === 'playing' && !s.error ? <><Equalizer color={c.live} active height={12}/><LiveBadge small/></> : null}<Muted numberOfLines={1} style={{fontSize: 12, color: s.state === 'error' ? c.live : c.muted, flex: 1}}>{s.error ?? (s.state === 'playing' ? s.station.country : stateLabels[s.state])}</Muted></View>
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>{s.state === 'playing' && !s.error ? <><Equalizer color={c.live} active height={12}/><LiveBadge small/></> : null}<Muted numberOfLines={1} style={{fontSize: 12, color: s.state === 'error' ? c.live : c.muted, flex: 1}}>{s.error ?? (s.state === 'playing' ? [s.station.country, s.station.region].filter(Boolean).join(' · ') : stateLabels[s.state])}</Muted></View>
       </View>
     </Pressable>
     <Favorite station={s.station}/>
@@ -220,8 +242,8 @@ export function MiniPlayer() {
 
 export function PlayButton({active, onPress, label, size = 44}: {active: boolean; onPress: () => void; label: string; size?: number}) {
   const c = useTheme();
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({pressed}) => ({width: size, height: size, borderRadius: size / 2, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .75 : 1, boxShadow: `0px 6px 16px ${c.primary}55`} as ViewStyle)}>
-    <Ionicons name={active ? 'pause' : 'play'} size={size * .45} color={c.onPrimary} style={{marginLeft: active ? 0 : size * .05}}/>
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({pressed}) => ({width: size, height: size, borderRadius: size / 2, backgroundColor: c.primary, experimental_backgroundImage: c.brand, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .75 : 1, boxShadow: `0px 6px 16px ${c.primary}55`} as ViewStyle)}>
+    <Ionicons name={active ? 'pause' : 'play'} size={size * .45} color="#FFFFFF" style={{marginLeft: active ? 0 : size * .05}}/>
   </Pressable>;
 }
 

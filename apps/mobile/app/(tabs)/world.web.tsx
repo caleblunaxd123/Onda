@@ -3,8 +3,9 @@ import { View } from 'react-native';
 import { Map as BrowserMap, NavigationControl, setWorkerUrl, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useTheme } from '../../src/theme';
-import { Muted, ScreenHeader } from '../../src/ui';
-import { WorldPanel, clusterColor, clusterRadius, useWorldExplorer, type Bounds } from '../../src/world';
+import { BrandHeader, IconButton, Muted } from '../../src/ui';
+import { router } from 'expo-router';
+import { MapCountBadge, WorldPanel, clusterColor, clusterRadius, useWorldExplorer, type Bounds } from '../../src/world';
 import { useMapStyle } from '../../src/map-style';
 
 export default function WorldWeb() {
@@ -71,8 +72,17 @@ export default function WorldWeb() {
   }, [explorer.countries.data, explorer.preferred]);
 
   return <View style={{flex: 1, backgroundColor: c.bg}}>
-    <ScreenHeader title="Explorar el mundo" subtitle="Toca un grupo para acercarte o una emisora para escucharla"/>
-    <div ref={container} aria-label="Mapa de emisoras" style={{flex: 1, minHeight: 220, width: '100%'}}/>
+    <BrandHeader title="Explorar el mundo" emoji="🌍" subtitle="Toca un grupo para acercarte o una emisora para oírla.">
+      <IconButton icon="settings-outline" label="Ajustes" onPress={() => router.push('/settings')}/>
+    </BrandHeader>
+    <View style={{flex: 1, minHeight: 220}}>
+      <div ref={container} aria-label="Mapa de emisoras" style={{position: 'absolute', inset: 0}}/>
+      <View style={{position: 'absolute', right: 12, top: 110, gap: 10}}>
+        <IconButton icon="globe-outline" label="Ver todo el mundo" onPress={() => map.current?.flyTo({center: [-30, 10], zoom: 1})}/>
+        <IconButton icon="navigate" label="Centrar en mi país (sin GPS)" onPress={() => fit(explorer.countries.data?.find(x => x.code === explorer.preferred)?.bounds ?? null)}/>
+      </View>
+      <MapCountBadge explorer={explorer}/>
+    </View>
     {!!error && <Muted style={{color: c.live, paddingHorizontal: 20, paddingTop: 4}}>{error}</Muted>}
     <View style={{flex: 1.15}}>
       <WorldPanel explorer={explorer}

@@ -1,5 +1,23 @@
 # Progreso — 2026-10-12
 
+## Actualización 2026-10-13: logo, diseño del modelo, segundo plano y APK
+- Logo oficial integrado (assets/brand): cabecera de marca en todas las pestañas, icono de app, icono adaptativo
+  y monocromo de Android, splash (expo-splash-screen) y favicon. Paleta derivada del logo (cian → azul → violeta).
+- Mundo según el modelo del propietario: cabecera con logo y onda, controles del mapa (mundo, acercar, alejar,
+  centrar en mi país sin GPS), contador flotante con recuento real, panel con onda y recarga, chips en una fila,
+  «Más filtros» (género e idioma aplicados a mapa y lista) y filas en tarjeta. Pestaña activa redondeada.
+- Corregido: «Continuar escuchando» repetía emisoras que Radio Browser lista con distinto id (mismo stream o
+  mismo nombre y país); ahora se deduplican al guardar y al mostrar. Corregido: reproducir una emisora la
+  quitaba de la destacada y podía recargar Radar; la exclusión de recientes se fija al abrir la pantalla.
+- Development Build recompilado e instalado (cambio nativo por icono/splash). Pruebas móviles: 37/37.
+- Segundo plano en emulador (`dumpsys`): a los 20 s fuera de la app, sesión multimedia PLAYING, AudioTrack
+  `started` y servicio `AudioControlsService` en primer plano con notificación de transporte. La comprobación a
+  los 4,5 min no fue concluyente: la app volvió a primer plano durante la espera (sesión PLAYING y servicio activo,
+  AudioTrack momentáneamente en pausa). Falta repetirla con pantalla bloqueada en un teléfono físico.
+- APK de prueba para teléfono (release, bundle incluido, arm64-v8a y armeabi-v7a, 84 MB) apuntando a la API en la
+  red local: `dist/ONDA-0.1.0-lan.apk` (no se versiona; se genera con `scripts/build-apk.ps1`).
+
+
 ## Continuación: catálogo, exploración, reproducción y rediseño
 Base: commit 6e5ee85 (colecciones de la sesión anterior, confirmadas por separado para conservarlas).
 

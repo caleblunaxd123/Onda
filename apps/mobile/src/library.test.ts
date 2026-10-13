@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { useLibrary } from './library';
+import { uniqueBroadcasts, useLibrary } from './library';
 import type { Station } from './types';
 const storage = vi.hoisted(() => ({getItem:vi.fn(async (_key:string):Promise<string|null>=>null),setItem:vi.fn(async()=>{}),removeItem:vi.fn(async()=>{})}));
 vi.mock('@react-native-async-storage/async-storage',()=>({default:storage}));
@@ -11,7 +11,7 @@ it('toggles favorites without duplicates and persists locally',()=>{
  useLibrary.getState().toggle(station);expect(useLibrary.getState().favorites).toHaveLength(0);
 });
 it('deduplicates history and retains most recent station first',()=>{
- useLibrary.getState().remember(station);useLibrary.getState().remember({...station,id:'b'});useLibrary.getState().remember(station);
+ useLibrary.getState().remember(station);useLibrary.getState().remember({...station,id:'b',name:'B',streamUrl:'https://example.com/b'});useLibrary.getState().remember(station);
  expect(useLibrary.getState().history.map(s=>s.id)).toEqual(['a','b']);
 });
 it('rehydrates favorites from device storage',async()=>{
@@ -66,7 +66,7 @@ it('clears all library data including collections while keeping preferences',()=
 });
 it('refreshes saved snapshots from the catalog without removing or reordering stations',()=>{
  const id=useLibrary.getState().createCollection('Viajes')!;
- useLibrary.getState().toggle(station);useLibrary.getState().toggle({...station,id:'gone'});
+ useLibrary.getState().toggle(station);useLibrary.getState().toggle({...station,id:'gone',name:'Gone',streamUrl:'https://example.com/gone'});
  useLibrary.getState().remember(station);useLibrary.getState().addToCollection(id,station);
  useLibrary.getState().refreshStations([{...station,name:'Fixture renovada',streams:['https://example.com/alt']}]);
  const s=useLibrary.getState();
@@ -91,4 +91,12 @@ it('follows the device country automatically until the person chooses one',()=>{
  useLibrary.getState().setCountry('JP');expect(useLibrary.getState().countryMode).toBe('manual');
  useLibrary.getState().syncDeviceCountry('PE');expect(useLibrary.getState().country).toBe('JP');
  useLibrary.getState().followDeviceCountry('PE');expect(useLibrary.getState()).toMatchObject({country:'PE',countryMode:'auto'});
+});
+it('treats catalog duplicates of the same broadcast as one entry in history',()=>{
+ useLibrary.getState().remember(station);
+ useLibrary.getState().remember({...station,id:'dup-stream',name:'Otro nombre',streamUrl:'https://example.com/test/'});
+ useLibrary.getState().remember({...station,id:'dup-name',name:'  fixture ',streamUrl:'https://other.example/x'});
+ useLibrary.getState().remember({...station,id:'other',name:'Fixture',countryCode:'CL',streamUrl:'https://cl.example/x'});
+ expect(useLibrary.getState().history.map(s=>s.id)).toEqual(['other','dup-name','dup-stream']);
+ expect(uniqueBroadcasts([station,{...station,id:'copy'},{...station,id:'b',name:'B',streamUrl:'https://b'}]).map(s=>s.id)).toEqual(['a','b']);
 });

@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Map, Camera, GeoJSONSource, Layer, type CameraRef } from '@maplibre/maplibre-react-native';
 import { useTheme } from '../../src/theme';
-import { IconButton, ScreenHeader } from '../../src/ui';
-import { WorldPanel, clusterColor, clusterRadius, useWorldExplorer, type Bounds } from '../../src/world';
+import { BrandHeader, IconButton } from '../../src/ui';
+import { router } from 'expo-router';
+import { MapCountBadge, WorldPanel, clusterColor, clusterRadius, useWorldExplorer, type Bounds } from '../../src/world';
 import { useMapStyle } from '../../src/map-style';
+
+function MapButton(props: React.ComponentProps<typeof IconButton>) {
+  return <View style={{borderRadius: 24, boxShadow: '0px 4px 12px rgba(15, 26, 53, 0.18)'}}><IconButton {...props}/></View>;
+}
 
 export default function World() {
   const c = useTheme(); const explorer = useWorldExplorer();
@@ -22,7 +27,9 @@ export default function World() {
     return () => clearTimeout(timer);
   }, [loaded, explorer.countries.data, explorer.preferred]);
   return <View style={{flex: 1, backgroundColor: c.bg}}>
-    <ScreenHeader title="Explorar el mundo" subtitle="Toca un grupo para acercarte o una emisora para escucharla"/>
+    <BrandHeader title="Explorar el mundo" emoji="🌍" subtitle="Toca un grupo para acercarte o una emisora para oírla.">
+      <IconButton icon="settings-outline" label="Ajustes" onPress={() => router.push('/settings')}/>
+    </BrandHeader>
     <View style={{flex: 1, minHeight: 220}}>
       {!style ? <View style={{flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.surfaceAlt}}><ActivityIndicator color={c.primary} accessibilityLabel="Cargando mapa"/></View> :
       <Map style={{flex: 1}} mapStyle={style as never} attributionPosition={{bottom: 30, right: 8}} logo={false}
@@ -43,11 +50,13 @@ export default function World() {
           <Layer id="selected" type="circle" filter={['==', ['get', 'stationId'], explorer.selectedId ?? '-']} paint={{'circle-color': c.live, 'circle-radius': 11, 'circle-stroke-width': 3, 'circle-stroke-color': '#FFFFFF'}}/>
         </GeoJSONSource>
       </Map>}
-      <View style={{position: 'absolute', right: 12, top: 12, gap: 8}}>
-        <IconButton icon="globe-outline" label="Ver todo el mundo" onPress={() => camera.current?.flyTo({center: [-30, 10], zoom: 1, duration: 800})}/>
-        <IconButton icon="add" label="Acercar" onPress={() => camera.current?.zoomTo(Math.min(explorer.zoom.current + 1, 16), {duration: 300})}/>
-        <IconButton icon="remove" label="Alejar" onPress={() => camera.current?.zoomTo(Math.max(explorer.zoom.current - 1, 0), {duration: 300})}/>
+      <View style={{position: 'absolute', right: 12, top: 12, gap: 10}}>
+        <MapButton icon="globe-outline" label="Ver todo el mundo" onPress={() => camera.current?.flyTo({center: [-30, 10], zoom: 1, duration: 800})}/>
+        <MapButton icon="add" label="Acercar" onPress={() => camera.current?.zoomTo(Math.min(explorer.zoom.current + 1, 16), {duration: 300})}/>
+        <MapButton icon="remove" label="Alejar" onPress={() => camera.current?.zoomTo(Math.max(explorer.zoom.current - 1, 0), {duration: 300})}/>
+        <MapButton icon="navigate" label="Centrar en mi país (sin GPS)" onPress={() => fit(explorer.countries.data?.find(x => x.code === explorer.preferred)?.bounds ?? null)}/>
       </View>
+      <MapCountBadge explorer={explorer}/>
     </View>
     <View style={{flex: 1.15}}>
       <WorldPanel explorer={explorer}

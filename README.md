@@ -31,6 +31,17 @@ Otra instancia: `$env:ONDA_SQL_SERVER='(localdb)\OndaDev'` o `$env:ConnectionStr
 En emulador Android la API está en `http://10.0.2.2:5080`; en un dispositivo físico, la IP LAN del PC.
 El tráfico HTTP solo se habilita en builds con APP_VARIANT=development. Preview/producción requieren API HTTPS.
 
+## Probar en un teléfono Android real (APK de prueba en la red local)
+1. PC y teléfono en la misma red Wi‑Fi/LAN. Iniciar la API para la red: `scripts/start-api.ps1` (escucha en 0.0.0.0:5080).
+2. Permitir el puerto 5080 en el firewall de Windows (una vez, PowerShell como administrador):
+   `New-NetFirewallRule -DisplayName "ONDA API 5080 (LAN)" -Direction Inbound -Protocol TCP -LocalPort 5080 -RemoteAddress LocalSubnet -Action Allow`
+3. Generar el APK con la IP LAN del PC (ejemplo 192.168.18.12):
+   `powershell -ExecutionPolicy Bypass -File scripts/build-apk.ps1 -ApiUrl http://192.168.18.12:5080`
+   Resultado: `dist/ONDA-<versión>-lan.apk` (firmado con la clave de depuración; solo para pruebas).
+4. Copiar el APK al teléfono, permitir «Instalar apps desconocidas» y abrirlo. Desde el navegador del teléfono,
+   `http://<IP-del-PC>:5080/health/ready` debe responder `ready`.
+Este APK usa HTTP en la red local; no sirve fuera de ella. Para distribución hace falta una API HTTPS pública.
+
 ## Ver la app en web
 Con la API en marcha: `npm --prefix apps/mobile run web -- --localhost` y abrir http://localhost:8081.
 La web comparte pantallas y lógica; el mapa usa MapLibre GL JS. No sustituye las pruebas Android. Ver docs/WEB_PREVIEW.md.
@@ -40,7 +51,7 @@ Servidor `.\SQLEXPRESS`, autenticación Windows, base `Onda`. Tablas y consultas
 Las migraciones se aplican explícitamente, nunca al iniciar la API.
 
 ## Verificación
-- `npm run check:mobile` — TypeScript, ESLint y 36 pruebas.
+- `npm run check:mobile` — TypeScript, ESLint y 37 pruebas.
 - `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 62 pruebas, incluidas 10 con SQL Server real.
 - `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1` — catálogo real de extremo a extremo.
 - `curl http://localhost:5080/api/v1/catalog/status`

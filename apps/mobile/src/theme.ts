@@ -4,22 +4,29 @@ export const tokens = {space: [0, 4, 8, 12, 16, 24, 32, 48], radius: {small: 12,
 
 export type Palette = {
   isDark: boolean; bg: string; surface: string; surfaceAlt: string; text: string; muted: string;
-  primary: string; primaryText: string; onPrimary: string; accent: string; live: string; border: string;
-  shadow: string; featured: string; featuredFallback: string;
+  primary: string; primaryText: string; onPrimary: string; accent: string; accentSoft: string; live: string; border: string;
+  shadow: string; featured: string; featuredFallback: string; brand: string; headerGlow: string;
 };
 
+/** Colours taken from the ONDA logo: cyan #12D3E6 → blue #1478E0 → violet #6D3BEF. */
 const light: Palette = {
-  isDark: false, bg: '#F5F7FB', surface: '#FFFFFF', surfaceAlt: '#EDF2F8', text: '#101A33', muted: '#56667F',
+  isDark: false, bg: '#F5F8FC', surface: '#FFFFFF', surfaceAlt: '#EAF1F8', text: '#0F1A35', muted: '#55657E',
   // primaryText keeps ≥4.5:1 on white; primary is used for fills with white text and icons.
-  primary: '#0E9AA8', primaryText: '#0A7A86', onPrimary: '#FFFFFF', accent: '#6F52E3', live: '#E5384F', border: '#E2E8F1',
-  shadow: '0px 6px 18px rgba(16, 26, 51, 0.08)',
-  featured: 'linear-gradient(120deg, #101B44 0%, #2C2A78 55%, #7A2F7E 100%)', featuredFallback: '#1B2257',
+  primary: '#0C98C8', primaryText: '#0A6E96', onPrimary: '#FFFFFF', accent: '#6D3BEF', accentSoft: '#EEE9FE',
+  live: '#E5384F', border: '#E1E8F2',
+  shadow: '0px 6px 18px rgba(15, 26, 53, 0.08)',
+  featured: 'linear-gradient(120deg, #0B1B4D 0%, #1D3FA6 52%, #6B2FC9 100%)', featuredFallback: '#1A2C78',
+  brand: 'linear-gradient(135deg, #12D3E6 0%, #1478E0 62%, #6D3BEF 100%)',
+  headerGlow: 'linear-gradient(180deg, #D8F3FA 0%, #EAF4FC 55%, #F5F8FC 100%)',
 };
 const dark: Palette = {
-  isDark: true, bg: '#0B1326', surface: '#152241', surfaceAlt: '#1C2B4D', text: '#F5F8FF', muted: '#A8BAD1',
-  primary: '#2DD4CF', primaryText: '#4FE0DB', onPrimary: '#05232A', accent: '#9B87FF', live: '#FF5C74', border: '#26375A',
+  isDark: true, bg: '#0A1226', surface: '#142240', surfaceAlt: '#1B2B4C', text: '#F4F8FF', muted: '#A6B8D0',
+  primary: '#22CBE8', primaryText: '#5EDDF2', onPrimary: '#04202B', accent: '#A78BFA', accentSoft: '#2A2453',
+  live: '#FF5C74', border: '#24365A',
   shadow: '0px 6px 18px rgba(0, 0, 0, 0.35)',
-  featured: 'linear-gradient(120deg, #13204A 0%, #33287A 55%, #7A2F7E 100%)', featuredFallback: '#1E2659',
+  featured: 'linear-gradient(120deg, #0E1E52 0%, #1F3C9C 52%, #6B2FC9 100%)', featuredFallback: '#1B2C70',
+  brand: 'linear-gradient(135deg, #12D3E6 0%, #1478E0 62%, #6D3BEF 100%)',
+  headerGlow: 'linear-gradient(180deg, #102A52 0%, #0D1A36 60%, #0A1226 100%)',
 };
 
 export function useTheme(): Palette {

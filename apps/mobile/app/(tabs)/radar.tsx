@@ -4,27 +4,34 @@ import { router } from 'expo-router';
 import { Ionicons } from '../../src/icons';
 import { useCountries, useStationFeed } from '../../src/catalog';
 import { daySeed, listeningProfile } from '../../src/discovery';
-import { useLibrary } from '../../src/library';
+import { recentIdsSnapshot, useLibrary, useLibraryHydrated } from '../../src/library';
 import { isActive, player, usePlayer } from '../../src/player';
 import { useTheme } from '../../src/theme';
-import { Label, Muted, Artwork, Chip, Favorite, Loading, Message, IconButton, ScreenHeader, LiveBadge, PlayButton, flag, tagLabel, cardStyle, stateLabels } from '../../src/ui';
+import { Label, Muted, Artwork, Chip, Favorite, Loading, Message, IconButton, BrandHeader, LiveBadge, PlayButton, flag, tagLabel, cardStyle, stateLabels } from '../../src/ui';
 
 export default function Radar() {
+  const c = useTheme(); const hydrated = useLibraryHydrated();
+  return hydrated ? <RadarContent/> : <View style={{flex: 1, backgroundColor: c.bg}}/>;
+}
+
+function RadarContent() {
   const c = useTheme(); const playback = usePlayer(); const [height, setHeight] = useState(0);
   const [seed, setSeed] = useState(daySeed());
   const [autoTune, setAutoTune] = useState(false);
   const library = useLibrary();
   const profile = useMemo(() => listeningProfile(library.favorites, library.history, library.collections), [library.favorites, library.history, library.collections]);
   const [scope, setScope] = useState<'country' | 'world'>('country');
+  // Captured once: tuning a card adds it to history, which must not reload the feed under the person's finger.
+  const [recentAtOpen] = useState(() => recentIdsSnapshot());
   const countries = useCountries();
   const countryName = countries.data?.find(x => x.code === library.country)?.name ?? library.country;
   const feed = useStationFeed({order: 'discover', seed, country: scope === 'country' ? library.country : undefined,
-    boostTags: [...new Set([...profile.tags, ...library.likedTags])].slice(0, 5), boostCountries: [library.country, ...profile.countries], exclude: profile.recent}, {limit: 20});
+    boostTags: [...new Set([...profile.tags, ...library.likedTags])].slice(0, 5), boostCountries: [library.country, ...profile.countries], exclude: recentAtOpen}, {limit: 20});
   return <View style={{flex: 1, backgroundColor: c.bg}}>
-    <ScreenHeader title="Radio Radar" subtitle={autoTune ? 'Sintonía automática: suena al deslizar' : 'Desliza y descubre nuevas emisoras'}>
+    <BrandHeader title="Radio Radar" emoji="📡" subtitle={autoTune ? 'Sintonía automática: suena al deslizar.' : 'Desliza y descubre nuevas emisoras.'}>
       <IconButton icon={autoTune ? 'radio' : 'radio-outline'} tint={autoTune ? c.primaryText : undefined} label={autoTune ? 'Desactivar sintonía automática' : 'Activar sintonía automática al deslizar'} onPress={() => setAutoTune(!autoTune)}/>
       <IconButton icon="shuffle" label="Barajar el radar" onPress={() => setSeed(Math.floor(Math.random() * 1e9))}/>
-    </ScreenHeader>
+    </BrandHeader>
     <View style={{flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 4}}>
       <Chip label={`${flag(library.country)} ${countryName}`} selected={scope === 'country'} onPress={() => setScope('country')}/>
       <Chip label="🌍 Todo el mundo" selected={scope === 'world'} onPress={() => setScope('world')}/>

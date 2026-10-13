@@ -4,16 +4,24 @@ import { Redirect, router } from 'expo-router';
 import { Ionicons } from '../../src/icons';
 import { useCountries, useStationFeed, useTags } from '../../src/catalog';
 import { daySeed, listeningProfile, pickForDay } from '../../src/discovery';
-import { useLibrary } from '../../src/library';
+import { recentIdsSnapshot, uniqueBroadcasts, useLibrary, useLibraryHydrated } from '../../src/library';
 import { greeting, moods, useTheme } from '../../src/theme';
 import { isActive, player, usePlayer } from '../../src/player';
-import { Page, Label, Muted, StationRow, Artwork, Loading, Message, SectionTitle, StationTile, IconButton, LiveBadge, flag, tagLabel, cardStyle } from '../../src/ui';
+import { BrandHeader, Page, Label, Muted, StationRow, Artwork, Loading, Message, SectionTitle, StationTile, IconButton, LiveBadge, flag, tagLabel, cardStyle } from '../../src/ui';
 import type { Station } from '../../src/types';
 
 export default function Home() {
+  const c = useTheme(); const hydrated = useLibraryHydrated(); const onboarded = useLibrary(s => s.onboarded);
+  if (!hydrated) return <View style={{flex: 1, backgroundColor: c.bg}}/>;
+  if (!onboarded) return <Redirect href="/onboarding"/>;
+  return <HomeContent/>;
+}
+
+function HomeContent() {
   const c = useTheme(); const {width} = useWindowDimensions();
   const library = useLibrary();
-  const hydrated = useLibrary.persist.hasHydrated();
+  // Captured once: playing a station must not remove it from the cards the person is looking at.
+  const [recentAtOpen] = useState(() => recentIdsSnapshot());
   const [tag, setTag] = useState('');
   const seed = daySeed();
   const profile = useMemo(() => listeningProfile(library.favorites, library.history, library.collections), [library.favorites, library.history, library.collections]);
@@ -21,9 +29,9 @@ export default function Home() {
   const countries = useCountries();
   const countryName = countries.data?.find(x => x.code === library.country)?.name ?? library.country;
   // Suggestions come from the country where the person is; the world is only a fallback for small catalogs.
-  const local = useStationFeed({country: library.country, order: 'discover', seed, boostTags: likedTags, exclude: profile.recent.slice(0, 10)}, {limit: 12});
+  const local = useStationFeed({country: library.country, order: 'discover', seed, boostTags: likedTags, exclude: recentAtOpen.slice(0, 10)}, {limit: 12});
   const needsWorld = local.isSuccess && local.items.length < 3;
-  const world = useStationFeed({order: 'discover', seed, boostCountries: [library.country, ...profile.countries], boostTags: likedTags, exclude: profile.recent.slice(0, 10)}, {limit: 12, enabled: needsWorld});
+  const world = useStationFeed({order: 'discover', seed, boostCountries: [library.country, ...profile.countries], boostTags: likedTags, exclude: recentAtOpen.slice(0, 10)}, {limit: 12, enabled: needsWorld});
   const featured = needsWorld ? {...world, items: [...local.items, ...world.items]} : local;
   const popular = useStationFeed({country: library.country, tag: tag || undefined, order: 'discover', seed}, {limit: 10});
   const tags = useTags();
@@ -33,22 +41,19 @@ export default function Home() {
   const inferred = profile.tags.find(t => known.has(t));
   const genre = chosen ?? inferred ?? pickForDay((tags.data ?? []).slice(0, 30).map(t => t.value), seed);
   const genreLabel = genre ? known.get(genre) ?? tagLabel(genre) : '';
-  const genreLocal = useStationFeed({tag: genre, country: library.country, order: 'discover', seed, exclude: profile.recent}, {limit: 12, enabled: !!genre});
+  const genreLocal = useStationFeed({tag: genre, country: library.country, order: 'discover', seed, exclude: recentAtOpen}, {limit: 12, enabled: !!genre});
   const genreWorldNeeded = genreLocal.isSuccess && genreLocal.items.length < 4;
-  const genreWorld = useStationFeed({tag: genre, order: 'discover', seed, exclude: profile.recent, boostCountries: [library.country]}, {limit: 12, enabled: !!genre && genreWorldNeeded});
+  const genreWorld = useStationFeed({tag: genre, order: 'discover', seed, exclude: recentAtOpen, boostCountries: [library.country]}, {limit: 12, enabled: !!genre && genreWorldNeeded});
   const genreFeed = genreWorldNeeded ? genreWorld : genreLocal;
   const genreTitle = (chosen ? `Porque te gusta: ${genreLabel}` : inferred ? `Más ${genreLabel.toLowerCase()} para ti` : `Género del día: ${genreLabel}`)
     + (genreWorldNeeded ? ' · en el mundo' : ` · en ${countryName}`);
   const hello = greeting();
   const cardWidth = Math.min(width, 480) - 40;
-  if (hydrated && !library.onboarded) return <Redirect href="/onboarding"/>;
   const featuredItems = featured.items.slice(0, 5);
-  return <Page>
-    <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-      <Label accessibilityRole="header" accessibilityLabel="ONDA" style={{fontSize: 30, lineHeight: 36, fontWeight: '900', letterSpacing: 1, color: c.primaryText}}>ONDA</Label>
-      <IconButton icon="settings-outline" label="Ajustes y perfil" onPress={() => router.push('/settings')}/>
-    </View>
-    <Pressable accessibilityRole="search" accessibilityLabel="Buscar emisoras, países, ciudades y géneros" onPress={() => router.push('/search')} style={[cardStyle(c), {borderRadius: 16, paddingHorizontal: 14, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: -6}]}>
+  return <View style={{flex: 1, backgroundColor: c.bg}}>
+    <BrandHeader><IconButton icon="settings-outline" label="Ajustes y perfil" onPress={() => router.push('/settings')}/></BrandHeader>
+    <Page>
+    <Pressable accessibilityRole="search" accessibilityLabel="Buscar emisoras, países, ciudades y géneros" onPress={() => router.push('/search')} style={[cardStyle(c), {borderRadius: 16, paddingHorizontal: 14, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: -4}]}>
       <Ionicons name="search" size={18} color={c.muted}/><Muted style={{fontSize: 14}}>Buscar emisoras, países, géneros…</Muted>
     </Pressable>
     <View style={{gap: 2}}>
@@ -65,7 +70,7 @@ export default function Home() {
     {library.history.length > 0 && <>
       <SectionTitle title="Continuar escuchando" action="Ver todo" onPress={() => router.push('/library')}/>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap: 12}} style={{marginHorizontal: -20}} contentInset={{left: 20}}>
-        <View style={{width: 8}}/>{library.history.slice(0, 10).map(s => <StationTile key={s.id} station={s}/>)}<View style={{width: 8}}/>
+        <View style={{width: 8}}/>{uniqueBroadcasts(library.history).slice(0, 10).map(s => <StationTile key={s.id} station={s}/>)}<View style={{width: 8}}/>
       </ScrollView>
     </>}
 
@@ -97,7 +102,8 @@ export default function Home() {
       <View style={{flex: 1, gap: 4}}><Label style={{fontSize: 18, fontWeight: '800'}}>Un mundo por escuchar</Label><Muted>{countries.data ? `${countries.data.length} países con radio. Explóralos en el mapa.` : 'Explora emisoras por país y ciudad.'}</Muted></View>
       <View style={{width: 56, height: 56, borderRadius: 28, backgroundColor: c.primary + '1A', alignItems: 'center', justifyContent: 'center'}}><Ionicons name="earth" size={30} color={c.primaryText}/></View>
     </Pressable>
-  </Page>;
+  </Page>
+  </View>;
 }
 
 function FeaturedCarousel({stations, width}: {stations: Station[]; width: number}) {

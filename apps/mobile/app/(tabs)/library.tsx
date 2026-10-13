@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Keyboard, Pressable, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
-import { useLibrary } from '../../src/library';
+import { uniqueBroadcasts, useLibrary } from '../../src/library';
 import { useTheme } from '../../src/theme';
 import { Ionicons } from '../../src/icons';
-import { Page, Heading, Label, Button, StationRow, Artwork, Card, IconButton, SectionTitle, ScreenHeader, cardStyle } from '../../src/ui';
+import { Page, Heading, Label, Button, StationRow, Artwork, Card, IconButton, SectionTitle, BrandHeader, cardStyle } from '../../src/ui';
 
 type Section = 'favorites' | 'history' | 'collections';
 const sections = [{id: 'favorites', label: 'Favoritos'}, {id: 'history', label: 'Historial'}, {id: 'collections', label: 'Colecciones'}] as const;
@@ -20,7 +20,7 @@ export default function Library() {
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const selected = section === 'collections' ? library.collections.find(item => item.id === selectedId) : undefined;
-  const source = selected?.stations ?? (section === 'collections' ? [] : library[section]);
+  const source = selected?.stations ?? (section === 'collections' ? [] : section === 'history' ? uniqueBroadcasts(library.history) : library[section]);
   const needle = query.trim().toLocaleLowerCase();
   const rows = source.filter(s => [s.name, s.country, ...s.tags].join(' ').toLocaleLowerCase().includes(needle));
   const collections = library.collections.filter(item => item.name.toLocaleLowerCase().includes(needle));
@@ -37,7 +37,7 @@ export default function Library() {
     Keyboard.dismiss(); setEditing(false); setQuery('');
   };
   return <View style={{flex: 1, backgroundColor: c.bg}}>
-    <ScreenHeader title="Tu biblioteca" subtitle="Las radios que hacen tu día"><IconButton icon="add" label="Crear colección" onPress={() => {setSection('collections'); setSelectedId(null); setName(''); setError(''); setEditing(true); setDeleting(false);}}/><IconButton icon="settings-outline" label="Ajustes" onPress={() => router.push('/settings')}/></ScreenHeader>
+    <BrandHeader title="Tu biblioteca" emoji="💜" subtitle="Las radios que hacen tu día."><IconButton icon="add" label="Crear colección" onPress={() => {setSection('collections'); setSelectedId(null); setName(''); setError(''); setEditing(true); setDeleting(false);}}/><IconButton icon="settings-outline" label="Ajustes" onPress={() => router.push('/settings')}/></BrandHeader>
     <Page>
     <View accessibilityRole="tablist" style={{flexDirection: 'row', padding: 4, borderRadius: 99, backgroundColor: c.surface, gap: 4, borderWidth: 1, borderColor: c.border, marginTop: -6}}>
       {sections.map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected: section === item.id}} onPress={() => {setSection(item.id); setSelectedId(null); setQuery(''); setEditing(false); setDeleting(false);}} style={{flex: 1, minHeight: 44, borderRadius: 99, alignItems: 'center', justifyContent: 'center', backgroundColor: section === item.id ? c.primary : 'transparent'}}><Label style={{fontSize: 12, fontWeight: '700', color: section === item.id ? c.onPrimary : c.muted}}>{item.label}</Label></Pressable>)}

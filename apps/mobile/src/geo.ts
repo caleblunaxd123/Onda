@@ -24,6 +24,6 @@ export function cellsToFeatures(area: MapArea | undefined): FeatureCollection<Po
   }))};
 }
 
-export const clusterColor = ['step', ['get', 'count'], '#2BB8C9', 10, '#3D7BE0', 60, '#7A5AF0', 300, '#C2479A'] as const;
+export const clusterColor = ['step', ['get', 'count'], '#1FBFD8', 10, '#2F74E6', 60, '#6D3BEF', 300, '#B13CD6'] as const;
 export const clusterRadius = ['step', ['get', 'count'], 13, 10, 16, 60, 20, 300, 25] as const;
 

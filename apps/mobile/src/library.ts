@@ -1,9 +1,25 @@
+import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Station } from './types';
+const fold = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const streamKey = (url: string) => url.replace(/^https?:\/\//i, '').replace(/[?#].*$/, '').replace(/\/+$/, '').toLowerCase();
+
+/**
+ * Same broadcast even when the catalog lists it twice: same id, same stream URL, or same name in the same country.
+ * Radio Browser contains such duplicates under different ids.
+ */
+export const sameBroadcast = (a: Station, b: Station) =>
+  a.id === b.id || streamKey(a.streamUrl) === streamKey(b.streamUrl) ||
+  (fold(a.name) === fold(b.name) && a.countryCode === b.countryCode);
+
+/** Keeps the first occurrence of each broadcast, preserving order. */
+export const uniqueBroadcasts = (items: Station[]) =>
+  items.filter((station, index) => items.findIndex(other => sameBroadcast(other, station)) === index);
+
 export const prependUnique = (items: Station[], station: Station, limit = 100) =>
-  [station, ...items.filter(s => s.id !== station.id)].slice(0, limit);
+  [station, ...items.filter(s => !sameBroadcast(s, station))].slice(0, limit);
 
 export type Collection = { id: string; name: string; stations: Station[] };
 
@@ -79,3 +95,13 @@ export const useLibrary = create<Library>()(persist((set) => ({
     return {...current, ...saved, onboarded: saved.onboarded ?? existing};
   },
 }));
+
+/** True once the persisted library has been loaded from device storage. */
+export function useLibraryHydrated() {
+  const [hydrated, setHydrated] = useState(useLibrary.persist.hasHydrated());
+  useEffect(() => useLibrary.persist.onFinishHydration(() => setHydrated(true)), []);
+  return hydrated;
+}
+
+/** Ids played recently, captured once when a screen opens so playing a station does not reshuffle its lists. */
+export const recentIdsSnapshot = (limit = 30) => useLibrary.getState().history.slice(0, limit).map(s => s.id);

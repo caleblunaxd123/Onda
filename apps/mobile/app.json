@@ -17,7 +17,12 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
       ],
-      "allowBackup": false
+      "allowBackup": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#FFFFFF",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
     },
     "plugins": [
       "expo-router",
@@ -35,10 +40,27 @@
       "@maplibre/maplibre-react-native",
       "expo-font",
       "expo-asset",
-      "expo-build-properties"
+      "expo-build-properties",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 240,
+          "resizeMode": "contain",
+          "backgroundColor": "#F5F7FB",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#0B1326"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "icon": "./assets/icon.png",
+    "web": {
+      "favicon": "./assets/favicon.png"
     }
   }
 }

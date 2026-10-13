@@ -16,11 +16,11 @@ export default function TabLayout() {
         const item = items[route.name as keyof typeof items]; const focused = state.index === index;
         return <Pressable key={route.key} accessibilityRole="tab" accessibilityLabel={item.title} accessibilityState={{selected: focused}}
           onPress={() => {const e = navigation.emit({type: 'tabPress', target: route.key, canPreventDefault: true}); if (!focused && !e.defaultPrevented) navigation.navigate(route.name);}}
-          onLongPress={() => navigation.emit({type: 'tabLongPress', target: route.key})} style={{flex: 1, minHeight: 54, alignItems: 'center', justifyContent: 'center', gap: 2}}>
-          <View style={{width: 44, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? c.primary + '1F' : 'transparent'}}>
-            <Ionicons name={focused ? item.icon : `${item.icon}-outline`} size={21} color={focused ? c.primaryText : c.muted}/>
+          onLongPress={() => navigation.emit({type: 'tabLongPress', target: route.key})} style={{flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center'}}>
+          <View style={{alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 16, backgroundColor: focused ? c.primary + (c.isDark ? '2E' : '1A') : 'transparent'}}>
+            <Ionicons name={focused ? item.icon : `${item.icon}-outline`} size={22} color={focused ? c.primaryText : c.muted}/>
+            <Label style={{fontSize: 11, lineHeight: 14, color: focused ? c.primaryText : c.muted, fontWeight: focused ? '800' : '500'}}>{item.title}</Label>
           </View>
-          <Label style={{fontSize: 11, lineHeight: 14, color: focused ? c.primaryText : c.muted, fontWeight: focused ? '700' : '500'}}>{item.title}</Label>
         </Pressable>;
       })}
     </View>

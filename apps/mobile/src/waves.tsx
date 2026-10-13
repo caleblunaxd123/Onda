@@ -59,3 +59,29 @@ function Bar({duration, color, height, active}: {duration: number; color: string
   const style = useAnimatedStyle(() => ({height: Math.max(3, height * level.value)}));
   return <Animated.View style={[{width: 3, borderRadius: 2, backgroundColor: color}, style]}/>;
 }
+
+const WAVE_PATTERN = [0.25, 0.4, 0.3, 0.55, 0.45, 0.7, 0.5, 0.85, 0.65, 1, 0.75, 0.9, 0.6, 0.8, 0.5, 0.65, 0.4, 0.55, 0.3, 0.35];
+
+/**
+ * Decorative brand waveform for headers (cyan → blue → violet, like the logo). Static by default; it breathes
+ * only while the global player reports real playback, and never moves when the system reduces motion.
+ */
+export function Waveform({active, height = 44, bars = WAVE_PATTERN.length, opacity = 0.45}: {active: boolean; height?: number; bars?: number; opacity?: number}) {
+  const reduce = useReducedMotion();
+  const colors = ['#12D3E6', '#1BA8E4', '#1478E0', '#3F5BE8', '#6D3BEF'];
+  return <View pointerEvents="none" accessible={false} style={{flexDirection: 'row', alignItems: 'center', gap: 3, height, opacity}}>
+    {WAVE_PATTERN.slice(0, bars).map((level, i) => <WaveBar key={i} level={level} height={height} index={i}
+      color={colors[Math.min(colors.length - 1, Math.floor(i / bars * colors.length))]} active={active && !reduce}/>)}
+  </View>;
+}
+
+function WaveBar({level, height, index, color, active}: {level: number; height: number; index: number; color: string; active: boolean}) {
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    if (active) scale.value = withDelay(index * 60, withRepeat(withSequence(withTiming(0.55, {duration: 420 + (index % 4) * 90}), withTiming(1.1, {duration: 380 + (index % 3) * 110})), -1, true));
+    else {cancelAnimation(scale); scale.value = withTiming(1, {duration: 200});}
+    return () => cancelAnimation(scale);
+  }, [active, index, scale]);
+  const style = useAnimatedStyle(() => ({height: Math.max(4, height * level * scale.value)}));
+  return <Animated.View style={[{width: 3.5, borderRadius: 2, backgroundColor: color}, style]}/>;
+}

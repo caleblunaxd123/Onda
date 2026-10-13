@@ -2,27 +2,33 @@
 Basado en la referencia del propietario (docs/design-reference.png). Tema claro como presentación principal,
 oscuro equivalente y automático (sistema) por defecto.
 
-## Color (src/theme.ts)
+## Logo y color (src/theme.ts)
+Logo oficial (assets/brand/onda-logo.png, marca en onda-mark.png): degradado cian #12D3E6 → azul #1478E0 →
+violeta #6D3BEF. La paleta se deriva de él, como en el modelo del propietario.
 | Token | Claro | Oscuro | Uso |
 |---|---|---|---|
-| bg | #F5F7FB | #0B1326 | Fondo de pantalla |
-| surface | #FFFFFF | #152241 | Tarjetas, barra inferior, campos |
-| surfaceAlt | #EDF2F8 | #1C2B4D | Botón secundario, esqueletos |
-| text / muted | #101A33 / #56667F | #F5F8FF / #A8BAD1 | Texto principal y secundario |
-| primary | #0E9AA8 | #2DD4CF | Rellenos (botón reproducir, chips activos) |
-| primaryText | #0A7A86 | #4FE0DB | Texto e iconos de acento (≥4,5:1 sobre surface) |
-| accent | #6F52E3 | #9B87FF | Violeta: radar, luna |
+| bg | #F5F8FC | #0A1226 | Fondo de pantalla |
+| surface | #FFFFFF | #142240 | Tarjetas, barra inferior, campos |
+| surfaceAlt | #EAF1F8 | #1B2B4C | Botón secundario, esqueletos |
+| text / muted | #0F1A35 / #55657E | #F4F8FF / #A6B8D0 | Texto principal y secundario |
+| primary | #0C98C8 | #22CBE8 | Rellenos e iconos activos |
+| primaryText | #0A6E96 | #5EDDF2 | Texto de acento (≥4,5:1 sobre surface) |
+| accent / accentSoft | #6D3BEF / #EEE9FE | #A78BFA / #2A2453 | «Más filtros», violeta de marca |
 | live | #E5384F | #FF5C74 | EN VIVO, errores |
-| featured | degradado 120° #101B44 → #2C2A78 → #7A2F7E | similar | Destacada, Radar, reproductor |
+| brand | degradado del logo | igual | Botón reproducir |
+| featured | #0B1B4D → #1D3FA6 → #6B2FC9 | similar | Destacada, Radar, reproductor |
+| headerGlow | celeste suave → fondo | azul noche → fondo | Cabecera de marca |
+Clusters del mapa: cian #1FBFD8 (<10), azul #2F74E6 (<60), violeta #6D3BEF (<300), magenta #B13CD6.
 
 Los degradados usan `experimental_backgroundImage` (RN 0.86, nueva arquitectura) con color de respaldo;
-las sombras, `boxShadow`. Sin dependencias nativas nuevas.
+las sombras, `boxShadow`. Icono, icono adaptativo y splash (expo-splash-screen) generados desde el logo.
 
 ## Tipografía y espaciado
 Fuente del sistema, escalado accesible limitado a 1,6×. Títulos de pantalla 26/32 (800), secciones 18/24 (800),
 cuerpo 15/21, secundario 13/18. Espacios 4, 8, 12, 16, 20, 24. Radios 12/16/20/24/99. Objetivos táctiles ≥44 px.
 
 ## Componentes (src/ui.tsx)
+BrandHeader (logo, onda de marca animada solo con reproducción real, título con emoji y acciones) en las pestañas ·
 ScreenHeader (título, subtítulo, atrás, acciones) · Chip (filtro seleccionable/eliminable) · StationRow
 (logo, nombre, bandera + región + género, estado real, favorito, menú ⋮) · StationActions · Sheet (hoja inferior) ·
 OptionPicker (lista filtrable con recuentos reales) · SearchField · PlayButton · LiveBadge · StationStatus ·
