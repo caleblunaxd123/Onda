@@ -1,0 +1,6 @@
+@Onda.Api_HostAddress = http://localhost:5080
+
+GET {{Onda.Api_HostAddress}}/api/v1/stations?country=PE&limit=10
+Accept: application/json
+
+###

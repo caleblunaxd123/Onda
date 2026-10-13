@@ -1,0 +1,5 @@
+import { useState } from 'react';
+import { View } from 'react-native';
+import { useLibrary } from '../../src/library';
+import { Page, Heading, Label, Button, StationRow, Message } from '../../src/ui';
+export default function Library() {const [section,setSection]=useState<'favorites'|'history'>('favorites');const rows=useLibrary(s=>s[section]);return <Page><Heading>Tu biblioteca</Heading><Label>Tus frecuencias favoritas, siempre a mano. Modo invitado · guardado en este dispositivo.</Label><View style={{flexDirection:'row',gap:12}}><Button title="Favoritos" secondary={section!=='favorites'} onPress={()=>setSection('favorites')}/><Button title="Historial" secondary={section!=='history'} onPress={()=>setSection('history')}/></View>{rows.length?rows.map(s=><StationRow key={s.id} station={s}/>):<Message title={section==='favorites'?'Haz espacio para tus favoritas':'Tu viaje empieza con una radio'} body={section==='favorites'?'Toca el corazón de una emisora para guardarla aquí.':'Las emisoras aparecen aquí cuando comienza su reproducción.'}/>}</Page>;}

@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Onda.Api/Onda.Api.csproj" />
+  <Project Path="Onda.Application/Onda.Application.csproj" />
+  <Project Path="Onda.Domain/Onda.Domain.csproj" />
+  <Project Path="Onda.Infrastructure/Onda.Infrastructure.csproj" />
+  <Project Path="Onda.Tests/Onda.Tests.csproj" />
+</Solution>

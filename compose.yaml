@@ -1,0 +1,36 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    ports:
+      - "127.0.0.1:1433:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      start_period: 30s
+      retries: 15
+  migrate:
+    build: ./backend
+    command: ["--migrate"]
+    environment:
+      ConnectionStrings__Onda: Server=db;Database=Onda;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    build: ./backend
+    ports:
+      - "5080:8080"
+    environment:
+      ConnectionStrings__Onda: Server=db;Database=Onda;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+volumes:
+  sqlserver_data:

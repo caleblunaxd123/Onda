@@ -1,0 +1,12 @@
+{
+  "name": "onda",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "mobile": "npm --prefix apps/mobile start",
+    "api": "dotnet run --project backend/Onda.Api --no-launch-profile --urls http://0.0.0.0:5080",
+    "check:mobile": "npm --prefix apps/mobile run typecheck && npm --prefix apps/mobile run lint && npm --prefix apps/mobile test",
+    "test:api": "dotnet test backend/Onda.slnx",
+    "web": "npm --prefix apps/mobile run web -- --localhost"
+  }
+}
