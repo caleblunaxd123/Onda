@@ -2,7 +2,7 @@ import { Share, View } from 'react-native';
 import { useStations } from '../src/catalog';
 import { player, usePlayer } from '../src/player';
 import { useTheme } from '../src/theme';
-import { Page, Heading, Label, Artwork, Button, Favorite, Card, StationRow, stateLabels, IconButton, SectionTitle } from '../src/ui';
+import { Page, Heading, Label, Artwork, Button, Favorite, Card, StationRow, stateLabels, IconButton, SectionTitle, SaveToCollection } from '../src/ui';
 export default function FullPlayer() {
  const c=useTheme();const state=usePlayer();const similar=useStations({tag:state.station?.tags[0]});
  if(!state.station)return <Page><Heading>Tu mundo, en directo</Heading><Label>Elige una emisora para comenzar.</Label></Page>;
@@ -17,6 +17,7 @@ export default function FullPlayer() {
  </View>
  <Card><View style={{flexDirection:'row',justifyContent:'space-around'}}><View style={{alignItems:'center',gap:5}}><Label style={{color:c.primary}}>◷</Label><Label style={{fontSize:12}}>Temporizador</Label><Label style={{fontSize:11,color:c.muted}}>{state.sleepAt?new Date(state.sleepAt).toLocaleTimeString():'Desactivado'}</Label></View><View style={{alignItems:'center',gap:5}}><Label style={{color:c.primary}}>◈</Label><Label style={{fontSize:12}}>Calidad de origen</Label><Label style={{fontSize:11,color:c.muted}}>{station.codec||'No informada'} {station.bitrate>0?station.bitrate+' kbps':''}</Label></View></View>
  <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{[15,30,60,0].map(m=><Button key={m} title={m?m+' min':'Apagar timer'} secondary onPress={()=>player.setSleep(m)}/>)}</View></Card>
+ <Card><View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><Label style={{fontWeight:'800'}}>Guardar en una colección</Label><SaveToCollection station={station}/></View><Label style={{fontSize:13,color:c.muted}}>Organiza esta frecuencia para volver a escucharla cuando quieras.</Label></Card>
  <Card><Label style={{fontWeight:'800'}}>Sobre la emisora</Label><Label style={{fontSize:14,color:c.muted}}>Desde {station.country||'el mundo'}, una transmisión de radio en directo. No hay información fiable de la canción actual disponible.</Label></Card>
  <SectionTitle title="En una frecuencia similar"/>{similar.data?.items.filter(s=>s.id!==station.id).slice(0,4).map(s=><StationRow key={s.id} station={s}/>)}
  </Page>;

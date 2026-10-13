@@ -52,5 +52,6 @@ Para otro SQL Server configurar `ConnectionStrings__Onda` y ejecutar:
 `curl "http://localhost:5080/api/v1/stations?country=PE&limit=10"`
 
 OpenAPI: `/openapi/v1.json` en entorno Development.
+Biblioteca local con favoritos, historial y colecciones. Usa el botón + de una emisora para organizarla.
 No hay cuentas, sincronización de biblioteca, salas ni IA activadas todavía.
 Consultar [estado](docs/PROGRESS.md), [pruebas](docs/TESTING.md) y [roadmap](docs/ROADMAP.md).

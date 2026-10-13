@@ -1,9 +1,9 @@
 # Roadmap y aceptación
 - Fase 0: inspección y decisiones realizadas.
-- Fase 1: estructura, navegación, diseño y API + SQL Server implementados. Build nativo pendiente.
+- Fase 1: estructura, navegación, diseño y API + SQL Server implementados. Development Build Android instalado en emulador.
 - Fase 2: catálogo real integrado; audio nativo implementado; verificación audible en dispositivo pendiente.
 - Fase 3: inicio, búsqueda, biblioteca local, ánimo, radar y mapa inicial implementados.
-  Faltan colecciones, filtros completos, mapa por viewport/ciudad, onboarding, reportes y recomendaciones avanzadas.
+  Colecciones locales implementadas; faltan filtros completos, mapa por viewport/ciudad, onboarding, reportes y recomendaciones avanzadas.
 - Fase 4: pruebas automatizadas en curso; pendiente beta Android, rendimiento, memoria, accesibilidad y pruebas físicas.
 - Fase 5: salas SignalR NO iniciadas, depende de aceptación MVP.
 - Fase 6: IA NO iniciada.

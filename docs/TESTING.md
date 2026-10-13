@@ -26,4 +26,16 @@ Verificación real de SQL Server y Radio Browser documentada en PROGRESS.md.
 13. Medir FPS/memoria/batería en gama media. Revisar permisos y que no haya micrófono/GPS.
 14. Release: HTTPS, firma, política de datos, reportes y auditoría.
 
-No se ejecutaron pruebas físicas ni se dispone de un APK validado en esta entrega inicial.
+Development Build compilado e instalado en el emulador Medium_Phone_API_36.1.
+La interfaz de biblioteca y el catálogo se revisaron en emulador; esto no sustituye las pruebas físicas anteriores.
+
+## Biblioteca y colecciones
+1. Crear una colección desde Biblioteca y otra desde el botón + de una emisora.
+2. Guardar una emisora en varias colecciones; guardarla de nuevo no crea duplicados.
+3. Buscar por nombre, país o género dentro de la biblioteca; limpiar la búsqueda.
+4. Renombrar una colección; rechazar un nombre vacío o formado solo por espacios.
+5. Quitar una emisora de una colección: conserva sus favoritos, historial y otras colecciones.
+6. Cancelar el borrado y confirmar el borrado de una colección propia.
+7. Cerrar/reabrir la app: conservar colecciones y favoritos.
+8. Rehidratar almacenamiento anterior sin colecciones: conservar biblioteca previa.
+9. Probar formulario, teclado y panel de guardado en tema claro/oscuro y con texto grande.

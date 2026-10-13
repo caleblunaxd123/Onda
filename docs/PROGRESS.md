@@ -1,5 +1,32 @@
 # Progreso — 2026-10-12
 
+## Continuación: biblioteca y emulador Android
+- Repositorio descargado desde origin/main, commit base 7baa666.
+- Biblioteca con Favoritos, Historial y Colecciones, búsqueda local y estados vacíos.
+- Colecciones persistentes: crear, renombrar, eliminar, añadir/quitar emisoras sin duplicados.
+  Guardado disponible desde las filas del catálogo y el reproductor; las bibliotecas anteriores
+  mantienen favoritos, historial y preferencias. El borrado local incluye las colecciones.
+- Inicio con cuatro emisoras destacadas seleccionables; favoritos con corazón rojo,
+  miniplayer compacto y tema automático como valor inicial en instalaciones nuevas.
+- Reparado package-lock.json: faltaban @emnapi/core y @emnapi/runtime; npm ci ejecutado correctamente.
+- Corregido init-localdb.ps1 para restaurar paquetes antes de la migración en un clon nuevo.
+- Corregido un espacio JSX en búsqueda que provocaba un aviso de texto fuera de Text.
+- .NET SDK 10.0.401 instalado localmente en .tools/dotnet (ignorado por Git); SQL Server
+  OndaDev/Onda inicializado, migración aplicada y API local iniciada en localhost:5080.
+- Comprobaciones actuales: TypeScript y ESLint correctos; 15 pruebas móvil y 16 backend aprobadas;
+  smoke-api.ps1 aprobado con catálogo real, readiness SQL, UUID únicos y streams HTTPS.
+- Development Build Android compilado e instalado realmente en emulator-5554,
+  Medium_Phone_API_36.1. APK local: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk.
+- Inicio y catálogo real renderizados; creación de colección, guardado de RTL y favorito
+  comprobados en la interfaz nativa. Colección y favorito conservados tras cierre forzado y reapertura.
+  Verificación equivalente de creación/guardado realizada en web.
+- Captura real de la biblioteca Android: [android-library.png](android-library.png).
+- No equivale a una beta aceptada: faltan las pruebas físicas de audio, Bluetooth, background,
+  rendimiento y accesibilidad de TESTING.md. Salas e IA siguen pendientes.
+
+Los apartados siguientes documentan la entrega inicial; sus limitaciones de SDK/compilación Android
+quedan reemplazadas por esta actualización. Las pruebas físicas siguen pendientes.
+
 ## Actualización: vista web y publicación del código
 - Vista web ejecutada y revisada en http://localhost:8081, con ancho móvil y el mismo backend SQL Server.
 - Inicio con emisoras reales, mapa mundial con clusters y reproducción/pausa comprobados en la interfaz del navegador.
