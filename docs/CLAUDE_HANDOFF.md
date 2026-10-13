@@ -14,7 +14,7 @@ README.md y docs/{PROGRESS,ARCHITECTURE,ROADMAP,TESTING,DEPLOYMENT,DEPENDENCIES,
 Verifica la implementación: no vuelvas a crear módulos que ya funcionan ni uses datos sociales falsos.
 
 Web https://onda.lunalav.pe; API https://onda-api.lunalav.pe; APK beta público en
-https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0. Contabo, Cloudflare, Caddy, SQL Server Express,
+https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=2. Contabo, Cloudflare, Caddy, SQL Server Express,
 Ollama local. .NET 10, Expo SDK 57, React Native 0.86.3. SQL Server es decisión del propietario;
 no lo sustituyas por PostgreSQL.
 

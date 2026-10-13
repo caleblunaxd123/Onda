@@ -5,7 +5,7 @@ Aplicación social de radio, música y video con Expo / React Native (SDK 57) y 
 Base de datos: **SQL Server**, por decisión del propietario.
 Estado: **beta 0.3 desplegada**; faltan pruebas físicas para aceptar el MVP.
 
-Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0).
+Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=2).
 El APK incluye JavaScript, funciona sin Metro y usa HTTPS. Firma de depuración para beta interna; no es una publicación en tiendas.
 Continuación: [handoff para Claude Code](docs/CLAUDE_HANDOFF.md).
 
@@ -39,7 +39,7 @@ En emulador Android la API está en `http://10.0.2.2:5080`; en un dispositivo f�
 El tráfico HTTP solo se habilita en builds con APP_VARIANT=development. Preview/producción requieren API HTTPS.
 
 ## Probar en un teléfono Android real
-Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0). No requiere PC ni Wi-Fi compartido.
+Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=2). No requiere PC ni Wi-Fi compartido.
 También se puede generar una variante para pruebas locales:
 1. PC y teléfono en la misma red Wi‑Fi/LAN. Iniciar la API para la red: `scripts/start-api.ps1` (escucha en 0.0.0.0:5080).
 2. Permitir el puerto 5080 en el firewall de Windows (una vez, PowerShell como administrador):

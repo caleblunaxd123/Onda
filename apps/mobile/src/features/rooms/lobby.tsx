@@ -1,11 +1,10 @@
-import {gradientStyle} from '../../theme';
+import {gradientStyle, useTheme} from '../../theme';
 import { useState } from "react";
 import { FlatList, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { request } from "../../api";
 import { fold } from "../../format";
-import { useTheme } from "../../theme";
 import { Ionicons } from "../../icons";
 import {
   BrandHeader,

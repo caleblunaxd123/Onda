@@ -2,8 +2,8 @@
 
 - Web: https://onda.lunalav.pe
 - API: https://onda-api.lunalav.pe (`/health/live`, `/health/ready`).
-- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0
-- APK: 118.045.320 bytes, SHA256 `d4490436697b9d712ea6ff124a8ee9ceb99dae7ddbaa003903dcc0fe9f5edcc9`.
+- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=2
+- APK: 118.045.708 bytes, SHA256 `641d5f18f407a90849d59a69824adf3d3a7508766d213f53711b317670e7164e`.
   arm64-v8a, armeabi-v7a y x86_64. JavaScript incluido, HTTPS, firma de depuración para beta interna.
 
 ## Contabo y Cloudflare

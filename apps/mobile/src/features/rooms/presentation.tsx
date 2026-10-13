@@ -1,8 +1,7 @@
-import {gradientStyle} from '../../theme';
+import {gradientStyle, useTheme} from '../../theme';
 import { useState, type ReactNode } from "react";
 import { Image, Pressable, View, type ViewStyle } from "react-native";
 import { Ionicons } from "../../icons";
-import { useTheme } from "../../theme";
 import { Artwork, Label, Muted } from "../../ui";
 import type { Member, RoomMedia, RoomSummary } from "./types";
 

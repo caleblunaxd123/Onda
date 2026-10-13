@@ -83,3 +83,6 @@ Coanfitrión controla reproducción/cola y no puede cerrar/rotar invitaciones. V
 Android 0.3 y web en la misma sala: pausa desde Android reflejada en web, chat y propuesta desde biblioteca.
 Capturas: android-cinema-room.png, web-cinema-room.png, web-cinema-queue.png.
 CI: corregida la comprobación nullable de map-style.ts observada en Linux.
+
+CI final backend/móvil verde en Linux. Degradados: adaptador explícito entre CSS web y experimental_backgroundImage
+de RN 0.86; Inicio y Juntos verificados en Android con el APK corregido.
