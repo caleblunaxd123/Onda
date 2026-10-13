@@ -1,9 +1,13 @@
 # ONDA
 **El mundo suena aquí.**
 
-Aplicación móvil de radios con Expo / React Native (SDK 57) y API ASP.NET Core 10.
+Aplicación social de radio, música y video con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: implementación funcional en desarrollo; **MVP todavía no aceptado** (faltan pruebas físicas).
+Estado: **beta 0.2 desplegada**; faltan pruebas físicas para aceptar el MVP.
+
+Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.2.0).
+El APK incluye JavaScript, funciona sin Metro y usa HTTPS. Firma de depuración para beta interna; no es una publicación en tiendas.
+Continuación: [handoff para Claude Code](docs/CLAUDE_HANDOFF.md).
 
 ## Qué incluye
 - Catálogo de ~68.000 emisoras de Radio Browser sincronizado en SQL Server (solo se reproducen streams HTTPS),
@@ -12,7 +16,10 @@ Estado: implementación funcional en desarrollo; **MVP todavía no aceptado** (f
   (país, ciudad, idioma, género), mapa por área visible con clusters, Radio Radar con carga progresiva,
   reproductor global con reintentos y fuentes alternativas, reportes de problemas, biblioteca local con colecciones.
 - Diseño según docs/design-reference.png, tema claro/oscuro/automático. Capturas: docs/screenshots.
-- Sin cuentas, sincronización de biblioteca, salas ni IA todavía.
+- Salas públicas/privadas con invitados, chat, reacciones, cola con votos, controles del anfitrión, transferencia de control,
+  expulsión, reportes, reconexión y códigos renovables. Radio, YouTube/YouTube Music y archivos HTTPS de audio/video.
+- Cuentas opcionales con recuperación por código privado y biblioteca sincronizada: radios, colecciones y multimedia;
+  historial solo con consentimiento. Asistente de descubrimiento con IA local y respaldo por reglas; pasaporte basado en escuchas reales.
 
 ## Inicio en Windows
 Requisitos: Node 22+, .NET SDK 10 (se usa `.tools/dotnet` si existe), SQL Server (por defecto `.\SQLEXPRESS`,
@@ -31,7 +38,9 @@ Otra instancia: `$env:ONDA_SQL_SERVER='(localdb)\OndaDev'` o `$env:ConnectionStr
 En emulador Android la API está en `http://10.0.2.2:5080`; en un dispositivo físico, la IP LAN del PC.
 El tráfico HTTP solo se habilita en builds con APP_VARIANT=development. Preview/producción requieren API HTTPS.
 
-## Probar en un teléfono Android real (APK de prueba en la red local)
+## Probar en un teléfono Android real
+Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.2.0). No requiere PC ni Wi-Fi compartido.
+También se puede generar una variante para pruebas locales:
 1. PC y teléfono en la misma red Wi‑Fi/LAN. Iniciar la API para la red: `scripts/start-api.ps1` (escucha en 0.0.0.0:5080).
 2. Permitir el puerto 5080 en el firewall de Windows (una vez, PowerShell como administrador):
    `New-NetFirewallRule -DisplayName "ONDA API 5080 (LAN)" -Direction Inbound -Protocol TCP -LocalPort 5080 -RemoteAddress LocalSubnet -Action Allow`
@@ -51,8 +60,8 @@ Servidor `.\SQLEXPRESS`, autenticación Windows, base `Onda`. Tablas y consultas
 Las migraciones se aplican explícitamente, nunca al iniciar la API.
 
 ## Verificación
-- `npm run check:mobile` — TypeScript, ESLint y 37 pruebas.
-- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 62 pruebas, incluidas 10 con SQL Server real.
+- `npm run check:mobile` — TypeScript, ESLint y 54 pruebas.
+- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 93 pruebas, incluidas integraciones con SQL real y WebSockets.
 - `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1` — catálogo real de extremo a extremo.
 - `curl http://localhost:5080/api/v1/catalog/status`
 
