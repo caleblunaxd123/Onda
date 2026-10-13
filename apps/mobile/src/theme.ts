@@ -1,7 +1,12 @@
-import { useColorScheme } from 'react-native';
+import {Platform, useColorScheme, type ViewStyle} from 'react-native';
 import {createContext, createElement, useContext, type ReactNode} from 'react';
 import { useLibrary } from './library';
 export const tokens = {space: [0, 4, 8, 12, 16, 24, 32, 48], radius: {small: 12, card: 20, pill: 99}};
+/** SDK 57 / RN 0.86 exposes gradients under the experimental native property; web uses CSS. */
+export function gradientStyle(image: string, fallback = 'transparent'): ViewStyle {
+  return Platform.OS === 'web' ? {backgroundImage: image, backgroundColor: fallback} as ViewStyle
+    : {experimental_backgroundImage: image, backgroundColor: fallback};
+}
 
 export type Palette = {
   isDark: boolean; bg: string; surface: string; surfaceAlt: string; text: string; muted: string;

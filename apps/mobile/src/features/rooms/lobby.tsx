@@ -1,3 +1,4 @@
+import {gradientStyle} from '../../theme';
 import { useState } from "react";
 import { FlatList, View } from "react-native";
 import { router } from "expo-router";
@@ -99,8 +100,7 @@ export default function RoomsScreen() {
                 borderRadius: 26,
                 padding: 22,
                 gap: 16,
-                backgroundImage:
-                  "linear-gradient(130deg, #172443 0%, #24153E 68%, #121827 100%)",
+                ...gradientStyle("linear-gradient(130deg, #172443 0%, #24153E 68%, #121827 100%)", "#14294B"),
                 overflow: "hidden",
               }}
             >

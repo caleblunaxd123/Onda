@@ -1,3 +1,4 @@
+import {gradientStyle} from '../../theme';
 import { useState, type ReactNode } from "react";
 import { Image, Pressable, View, type ViewStyle } from "react-native";
 import { Ionicons } from "../../icons";
@@ -121,8 +122,7 @@ export function MediaPoster({
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage:
-            "linear-gradient(180deg, rgba(8,10,16,.05) 15%, rgba(8,10,16,.92) 100%)",
+          ...gradientStyle("linear-gradient(180deg, rgba(8,10,16,.05) 15%, rgba(8,10,16,.92) 100%)", "transparent"),
         }}
       />
       {children}
@@ -234,8 +234,7 @@ export function RadioStage({
         padding: 24,
         alignItems: "center",
         gap: 12,
-        backgroundImage:
-          "linear-gradient(150deg, #17294D 0%, #211637 70%, #11141F 100%)",
+        ...gradientStyle("linear-gradient(150deg, #17294D 0%, #211637 70%, #11141F 100%)", "#14294B"),
       }}
     >
       {media.station && <Artwork station={media.station} size={100} round />}
