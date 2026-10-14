@@ -135,7 +135,12 @@ export function RoomRow({room, onPress}: {room: RoomSummary; onPress: () => void
     <Pressable accessibilityRole="button" accessibilityLabel={`Entrar a ${room.name}: ${room.media.title}, ${room.listeners} ${room.listeners === 1 ? "persona" : "personas"}`}
       onPress={onPress}
       style={({ pressed }) => ({ flexDirection: "row", gap: 12, padding: 8, borderRadius: 18, backgroundColor: c.surface, alignItems: "center", opacity: pressed ? 0.8 : 1 })}>
-      <MediaPoster media={room.media} style={{ width: 128, height: 76, borderRadius: 12 }} />
+      <View style={{width: "36%", maxWidth: 140}}>
+        <MediaPoster media={room.media} style={{height: 76, borderRadius: 12}}/>
+        <View style={{position: "absolute", left: 6, top: 6, width: 24, height: 24, borderRadius: 8, backgroundColor: "#25344AE6", alignItems: "center", justifyContent: "center"}}>
+          <Ionicons name={room.media.kind === "youtube" ? "logo-youtube" : room.media.kind === "radio" ? "radio-outline" : room.media.kind === "audio" ? "musical-notes-outline" : "play-outline"} size={15} color="#FFFFFF"/>
+        </View>
+      </View>
       <View style={{ flex: 1, gap: 4 }}>
         <Label numberOfLines={2} style={{ fontSize: 14, fontWeight: "800", lineHeight: 18 }}>{room.media.title}</Label>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
@@ -164,16 +169,18 @@ export function RadioStage({
     <View
       style={{
         borderRadius: 22,
-        padding: 24,
+        padding: 16,
+        flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        ...gradientStyle("linear-gradient(150deg, #17294D 0%, #211637 70%, #11141F 100%)", "#14294B"),
+        backgroundColor: c.surface,
       }}
     >
-      {media.station && <Artwork station={media.station} size={100} round />}
+      {media.station && <Artwork station={media.station} size={64} round />}
+      <View style={{flex: 1, gap: 8}}>
       <Label
         numberOfLines={2}
-        style={{ fontSize: 23, fontWeight: "900", textAlign: "center" }}
+        style={{ fontSize: 18, fontWeight: "800" }}
       >
         {media.title}
       </Label>
@@ -187,6 +194,7 @@ export function RadioStage({
           }}
         />
         <Muted>{status}</Muted>
+      </View>
       </View>
     </View>
   );

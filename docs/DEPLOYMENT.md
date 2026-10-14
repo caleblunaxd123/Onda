@@ -1,12 +1,13 @@
-# Despliegue verificado — beta 0.4, 2026-10-14
+# Despliegue verificado — beta 0.5, 2026-10-14
 
 - Web: https://onda.lunalav.pe
 - API: https://onda-api.lunalav.pe (`/health/live`, `/health/ready`).
-- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.4.0&build=5.1
-- APK 0.4.0 (versionCode 5): 118.249.380 bytes, SHA256 `d633d7f82fdd3975c04c8444b29245067e776e945172d77af1bc33d8ac2e2d78`.
-  El enlace `build=5` quedó en caché de Cloudflare con el APK anterior (se consultó antes de copiar): usar `build=5.1`.
-  Copia del APK 0.3 conservada en `/opt/onda/releases/ONDA-beta-0.3.0-build4.apk`.
-  arm64-v8a, armeabi-v7a y x86_64. JavaScript incluido, HTTPS, firma de depuración para beta interna.
+- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.5.0&build=7.1
+- APK 0.5.0 (versionCode 7): 124.465.418 bytes, SHA256
+  `f5d64d673f77bb7986d80937f2f7d027bec5010ee177938ff2144929984c06e1`.
+  Hash local/remoto iguales y HEAD público verificado (200, tamaño y tipo APK). Nuevo enlace build=7.1.
+  arm64-v8a, armeabi-v7a y x86_64; JS incluido, HTTPS, firma de depuración para beta interna.
+  APK 0.4 anterior conservado en `/opt/onda/releases/ONDA-beta-0.4.0-build5.apk`.
 
 ## Contabo y Cloudflare
 VPS 217.216.82.43, despliegue `/opt/onda`, acceso SSH del propietario con usuario `deploy`.
@@ -16,8 +17,7 @@ ASP.NET confía únicamente en el proxy configurado 10.77.0.10. SQL no tiene pue
 No se modificaron rutas ni datos de otras aplicaciones del VPS.
 
 `infra/contabo/compose.yaml`: API, migrador y Ollama; redes existentes `stack_data` (interna) y `stack_web`,
-más red privada `onda_ai`. Imagen activa API `onda-api:20261014-sync` (chat persistente, ServerTime, solo notas
-de voz). Adjuntos privados en `/opt/onda/uploads` → `/data/chat-uploads` (UID 1654, 0700), fuera de `public`.
+más red privada `onda_ai`. Imagen activa API `onda-api:20261014-light-social` (chat persistente, pins y Google preparado; subidas deshabilitadas). Adjuntos privados en `/opt/onda/uploads` → `/data/chat-uploads` (UID 1654, 0700), fuera de `public`.
 Ollama fijado a digest `sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c`;
 modelo `qwen2.5:1.5b` descargado. Límite API 768 MB/1,5 CPU; Ollama 2 GB/2 CPU.
 IA verificada con `engine=local-ai`, filtros reales y 8 estaciones; respaldo por reglas en indisponibilidad.
@@ -36,11 +36,11 @@ sudo docker compose --env-file compose.env up -d api
 1. Revisar cambios y SQL de migración; ejecutar pruebas antes de publicar.
 2. Crear respaldo con `sudo python3 /opt/onda/backup.py --restore-check` antes de migraciones.
 3. Construir una imagen con etiqueta nueva: `docker build -f backend/Dockerfile -t onda-api:<release> backend`.
-4. Cambiar `ONDA_IMAGE` en `/opt/onda/compose.env`, migrar, reiniciar solo ONDA y verificar ready/HTTPS/WebSockets.
+4. `GoogleIdentity` añade una columna nullable e índice único, sin borrar cuentas/sesiones. Cambiar `ONDA_IMAGE` en `/opt/onda/compose.env`, migrar, reiniciar solo ONDA y verificar ready/HTTPS/WebSockets.
 5. Exportar web con `npm --prefix apps/mobile run export:web`, public API env HTTPS, copiar `dist` a `/opt/onda/public`.
    Conservar bundles anteriores para visitantes con HTML antiguo. Los nombres de bundles llevan hash.
 6. Generar APK con `scripts/build-apk.ps1 -ApiUrl https://onda-api.lunalav.pe`; publicar en `public/downloads`.
-   Usar un nuevo parámetro de versión/enlace para evitar una copia previa del APK en CDN (TTL 4 h observado).
+   Publicar primero con archivo temporal + reemplazo atómico. Usar un nuevo parámetro de versión/enlace para evitar una copia previa del APK en CDN (TTL 4 h observado).
 7. No hacer `compose down` en el stack compartido, ni eliminar volúmenes, DB o datos ajenos.
 8. Para cambios de proxy usar `install-proxy.py` con la ruta revisada: valida, conserva backup y recarga Caddy;
    mantiene el inode del archivo compartido montado. Rechaza rutas duplicadas.
@@ -50,9 +50,9 @@ Timer diario `onda-backup.timer` 03:40 UTC, persistente, retraso aleatorio ≤10
 VERIFYONLY, cifrado AES-256-CBC/PBKDF2 200.000, SHA256; retención 14 días conservando los dos más recientes.
 Archivos: `/opt/stack/backups/sql/onda`; clave privada `/opt/onda/secrets/backup.key`.
 Desde 0.4 también `OndaUploads-<fecha>.tar.enc` (adjuntos, misma clave y retención); `--restore-check` lo descifra
-y lista. Respaldo previo verificado: `Onda-20261014T025158Z.bak.enc` y `OndaUploads-20261014T025158Z.tar.enc`.
+y lista. Respaldo previo verificado: `Onda-20261014T042314Z.bak.enc` y `OndaUploads-20261014T042314Z.tar.enc`.
 `--restore-check` descifra/restaura en `OndaBackupCheck`, valida catálogo y elimina su propia DB de comprobación.
-Última restauración verificada: `Onda-20261013T232735Z.bak.enc`, ya con esquema de comunidad y continuidad.
+Restauración previa a GoogleIdentity verificada: `Onda-20261014T042314Z.bak.enc`.
 Copia externa manual comprobada en `.tools/backups` del PC del propietario (ignorada por Git); clave protegida
 con DPAPI CurrentUser. No hay todavía copia externa automática ni alertas operativas externas.
 No publicar backups, credenciales, tokens ni archivos `.env`.
@@ -73,9 +73,11 @@ con búsqueda/selección reales y otra conexión pública recibiendo cambio de v
 volvió a su sala anterior con la pausa/posición conservadas. QA sintético propio eliminado.
 Web exportada; búsqueda YouTube web externa hasta configurar Data API (decisión del propietario).
 
-## Checkpoint para Claude: estado publicado frente a WIP
-API/web provider y APK build=4 corresponden al flujo Crear sala -> proveedor -> entrar -> elegir contenido.
-100 backend / 60 móvil; CI verde para 15cd8da. Falta QA específica del nuevo recorrido en emulador.
-La paleta soft y la base de chat/adjuntos están versionadas como WIP y NO desplegadas.
-RoomChatStorage NO aplicada en Contabo. No desplegar WIP sin terminar hub/DI/UI, permisos nativos,
-almacenamiento persistente de adjuntos, limpieza, pruebas y respaldo/migración explícita.
+## Chat y Google en beta 0.5
+`Chat__AllowedKinds: ""` impide nuevas subidas incluso en clientes anteriores. Los stickers son identificadores
+de recursos incluidos; no se almacenan imágenes. Mantener el volumen privado para adjuntos históricos y su retención.
+Google no tiene IDs configurados; `/api/v1/auth/providers` devuelve enabled=false y no se emiten challenges.
+Activación y huellas públicas: GOOGLE_SIGN_IN.md. HTML SPA se sirve con no-store; bundles con hash se conservan.
+SDK 57: `expo prebuild` recrea por defecto; usar `--no-clean` para regenerar cambios manteniendo carpetas/caché.
+No editar archivos nativos generados. API local 5080 y build dev anteriores permanecen activos; para usar el esquema
+nuevo en desarrollo hay que migrar/reconstruir local explícitamente antes de reemplazar su API.

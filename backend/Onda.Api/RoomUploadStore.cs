@@ -13,7 +13,7 @@ public sealed record UploadResult(RoomUpload? Row, UploadRejection Rejection)
         UploadRejection.DailyQuota => "Alcanzaste el límite de 100 MB de adjuntos por día.",
         UploadRejection.RoomQuota => "Esta sala alcanzó su límite de 200 MB de adjuntos.",
         UploadRejection.Format => "Formato no admitido. Fotos JPG/PNG de hasta 4096 px; notas de voz M4A/WebM/MP3/OGG/WAV.",
-        UploadRejection.Kind => "En el chat de las salas solo se pueden enviar notas de voz.",
+        UploadRejection.Kind => "Este tipo de adjunto no está habilitado en el chat.",
         _ => "Elige un archivo con contenido.",
     };
 }
@@ -32,8 +32,9 @@ public sealed class RoomUploadStore(IConfiguration config, TimeProvider clock)
     public const int MaxVoiceMs = 10 * 60 * 1000;
     public static readonly TimeSpan UnsentLifetime = TimeSpan.FromHours(1);
     private readonly string root = Path.GetFullPath(config["Chat:UploadsPath"] ?? Path.Combine(Path.GetTempPath(), "onda-chat-uploads"));
-    /// <summary>Kinds accepted for new uploads (<c>Chat:AllowedKinds</c>, comma separated). Default: voice notes only.</summary>
-    private readonly HashSet<string> allowed = (config["Chat:AllowedKinds"] ?? "audio").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
+    /// <summary>No new attachments by default. Operators may explicitly enable legacy kinds.</summary>
+    private readonly HashSet<string> allowed = (config["Chat:AllowedKinds"] ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
+    public bool Enabled => allowed.Count > 0;
     public string Root => root;
     public string PathFor(Guid id) => Path.Combine(root, id.ToString("N") + ".bin");
     public static ChatAttachment View(RoomUpload row) => new(row.Id, row.Name, row.Mime, row.Kind, row.Length, row.DurationMs);

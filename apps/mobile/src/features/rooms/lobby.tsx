@@ -1,7 +1,7 @@
 import {useTheme} from '../../theme';
 import { useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { request } from "../../api";
 import { fold } from "../../format";
@@ -27,7 +27,9 @@ import type { RoomSummary } from "./types";
 export default function RoomsScreen() {
   const c = useTheme();
   const auth = useAuth();
-  const [mine, setMine] = useState(false);
+  const params = useLocalSearchParams<{view?: string}>();
+  const mine = params.view === "mine";
+  const setMine = (value: boolean) => router.setParams({view: value ? "mine" : "discover"});
   const [invite, setInvite] = useState(false);
   const [code, setCode] = useState("");
   const [search, setSearch] = useState("");
@@ -59,7 +61,7 @@ export default function RoomsScreen() {
   };
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <BrandHeader title="Juntos" subtitle="Mira y escucha con tu gente.">
+      <BrandHeader calm>
         <IconButton
           icon="link-outline"
           label="Entrar con invitación"
@@ -79,6 +81,7 @@ export default function RoomsScreen() {
         refreshing={rooms.isRefetching}
         ListHeaderComponent={
           <View style={{ gap: 12, paddingBottom: 6 }}>
+            <Label accessibilityRole="header" style={{fontSize: 22, lineHeight: 28, fontWeight: "800"}}>Mira y escucha con amigos.</Label>
             <SearchField value={search} onChange={setSearch} placeholder="Buscar sala, video o canción" label="Buscar sala o contenido" />
             <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
               <Chip label="Descubrir" icon="earth-outline" selected={!mine} onPress={() => setMine(false)} />
@@ -86,6 +89,7 @@ export default function RoomsScreen() {
               <View style={{ flex: 1 }} />
               <Muted style={{ fontSize: 12 }}>{items.length} {items.length === 1 ? "sala" : "salas"}</Muted>
             </View>
+            <Label accessibilityRole="header" style={{fontSize: 15, fontWeight: "700"}}>{mine ? "Tus salas" : "Salas públicas"}</Label>
           </View>
         }
         ListEmptyComponent={
@@ -108,9 +112,10 @@ export default function RoomsScreen() {
       />
       {/* Rave-style floating create button. */}
       <Pressable accessibilityRole="button" accessibilityLabel="Crear sala" onPress={() => router.push("/create-room")}
-        style={({ pressed }) => ({ position: "absolute", right: 20, bottom: 24, width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center",
+        style={({ pressed }) => ({ position: "absolute", right: 20, bottom: 24, paddingHorizontal: 18, height: 56, borderRadius: 28, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center",
           backgroundColor: c.primary, opacity: pressed ? 0.85 : 1, boxShadow: c.shadow })}>
-        <Ionicons name="add" size={34} color={c.onPrimary} />
+        <Ionicons name="add" size={26} color={c.onPrimary} />
+        <Label style={{fontWeight: "800", color: c.onPrimary}}>Crear sala</Label>
       </Pressable>
       {invite && (
         <Sheet

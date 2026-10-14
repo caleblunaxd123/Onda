@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {addTyping, canDelete, canEdit, clearTyping, continuesGroup, dayLabel, describeMessage, isJumboEmoji, linkParts, formatBytes, formatDuration, mergeMessages, myReaction, oldestPersisted,
-  pruneTyping, quoteOf, summarizeReactions, typingLabel, upsertMessage} from './chat';
+  pruneTyping, quoteOf, stickerOf, stickerText, summarizeReactions, typingLabel, upsertMessage} from './chat';
 import type {ChatMessage} from './types';
 
 const at = (s: number) => new Date(Date.UTC(2026, 9, 13, 20, 0, s)).toISOString();
@@ -8,6 +8,14 @@ const msg = (id: string, s: number, extra: Partial<ChatMessage> = {}): ChatMessa
   ({id, senderId: 'ana', sender: 'Ana', text: 'Hola ' + id, kind: 'text', at: at(s), revision: 1, ...extra});
 
 describe('room chat state', () => {
+  it('renders only known bundled sticker identifiers and gives replies a readable description', () => {
+    const value = msg('sticker', 1, {text: stickerText('temazo')});
+    expect(stickerOf(value.text)?.label).toBe('¡Qué temazo!');
+    expect(describeMessage(value)).toBe('Sticker: ¡Qué temazo!');
+    expect(quoteOf(value).text).toBe('Sticker: ¡Qué temazo!');
+    expect(stickerOf('[[onda:sticker:https://evil.test/image.png]]')).toBeUndefined();
+    expect(stickerOf('[[onda:sticker:temazo]] extra')).toBeUndefined();
+  });
   it('keeps the original order when a message is edited or reacted to', () => {
     const list = [msg('a', 1), msg('b', 2), msg('c', 3)];
     const edited = upsertMessage(list, {...list[0], text: 'Editado', editedAt: at(9), revision: 2});

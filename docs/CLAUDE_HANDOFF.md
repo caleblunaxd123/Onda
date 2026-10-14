@@ -1,92 +1,48 @@
-> **Estado 2026-10-14:** beta 0.4 desplegada (chat persistente, sincronización medida, UI estilo Rave,
-> proveedores honestos). Ver PROGRESS.md y provider-compatibility.md. Responder al propietario en español.
-> Siguiente: voz en vivo (WebRTC + TURN en Contabo), expo-video para HLS, pruebas físicas.
-
-# Continuación para Claude Code — ONDA 0.3
-
-## Prompt listo para usar
+# Continuación de ONDA — beta 0.5
 
 ```text
-Continúa ONDA desde https://github.com/caleblunaxd123/Onda, rama codex/onda-modules-contabo.
-El objetivo es una app multimedia social más intuitiva, fácil y completa, inspirada en las sesiones
-compartidas de Rave, conservando la identidad de ONDA y su catálogo de radios.
-No prometas superioridad sin pruebas con usuarios ni inventes fallos de la competencia.
+Continúa https://github.com/caleblunaxd123/Onda, rama codex/onda-modules-contabo, PR #1.
+Responde al propietario en español. Antes de editar: git fetch, status/diff y AGENTS.md aplicables.
+Lee PROGRESS, TESTING, DEPLOYMENT, provider-compatibility y GOOGLE_SIGN_IN. Verifica el código actual;
+no uses documentos históricos para volver a funciones que el propietario retiró.
 
-Primero ejecuta git fetch y revisa estado/diff antes de integrar cambios. Conserva cambios locales,
-biblioteca, cuentas, catálogo y otras aplicaciones del servidor. Lee AGENTS.md aplicables,
-README.md y docs/{PROGRESS,ARCHITECTURE,ROADMAP,TESTING,DEPLOYMENT,DEPENDENCIES,SQL_SERVER}.md.
-Verifica la implementación: no vuelvas a crear módulos que ya funcionan ni uses datos sociales falsos.
+Objetivo: multimedia social fácil de entender. Inicio = salas públicas/mis salas, invitación y crear.
+Radio está en otra pestaña; conserva catálogo SQL, Mundo, Radar, biblioteca y ONDA AI.
+Identidad ONDA, azul gris suave; usa la simplicidad de Rave como referencia, sin copiar su marca.
+Flujo aceptado: Crear sala → fuente → entrar automáticamente → buscar/elegir en la sala.
+YouTube Android ya usa navegador público integrado y player IFrame oficial. Ver juntos o añadir a cola
+desde el explorador; invitados proponen, anfitrión/coanfitrión controla. No añadir formularios duplicados.
+Web busca en pestaña externa y pega enlace, hasta que haya YouTube Data API; no inventar API keys.
+Otros servicios usan enlace oficial externo y reloj MANUAL: no afirmar integración Netflix/Disney/Prime.
 
-Web https://onda.lunalav.pe; API https://onda-api.lunalav.pe; APK beta público en
-https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=4. Contabo, Cloudflare, Caddy, SQL Server Express,
-Ollama local. .NET 10, Expo SDK 57, React Native 0.86.3. SQL Server es decisión del propietario;
-no lo sustituyas por PostgreSQL.
+Decisión más reciente de chat: NO fotos, NO archivos, NO grabaciones/notas de voz nuevas.
+Subidas deshabilitadas también en servidor antes de multipart. Mantén acceso privado/retención de adjuntos
+legado; no los borres indiscriminadamente. Mensajes, respuestas, reacciones, editar/borrar, un pin por sala,
+stickers incluidos enviados por ID pequeño. No guardar nuevos blobs ni habilitar Chat:AllowedKinds.
+Voz solicitada es EN VIVO, sin grabar: todavía pendiente WebRTC + TURN. Prioriza consentimiento al pulsar,
+mute, abandonar voz, atenuación local de música y límites de participantes/tráfico. No presentar como terminado
+hasta verificar dos clientes reales y red móvil. No usar notas de voz como sustituto de RTC.
 
-Prioridad inmediata: cerrar validación en Android físico y dos dispositivos en redes diferentes;
-reproducción audible, sincronía multimedia, reconexión, batería, 30 min bloqueado,
-Bluetooth/llamadas, TalkBack/texto grande y estados de error claros.
-Recuperación de sala y coanfitriones ya están implementados. Continúa con
-voz opcional WebRTC con controles simples y música atenuada, colecciones compartidas y
-sesiones programadas. Avanza por incrementos funcionales verificables según ROADMAP.
-No presentes Netflix, Disney+ o Spotify como soportados sin integración oficial funcional.
-No descargues/bypassees contenido protegido. YouTube mantiene su reproductor oficial y video.
+Google preparado en cliente Android/web y backend (Google.Apis.Auth), nonce de un solo uso y vinculación por sub.
+El propietario NO tiene proyecto/IDs OAuth; mantener desactivado. Sigue GOOGLE_SIGN_IN al recibir IDs públicos;
+no simules login con un campo Gmail ni vincules cuentas por coincidencia de correo. Preserva ID del invitado.
 
-Mejora el recorrido: elegir contenido -> crear sala -> invitar -> entrar -> proponer/votar
--> escuchar/ver -> guardar -> volver. Evita formularios innecesarios, controles ambiguos,
-audio duplicado y acciones del anfitrión que un invitado pueda ejecutar. Privacidad predeterminada.
+Producción web https://onda.lunalav.pe; API https://onda-api.lunalav.pe; APK 0.5.0 build=7.1.
+Contabo /opt/onda, API onda-api:20261014-light-social, Caddy/Cloudflare y SQL Server dedicado Onda;
+no sustituir SQL por PostgreSQL ni tocar otros servicios. GoogleIdentity ya migrada explícitamente después
+de respaldo cifrado/restauración comprobada. Secretos solo en archivos privados, jamás imprimir/versionar.
+No parar stack compartido, no borrar volúmenes, cuentas reales o sala AndroidQA del propietario.
+API local 5080/build dev se conservaron; no asumir que ya tienen este esquema/binario nuevo.
 
-Ejecuta npm run check:mobile y scripts/test-api.ps1; referencia 60 móvil y 96 backend
-(SQL real, cuentas y dos clientes SignalR). Usa scripts/sql-config.ps1 para SDK .NET local.
-SDK 57 usa hooks de navegación de expo-router, no @react-navigation/native.
-Instala paquetes nativos con Expo; no edites android/ios generados a mano.
-No uses npm audit fix --force: quedan 19 high en herramientas sin parche compatible;
-el adaptador MIT decode-uri-component 0.5.0 mantiene CommonJS y tiene pruebas de regresión.
+Verifica npm run check:mobile (87 pruebas) y backend SQL real (140). Si DLLs bloqueadas por API local,
+usa dotnet test ... --artifacts-path en una carpeta .tools dedicada. SDK Expo 57/RN 0.86.3:
+consulta docs de esa versión, hooks de expo-router, instala dependencias con expo install y regenera nativo;
+prebuild limpia por defecto, --no-clean mantiene carpeta/caché. No editar android/ios a mano.
+Prueba en emulador autorizado con install -r, sin borrar cuenta/biblioteca. QA debe ser propia, con IDs/códigos
+guardados solo en .tools y limpieza verificada; jamás borrar un usuario solo porque su nombre contiene QA.
 
-Para desplegar, lee DEPLOYMENT.md. Usa credenciales existentes sin imprimirlas ni versionarlas.
-Respalda y prueba restore antes de migrar, usa el migrador con secreto separado y runtime mínimo.
-No migres al arrancar, no publiques SQL/Ollama ni reinicies el stack ajeno.
-Presencia/chat/votos son de una sola instancia: no agregues réplicas sin coordinar estado.
-No subas .env, claves SSH, backups, tokens o códigos de recuperación a GitHub.
-
-Entregable por incremento: código terminado, pruebas apropiadas, evidencia Android/web,
-documentación vigente, commit y resumen de comportamiento y límites reales.
-No marques el MVP aceptado solo porque compila. No solicites nuevamente permiso para cambios,
-pruebas, push y despliegue ya autorizados; pregunta solo por información imprescindible.
+Pendientes posteriores: expo-video HLS nativo, pruebas Android físicas/Bluetooth/batería/reconexión,
+firma para tiendas, correo transaccional, backups externos/alertas. No dar por aceptado MVP solo porque compila.
+Por incremento entrega código, pruebas apropiadas, evidencia real, documentos vigentes y commit/push.
+Cambios, pruebas, GitHub y despliegue ya autorizados; pregunta solo por datos imprescindibles nuevos.
 ```
-
-## Estado que debe conservarse
-- Catálogo: 68.031 almacenadas, 38.815 variantes principales reproducibles HTTPS, 242 países (snapshot 13/10).
-- Biblioteca preservada: radios, historial confirmado por audio, colecciones y multimedia.
-- Cuenta opcional, upgrade de invitado con misma identidad, revocación y recuperación por código privado.
-- Sincronización con versiones y merge; historial optativo; medios guardados sin descargar archivos.
-- Salas públicas/privadas, chat/reacciones, cola/votos, permisos, transferencia, bans, reportes e invitaciones renovables.
-- YouTube/YouTube Music, archivos HTTPS y radio. Posición/pausa compartidas, clock offset y resync.
-- Asistente Qwen2.5 1.5B local, filtros de catálogo y fallback visible; pasaporte basado en escuchas, sin GPS.
-- Web/Android usan la API pública; APK con clave de depuración para beta, pendiente firma privada para tiendas.
-
-## Pendientes operativos
-No hay SMTP/correo verificado, voz RTC, PiP/casting, premium providers,
-moderación operativa con panel/admin ni alertas externas. Backup diario cifrado y restore probados;
-copia externa manual en PC, pendiente automatizar fuera del VPS. Pruebas físicas/auditoría pendientes.
-Los videos pueden rechazar embeds. Radio no promete sincronía exacta por muestra.
-La sesión web está en sessionStorage por pestaña; no es una sesión permanente entre navegadores.
-
-## Incremento 0.3: salas y diseño
-Sala cinematográfica oscura, modo cine, web en dos columnas y móvil compacto, seek con teclado/gestos,
-chat con seguimiento de mensajes, portadas de contenido real, buscador de salas, invitación copiable,
-pegado de enlaces y contenido guardado. Hasta dos coanfitriones con permisos de reproducción/cola;
-moderación solo del anfitrión. Continuidad optativa: 60 s de gracia, prioridad a coanfitrión conectado;
-reconectar antes conserva al anfitrión. Salas anteriores mantienen continuidad desactivada.
-Cola con prioridad fijada y votos personales recuperados al reconectar. Sincronización con anclas de tiempo
-para evitar saltos al silenciar/cambiar roles. 96 pruebas backend y 60 móvil.
-El propietario indicó continuar primero con salas/diseño; todavía no tiene proveedor de correo transaccional.
-
-## Navegación de contenido
-Explorador YouTube en Android con WebView aislada/incógnita, búsqueda pública y captura de navegación
-HTTPS a videos exactos. Seleccionar rellena el selector: el anfitrión/coanfitrión decide reproducir
-para todos y cualquier integrante puede añadir a la cola. ChangeMedia verifica roles y versión
-tras resolver metadatos; conserva otras propuestas y limpia votos del contenido elegido.
-El reproductor IFrame oficial detecta cambios mediante getVideoUrl y comunica el nuevo video;
-los invitados vuelven al contenido compartido. Pruebas del protocolo de navegación y SQL/WebSockets.
-El propietario no tiene Google Cloud/YouTube Data API y pidió priorizar navegador Android.
-La web abre búsqueda en otra pestaña y acepta enlaces; no afirmar búsqueda web integrada.

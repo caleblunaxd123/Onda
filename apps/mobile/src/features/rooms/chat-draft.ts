@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import {chatLimits, localKey, type LocalAttachment, type UploadHandle} from './chat';
+import {chatLimits, localKey, stickerOf, stickerText, type LocalAttachment, type UploadHandle} from './chat';
 import {discardLocal, discardUpload, uploadAttachment} from './chat-files';
 import {editChat, sendChat, useRoom} from './client';
 import type {ChatAttachment, ChatMessage} from './types';
@@ -110,6 +110,14 @@ async function deliver(outgoing: Outgoing) {
     set(s => ({outbox: s.outbox.map(x => x.key === outgoing.key ? {...x, status: 'failed', error: message} : x)}));
     return false;
   }
+}
+/** A sticker is sent independently, preserving text the person is still writing. */
+export async function sendSticker(id: string) {
+  const draft = useChatDraft.getState(); const text = stickerText(id);
+  if (!stickerOf(text) || !useRoom.getState().room) return false;
+  const outgoing: Outgoing = {key: localKey(), text, replyTo: draft.replyTo, attachments: [], at: new Date().toISOString(), status: 'sending'};
+  set(s => ({outbox: [...s.outbox, outgoing], replyTo: null}));
+  return deliver(outgoing);
 }
 export function retryOutgoing(key: string) {
   const item = useChatDraft.getState().outbox.find(x => x.key === key);

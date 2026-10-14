@@ -96,6 +96,11 @@ namespace Onda.Infrastructure.Migrations
                     b.Property<int>("FailedLogins")
                         .HasColumnType("int");
 
+                    b.Property<string>("GoogleSubject")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
                     b.Property<DateTimeOffset?>("LockedUntil")
                         .HasColumnType("datetimeoffset");
 
@@ -116,6 +121,10 @@ namespace Onda.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasFilter("[Email] IS NOT NULL");
+
+                    b.HasIndex("GoogleSubject")
+                        .IsUnique()
+                        .HasFilter("[GoogleSubject] IS NOT NULL");
 
                     b.ToTable("ListenerAccounts");
                 });

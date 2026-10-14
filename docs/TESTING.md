@@ -1,4 +1,22 @@
-# Pruebas
+# Validación actual — beta 0.5
+140 backend (SQL real, sin omitidas), 87 móvil + TypeScript/ESLint; export web y APK tres ABI.
+El script `node scripts/smoke-chat.mjs https://onda-api.lunalav.pe` pasó 30/30 en producción:
+adjuntos de imagen/archivo/audio rechazados, texto y stickers, respuestas, reacciones, edición, borrado,
+pins/permisos/persistencia, Google desactivado sin OAuth y limpieza de sus propios invitados.
+Nuevo contrato probado con SQL: default no sube ni crea archivos; opt-in de tipos legado sigue probado;
+un solo pin por sala, coanfitrión autorizado, invitado rechazado, edición/deleción y cita de sticker legible.
+Google: upgrade de invitado con ID preservado, revocación, vínculo por sub, no takeover por correo,
+no cambio a otra identidad durante vínculo, nonce de un solo uso/expiración y provider sin configurar.
+No hubo login Google real; falta configurar OAuth y repetir la verificación con cuenta de prueba del propietario.
+
+En emulador: APK 0.5.0 instalado con -r, cuenta/biblioteca preservadas, inicio de salas, radio en pestaña propia,
+Google no disponible anunciado, pin confirmado después de salir/reentrar y sticker recibido sin adjuntos por otra
+conexión pública. Búsqueda real de YouTube y propuesta a cola comprobadas durante la iteración, con Big Buck Bunny
+y Sintel. Margen del composer inspeccionado sin superposición con gesto de navegación.
+Web pública: inicio simplificado y selector comprobados en navegador integrado. Capturas actuales android-050-* y
+web-050-home.png. Se cerraron/eliminaron solo cuentas/salas creadas para QA por el agente.
+Voz en vivo, HLS nativo, iOS y pruebas físicas siguen pendientes. El histórico siguiente no redefine el alcance actual.
+
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
   con `ONDA_TEST_SQL` definido). 100 pruebas; ninguna omitida en la validación Windows con SQL Server real.

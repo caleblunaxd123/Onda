@@ -20,6 +20,7 @@ public static class RoomUploadEndpoints
         group.MapPost("/", async (Guid room, HttpContext context, RoomPresence presence, OndaDbContext db, RoomUploadStore files, CancellationToken ct) =>
         {
             if (!Member(presence, room, context.User)) return Results.Problem("Entra a la sala para adjuntar archivos.", statusCode: 403);
+            if (!files.Enabled) return Results.Problem("El chat usa mensajes, emojis y stickers. La subida de archivos está desactivada.", statusCode: 400);
             if (context.Request.ContentLength > RoomUploadStore.MaxBytes + FormOverhead) return Results.Problem("El archivo supera 10 MB.", statusCode: 413);
             if (!context.Request.HasFormContentType) return Results.Problem("Elige un archivo.", statusCode: 400);
             if (context.Features.Get<IHttpMaxRequestBodySizeFeature>() is {IsReadOnly: false} size) size.MaxRequestBodySize = RoomUploadStore.MaxBytes + FormOverhead;

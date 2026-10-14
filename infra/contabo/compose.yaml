@@ -32,6 +32,8 @@ services:
       Assistant__Model: qwen2.5:1.5b
       # Private chat attachments: outside public assets, only served by the authenticated endpoint.
       Chat__UploadsPath: /data/chat-uploads
+      # No new chat media uploads: stickers are bundled; live voice will not be recorded.
+      Chat__AllowedKinds: ""
     secrets:
       - source: runtime_connection
         target: connection

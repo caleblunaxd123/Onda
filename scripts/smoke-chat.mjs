@@ -4,10 +4,14 @@
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
+import fs from 'node:fs';
 const require = createRequire(path.join(path.dirname(fileURLToPath(import.meta.url)), '../apps/mobile/package.json'));
 const signalR = require('@microsoft/signalr');
 const api = (process.argv[2] ?? 'http://localhost:5080').replace(/\/$/, '');
 const stamp = Date.now().toString(36).slice(-5);
+const cleanupFile = path.join(path.dirname(fileURLToPath(import.meta.url)), '../.tools', `smoke-chat-cleanup-${stamp}.json`);
+fs.mkdirSync(path.dirname(cleanupFile), {recursive: true});
+const created = [];
 const checks = [];
 const ok = (name, value) => {checks.push([name, !!value]); console.log(`${value ? 'OK ' : 'FAIL'} ${name}`); if (!value) process.exitCode = 1;};
 async function http(method, url, token, body, headers = {}) {
@@ -16,7 +20,13 @@ async function http(method, url, token, body, headers = {}) {
   const text = await response.text();
   return {status: response.status, json: text ? (() => {try {return JSON.parse(text);} catch {return text;}})() : null};
 }
-const guest = async name => (await http('POST', '/api/v1/auth/guest', null, {displayName: name})).json;
+const guest = async name => {
+  const response = await http('POST', '/api/v1/auth/guest', null, {displayName: name});
+  if (response.status !== 200) throw new Error('Could not create own QA guest');
+  created.push(response.json);
+  fs.writeFileSync(cleanupFile, JSON.stringify(created), {mode: 0o600});
+  return response.json;
+};
 function hub(token) {
   return new signalR.HubConnectionBuilder().withUrl(api + '/hubs/rooms', {accessTokenFactory: () => token, transport: signalR.HttpTransportType.WebSockets, skipNegotiation: true})
     .configureLogging(signalR.LogLevel.None).build();
@@ -67,31 +77,33 @@ try {
   ok('other person cannot edit', await b.invoke('EditChat', room.id, {messageId: first.id, text: 'x'}).then(() => false, () => true));
   ok('legacy SendMessage still works', await a.invoke('SendMessage', room.id, 'Cliente anterior').then(() => true, () => false));
 
-  const photo = await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(png, 'foto.png', 'image/png'));
-  ok('photos are not accepted in room chat', photo.status === 400 && String(photo.json?.detail ?? '').includes('notas de voz'));
-  const doc = await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(Buffer.from('%PDF-1.4 qa'), 'guia.pdf', 'application/octet-stream'));
-  ok('files are not accepted in room chat', doc.status === 400);
-  const voice = await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(m4a, 'nota.m4a', 'audio/mp4', {durationMs: '4200'}));
-  ok('voice note upload with duration', voice.status === 200 && voice.json.kind === 'audio' && voice.json.durationMs === 4200);
-  ok('fake audio rejected by signature', (await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(Buffer.from('not audio'), 'x.m4a', 'audio/mp4'))).status === 400);
-  ok('unsent upload hidden from others', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, ana.token)).status === 404);
-  const withFiles = await b.invoke('SendChat', room.id, {text: '', replyToId: null, attachmentIds: [voice.json.id]});
-  ok('voice note message', withFiles.attachments.length === 1);
-  const fetched = await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, ana.token);
-  ok('member downloads sent voice note', fetched.status === 200);
-  ok('outsider cannot download', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, eve.token)).status === 403);
-  ok('no token cannot download', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, null)).status === 401);
-  ok('attachment reused is rejected', await a.invoke('SendChat', room.id, {text: 'x', replyToId: null, attachmentIds: [voice.json.id]}).then(() => false, () => true));
-
+  for (const [bytes, name, mime] of [[png, 'foto.png', 'image/png'], [Buffer.from('archivo QA'), 'nota.txt', 'text/plain'], [m4a, 'nota.m4a', 'audio/mp4']]) {
+    const upload = await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(bytes, name, mime));
+    ok('new media upload rejected: ' + name, upload.status === 400);
+  }
+  ok('guest cannot pin messages', await b.invoke('PinChat', room.id, {messageId: first.id}).then(() => false, () => true));
+  const pinUpdated = waitFor(b, 'MessageUpdated', m => m.id === first.id && m.pinned);
+  await a.invoke('PinChat', room.id, {messageId: first.id});
+  ok('pin delivered to another client', (await pinUpdated).pinned);
+  ok('pin persisted separately from history', (await b.invoke('PinnedChat', room.id)).id === first.id);
+  const withFiles = await b.invoke('SendChat', room.id, {text: '[[onda:sticker:temazo]]', replyToId: null, attachmentIds: []});
+  ok('bundled sticker has no attachments', withFiles.attachments.length === 0);
+  const stickerReply = await a.invoke('SendChat', room.id, {text: 'Excelente', replyToId: withFiles.id, attachmentIds: []});
+  ok('sticker quote readable', stickerReply.reply.text === 'Sticker: ¡Qué temazo!');
+  await a.invoke('PinChat', room.id, {messageId: withFiles.id});
+  ok('new pin replaces previous', (await a.invoke('PinnedChat', room.id)).id === withFiles.id);
   const deleted = waitFor(a, 'MessageUpdated', m => m.id === withFiles.id && m.deleted);
   await b.invoke('DeleteChat', room.id, {messageId: withFiles.id});
-  ok('author deletes for everyone', (await deleted).attachments.length === 0);
-  ok('deleted files are gone', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, ana.token)).status === 404);
+  ok('author deletes for everyone', (await deleted).deleted);
+  ok('deleting pinned message clears pin', (await a.invoke('PinnedChat', room.id)) === null);
   const moderated = await a.invoke('DeleteChat', room.id, {messageId: reply.id});
   ok('owner moderates others', moderated.deleted);
   const history = await b.invoke('History', room.id);
-  ok('history persists order and tombstones', history.filter(m => m.kind !== 'system').map(m => m.id).join() === [first.id, reply.id].join() + ',' + history.filter(m => m.kind !== 'system')[2].id + ',' + withFiles.id);
+  ok('history persists order and tombstones', history.some(m => m.id === withFiles.id && m.deleted) && history.every((m, i) => !i || Date.parse(m.at) >= Date.parse(history[i - 1].at)));
 
+  const providers = await http('GET', '/api/v1/auth/providers', null);
+  ok('Google remains disabled until OAuth configured', providers.status === 200 && providers.json.google.enabled === false);
+  ok('Google challenge not issued without OAuth config', (await http('POST', '/api/v1/auth/google/challenge', null, {})).status === 503);
   const kicked = waitFor(b, 'Kicked');
   await a.invoke('Kick', room.id, leo.user.id);
   await kicked;
@@ -102,7 +114,13 @@ try {
 } finally {
   await a.stop().catch(() => {}); await b.stop().catch(() => {});
   // Cleanup: deleting the QA guests removes their room (owned), messages, reactions and files.
-  for (const person of [ana, leo, eve]) if (person?.token) await http('DELETE', '/api/v1/auth/account', person.token, {password: null});
-  if (room?.id) ok('cleanup: QA room no longer listed', (await http('GET', '/api/v1/rooms', null)).json?.items?.every(x => x.id !== room.id) ?? true);
+  let cleaned = true;
+  for (const person of created) {
+    const result = await http('DELETE', '/api/v1/auth/account', person.token, {password: null}).catch(() => ({status: 0}));
+    cleaned &&= result.status === 204;
+  }
+  ok('cleanup: own QA accounts and owned room deleted', cleaned);
+  if (cleaned) fs.unlinkSync(cleanupFile);
+  else console.log('Cleanup credentials retained privately in ' + cleanupFile);
   console.log(`${checks.filter(x => x[1]).length}/${checks.length} checks passed against ${api}`);
 }

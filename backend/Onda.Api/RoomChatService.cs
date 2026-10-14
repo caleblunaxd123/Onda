@@ -35,7 +35,13 @@ public sealed class RoomChatService(OndaDbContext db, TimeProvider clock, RoomPr
     private static string Store(RoomMessage message) => JsonSerializer.Serialize(message with {Reply = null, Revision = 0});
     public static MessageReply Quote(RoomMessage m) => m.Deleted
         ? new(m.Id, m.Sender, DeletedText, true)
-        : new(m.Id, m.Sender, m.Text.Length > 0 ? m.Text[..Math.Min(160, m.Text.Length)] : AttachmentLabel(m.Attachments), false);
+        : new(m.Id, m.Sender, StickerLabel(m.Text) ?? (m.Text.Length > 0 ? m.Text[..Math.Min(160, m.Text.Length)] : AttachmentLabel(m.Attachments)), false);
+    public static string? StickerLabel(string text) => text switch
+    {
+        "[[onda:sticker:temazo]]" => "Sticker: ¡Qué temazo!", "[[onda:sticker:fiesta]]" => "Sticker: ¡Vamos!",
+        "[[onda:sticker:amor]]" => "Sticker: Me encanta", "[[onda:sticker:risa]]" => "Sticker: No puedo más",
+        "[[onda:sticker:chill]]" => "Sticker: Modo relax", "[[onda:sticker:aplausos]]" => "Sticker: ¡Bravo!", _ => null,
+    };
     private static string AttachmentLabel(ChatAttachment[]? items) => items?.FirstOrDefault() switch
     {
         {Kind: "image"} => "Foto", {Kind: "audio"} => "Nota de voz", {Name: { } name} => name, _ => "Adjunto",
@@ -83,6 +89,7 @@ public sealed class RoomChatService(OndaDbContext db, TimeProvider clock, RoomPr
         if (draft.Text is { } raw && raw.Length > maxText || draft.AttachmentIds is {Length: > MaxAttachments})
             throw new HubException($"Usa hasta {maxText:N0} caracteres y {MaxAttachments} adjuntos por mensaje.");
         var text = Clean(draft.Text); var ids = (draft.AttachmentIds ?? []).Distinct().ToArray();
+        if (ids.Length > 0 && !files.Enabled) throw new HubException("La subida de archivos está desactivada. Usa mensajes, emojis y stickers.");
         if (text.Length == 0 && ids.Length == 0) throw new HubException("Escribe algo o añade un adjunto.");
         MessageReply? reply = null;
         if (draft.ReplyToId is { } target)
@@ -138,10 +145,33 @@ public sealed class RoomChatService(OndaDbContext db, TimeProvider clock, RoomPr
         var uploads = await db.RoomUploads.Where(x => x.MessageId == command.MessageId && x.RoomId == room).ToArrayAsync(ct);
         db.RoomUploads.RemoveRange(uploads);
         // Text is a readable tombstone so earlier clients, which do not know the Deleted flag, also hide the content.
-        var deleted = message with {Text = DeletedText, Deleted = true, Reactions = [], Attachments = [], ReplyToId = null, EditedAt = null};
+        var deleted = message with {Text = DeletedText, Deleted = true, Pinned = false, Reactions = [], Attachments = [], ReplyToId = null, EditedAt = null};
         var result = await SaveAsync(room, row, deleted, ct);
         foreach (var upload in uploads) files.Delete(upload.Id);
         return result;
+    }
+
+    public async Task<RoomMessage?> PinnedAsync(Guid room, CancellationToken ct)
+    {
+        var row = await db.RoomChatEntries.AsNoTracking().Where(x => x.RoomId == room && x.Payload.Contains("\"Pinned\":true"))
+            .OrderByDescending(x => x.At).FirstOrDefaultAsync(ct);
+        if (row is null || Read(row).Deleted) return null;
+        return (await HydrateAsync(room, [Read(row)], ct))[0];
+    }
+    public async Task<RoomMessage[]> PinAsync(Guid room, bool controller, ChatTarget command, CancellationToken ct)
+    {
+        if (!controller) throw new HubException("El anfitrión o un coanfitrión puede fijar mensajes.");
+        var (row, message) = await LoadAsync(room, command.MessageId, ct);
+        if (message.Deleted) throw new HubException("No puedes fijar un mensaje eliminado.");
+        var rows = await db.RoomChatEntries.Where(x => x.RoomId == room && x.Id != row.Id && x.Payload.Contains("\"Pinned\":true")).ToArrayAsync(ct);
+        var changed = new List<RoomMessage>();
+        foreach (var previous in rows)
+        {
+            previous.Version++; var next = Read(previous) with {Pinned = false}; previous.Payload = Store(next); changed.Add(next);
+        }
+        row.Version++; var target = message with {Pinned = !message.Pinned, Revision = row.Version}; row.Payload = Store(target); changed.Add(target);
+        await db.SaveChangesAsync(ct);
+        return await HydrateAsync(room, changed.ToArray(), ct);
     }
 
     /// <summary>One reaction per person and message: the same emoji removes it, a different one replaces it.</summary>

@@ -63,7 +63,7 @@ export type RoomLayoutProps = {
   onMember: (member: Member) => void;
   /** Opens the YouTube explorer, optionally with a search already typed in the room. */
   onBrowseYoutube: (query?: string) => void;
-  onSheet: (sheet: "add" | "invite" | "report" | "close") => void;
+  onSheet: (sheet: "add" | "invite" | "report" | "close" | "options") => void;
   act: (method: string, ...args: unknown[]) => Promise<boolean>;
   children?: ReactNode;
 };
@@ -100,9 +100,11 @@ export function RoomLayout(p: RoomLayoutProps) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "web" ? undefined : "padding"}
-      style={{ flex: 1, backgroundColor: c.bg, paddingBottom: insets.bottom }}
+      style={{ flex: 1, backgroundColor: c.bg }}
     >
-      {/* Rave-simple header: leave · room · change content · people · invite. */}
+      {/* padding-mode KeyboardAvoidingView overrides its own paddingBottom; keep the gesture inset inside it. */}
+      <View style={{flex: 1, paddingBottom: keyboard ? 0 : insets.bottom}}>
+      {/* Leave, room, search, people and settings stay visible without displacing the conversation. */}
       <View style={{ paddingHorizontal: 10, paddingVertical: 6, flexDirection: "row", alignItems: "center", gap: 6 }}>
         <IconButton icon="chevron-back" label="Salir de la vista de sala" plain onPress={exit} />
         <View style={{ flex: 1, gap: 2 }}>
@@ -123,7 +125,7 @@ export function RoomLayout(p: RoomLayoutProps) {
           <Ionicons name="people" size={22} color={c.text} />
           <Label style={{ fontSize: 12, fontWeight: "800" }}>{p.room.members.length}</Label>
         </Pressable>
-        <IconButton icon="person-add-outline" label="Invitar amigos" plain onPress={() => p.onSheet("invite")} />
+        <IconButton icon="options-outline" label="Opciones de sala" plain onPress={() => p.onSheet("options")} />
       </View>
       <View
         style={{
@@ -136,6 +138,7 @@ export function RoomLayout(p: RoomLayoutProps) {
         {/* While writing in the chat on a phone the stage collapses (still mounted, so playback continues). */}
         <View style={wide ? { flex: 1.7 } : typing ? { height: 0, overflow: "hidden" } : undefined}>
           <View style={{ paddingHorizontal: 12, gap: 8 }}>
+            {!!p.reaction && <View pointerEvents="none" style={{position: "absolute", right: 24, top: 28, zIndex: 2}}><Label style={{fontSize: 46, lineHeight: 56}}>{p.reaction}</Label></View>}
             {p.room.media.kind === "stream" ? (
               <StreamRoomStage media={p.room.media} playing={p.connected && p.room.isPlaying} position={p.desiredPosition} positionAt={p.positionAt}
                 controller={p.controller} connected={p.connected} onPlayback={p.onPlayback} />
@@ -251,7 +254,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                 style={{
                   flexDirection: "row",
                   paddingHorizontal: 14,
-                  paddingTop: 12,
+                  paddingTop: 4,
                   borderBottomWidth: 1,
                   borderBottomColor: c.border,
                   gap: 24,
@@ -305,6 +308,7 @@ export function RoomLayout(p: RoomLayoutProps) {
         </View>
       </View>
       {p.children}
+      </View>
     </KeyboardAvoidingView>
   );
 }

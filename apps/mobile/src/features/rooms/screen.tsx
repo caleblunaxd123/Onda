@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Linking, Share, View } from "react-native";
+import { AppState, Linking, Platform, Share, View } from "react-native";
 import {
   router,
   useLocalSearchParams,
@@ -39,6 +39,7 @@ import { resetDraft } from "./chat-draft";
 import { clearChatCache } from "./chat-files";
 import { stopVoice } from "./voice";
 import { SourcePicker } from "./source-picker";
+import { YoutubeBrowser } from "./youtube-browser";
 import { youtubeVideoUrl } from "./youtube-navigation";
 import {
   orderedQueue,
@@ -81,7 +82,7 @@ export default function RoomScreen() {
   const [actionError, setActionError] = useState("");
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<
-    "add" | "invite" | "report" | "close" | null
+    "add" | "invite" | "report" | "close" | "options" | null
   >(initialProvider ? "add" : null);
   const [member, setMember] = useState<Member | null>(null);
   const [copied, setCopied] = useState("");
@@ -200,6 +201,15 @@ export default function RoomScreen() {
         : 0,
       version: latest.version,
     });
+  };
+  const chooseMedia = async (media: MediaInput, enqueue = !host) => {
+    const latest = useRoom.getState().room;
+    if (!latest || latest.id !== room?.id || !ready) return false;
+    const ok = enqueue || !host
+      ? await act("AddToQueue", latest.id, media)
+      : await act("ChangeMedia", latest.id, {media, version: latest.version});
+    if (ok) {setSheet(null); if (enqueue || !host) setTab("queue");}
+    return ok;
   };
   const mediaEvent = (event: MediaEvent) => {
     if (event.kind === "source") {
@@ -416,6 +426,19 @@ export default function RoomScreen() {
       }}
       act={act}
     >
+      {sheet === "options" && <Sheet title="Tu sala" onClose={() => setSheet(null)}>
+        <Muted>{room.isPrivate ? "Privada · Se entra por invitación" : "Pública · Aparece en Descubrir"}</Muted>
+        <ActionRow icon="play-circle-outline" label="Cambiar fuente o contenido" detail="YouTube, radio, música o video" onPress={() => {
+          setStartupPicker(false); setDirectSelection(true); setOpenYoutube(false); setInput({kind: room.media.kind}); setSheet("add");
+        }}/>
+        <ActionRow icon="person-add-outline" label="Invitar amigos" onPress={() => setSheet("invite")}/>
+        <ActionRow icon="sync-outline" label="Volver a sincronizar mi reproducción" onPress={() => {
+          setSheet(null); void refreshRoom().catch(e => setActionError(e.message));
+        }}/>
+        <ActionRow icon="people-outline" label="Personas y permisos" onPress={() => {setSheet(null); setTab("people");}}/>
+        <ActionRow icon="flag-outline" label="Reportar sala" onPress={() => {setMember(null); setSheet("report");}}/>
+        {isOwner && <ActionRow icon="stop-circle-outline" label="Cerrar sala para todos" onPress={() => setSheet("close")}/>}
+      </Sheet>}
       {sheet === "invite" && (
         <Sheet title="Invita a tu gente" onClose={() => setSheet(null)}>
           <Muted>
@@ -483,17 +506,18 @@ export default function RoomScreen() {
           )}
         </Sheet>
       )}
-      {sheet === "add" && (!startupPicker || !room.media.url) && (
+      {sheet === "add" && openYoutube && input.kind === "youtube" && Platform.OS !== "web" && (
+        <YoutubeBrowser initialQuery={youtubeQuery} controller={host}
+          onClose={() => {setOpenYoutube(false); setSheet(null);}}
+          onSelect={(url, enqueue) => chooseMedia({kind: "youtube", url}, enqueue)}/>
+      )}
+      {sheet === "add" && !(openYoutube && input.kind === "youtube" && Platform.OS !== "web") && (!startupPicker || !room.media.url) && (
         <Sheet title={room.media.url ? "Qué compartimos después" : "Elige qué mostrar"} onClose={() => setSheet(null)}>
-          <SourcePicker value={input} onChange={setInput} openYoutubeInitially={openYoutube} youtubeQuery={youtubeQuery} onBrowseClose={() => {if (directSelection) setSheet(null);}} onChoose={(media) => {
+          <SourcePicker value={input} onChange={setInput} openYoutubeInitially={openYoutube && Platform.OS === "web"} youtubeQuery={youtubeQuery}
+            onBrowseYoutube={Platform.OS === "web" ? undefined : () => {setInput({kind: "youtube"}); setYoutubeQuery(""); setOpenYoutube(true);}}
+            onBrowseClose={() => {if (directSelection) setSheet(null);}} onChoose={(media) => {
             if (!directSelection || !ready) return;
-            // Guests never change what the group is watching: their pick becomes a proposal in the queue.
-            if (!host) {
-              if (media.kind === "youtube") void act("AddToQueue", room.id, media).then((ok) => {if (ok) {setSheet(null); setTab("queue");}});
-              return;
-            }
-            const latest = useRoom.getState().room;
-            if (latest) void act("ChangeMedia", latest.id, {media, version: latest.version}).then((ok) => {if (ok) setSheet(null);});
+            void chooseMedia(media);
           }} />
           {actionError && <Muted>{actionError}</Muted>}
           {host && <Button

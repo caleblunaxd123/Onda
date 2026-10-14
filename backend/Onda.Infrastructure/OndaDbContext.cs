@@ -35,6 +35,8 @@ public sealed class OndaDbContext(DbContextOptions<OndaDbContext> options) : DbC
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Email).HasMaxLength(254);
+            e.Property(x => x.GoogleSubject).HasMaxLength(255).UseCollation(BinaryCollation);
+            e.HasIndex(x => x.GoogleSubject).IsUnique().HasFilter("[GoogleSubject] IS NOT NULL");
             e.HasIndex(x => x.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
             e.Property(x => x.DisplayName).HasMaxLength(40);
             e.Property(x => x.PasswordHash).HasMaxLength(500);

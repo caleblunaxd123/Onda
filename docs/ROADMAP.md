@@ -1,6 +1,6 @@
 # Roadmap — ONDA multimedia social
 
-## Implementado y desplegado (beta 0.3)
+## Implementado y desplegado (beta 0.5)
 - Catálogo SQL real, fuentes alternativas HTTPS, búsqueda por palabras/filtros, mapa, Radar, inicio y ánimos.
 - Biblioteca de radios/colecciones y multimedia, historial real, cola de radios, temas y perfil.
 - Salas públicas/privadas: invitación directa web/Android, invitados, chat, reacciones, propuestas/votos,
@@ -17,6 +17,9 @@
 - Navegador YouTube integrado Android y cambio de contenido para el grupo; búsqueda web externa y enlaces.
 
 ## Próximo trabajo, en orden
+La decisión actual reemplaza cualquier propuesta anterior de adjuntos: chat ligero sin fotos, archivos ni
+grabaciones. Inicio de salas y radio en pestaña propia ya publicados; pins y stickers locales implementados.
+Google Android/web preparado y desactivado hasta recibir IDs OAuth; ver GOOGLE_SIGN_IN.md.
 1. Cerrar beta física: audio audible, 30 min bloqueado, Bluetooth/llamadas, reconexión y TalkBack/texto grande;
    sincronía multimedia entre dos teléfonos en redes diferentes; medir errores y tiempos reales.
 2. Salas recientes, colecciones compartidas y ajustes editables de sala; medir la continuidad recién implementada.
@@ -36,7 +39,8 @@ Experimentos: tiempo hasta reproducir juntos, porcentaje de invitaciones que ter
 tras desconexión y retención semanal. Telemetría mínima, informada y sin almacenar conversaciones por defecto.
 
 ## Límites vigentes
-Presencia/chat/votos en memoria en una sola instancia. Radio tiene buffers independientes.
+Presencia y votos en memoria en una sola instancia; chat persistente en SQL con retención máxima de 30 días.
+Las subidas de adjuntos están deshabilitadas. Radio tiene buffers independientes.
 Recuperación requiere código privado; no SMTP/identidad de correo verificada. No todos los videos permiten embed.
 No hay integraciones de plataformas premium; implementarlas solo con APIs oficiales y permisos aplicables.
-95 pruebas backend y 56 móvil no sustituyen pruebas de Android físico ni certifican producción.
+140 pruebas backend y 87 móvil no sustituyen pruebas de Android físico ni certifican producción.

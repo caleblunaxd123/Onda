@@ -149,6 +149,12 @@ Sin pruebas físicas de audio, Bluetooth, llamadas, batería o background prolon
   IFrame API `getVideoUrl` detecta cambios del reproductor: anfitrión los comparte, invitado restaura la fuente de sala.
 
 ## Referencias técnicas consultadas
+Beta 0.5: índice de salas en Inicio, radio en ruta propia y `/rooms` como alias. `GoogleIdentity.cs` verifica
+ID tokens y desafíos de un solo uso; `GoogleSubject` identifica al usuario sin unir por correo ajeno.
+Cliente Android Credential Manager (Nitro) y web GIS, desactivados sin IDs. Chat fija un mensaje mediante
+bandera en su payload SQL, con lectura independiente de la página de historia. Stickers son IDs de un catálogo
+incluido. Multipart se rechaza antes de leer/escribir cuando AllowedKinds está vacío (valor predeterminado).
+Los adjuntos antiguos conservan acceso autenticado; la voz en vivo no está implementada.
 - https://docs.expo.dev/versions/v57.0.0/sdk/audio/
 - https://maplibre.org/maplibre-react-native/docs/setup/getting-started/ (tipos 11.5 instalados)
 - https://docs.radio-browser.info/

@@ -229,19 +229,75 @@ public class ChatTests : IAsyncLifetime
         Assert.False(File.Exists(Path.Combine(uploads, photo.Id.ToString("N") + ".bin")));
     }
 
-    [SkippableFact] public async Task ChatAcceptsOnlyVoiceNotesByDefault()
+    [SkippableFact] public async Task ChatCanRestrictNewUploadsToVoiceNotes()
     {
-        RequireSql(); await using var app = Factory(kinds: null);
+        RequireSql(); await using var app = Factory(kinds: "audio");
         var (ownerClient, _) = await ClientAsync(app, "Anfitrión"); var room = await RoomAsync(ownerClient);
         await using var owner = Hub(app, ownerClient); await owner.StartAsync(); await owner.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
         var before = Directory.Exists(uploads) ? Directory.GetFiles(uploads, "*.bin").Length : 0;
         var photo = await UploadAsync(ownerClient, room.Id, Png(800, 600), "image/png", "foto.png");
         Assert.Equal(HttpStatusCode.BadRequest, photo.StatusCode);
-        Assert.Contains("notas de voz", await photo.Content.ReadAsStringAsync());
+        Assert.Contains("no está habilitado", await photo.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.BadRequest, (await UploadAsync(ownerClient, room.Id, "%PDF-1.7"u8.ToArray(), "application/pdf", "a.pdf")).StatusCode);
         var voiceBytes = new byte[32]; "ftypM4A "u8.CopyTo(voiceBytes.AsSpan(4));
         Assert.Equal(HttpStatusCode.OK, (await UploadAsync(ownerClient, room.Id, voiceBytes, "audio/mp4", "nota.m4a", 3000)).StatusCode);
         Assert.Equal(before + 1, Directory.GetFiles(uploads, "*.bin").Length);
+    }
+
+    [SkippableFact] public async Task DefaultChatRejectsAllUploadsWithoutWritingFiles()
+    {
+        RequireSql(); await using var app = Factory(kinds: null);
+        var (client, _) = await ClientAsync(app, "Adjuntos QA"); var room = await RoomAsync(client);
+        await using var hub = Hub(app, client); await hub.StartAsync(); await hub.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+        var photoResponse = await UploadAsync(client, room.Id, Png(800, 600), "image/png", "foto.png");
+        Assert.Equal(HttpStatusCode.BadRequest, photoResponse.StatusCode);
+        var fileResponse = await UploadAsync(client, room.Id, "<html><script>alert(1)</script>"u8.ToArray(), "text/html", "archivo.html");
+        Assert.Equal(HttpStatusCode.BadRequest, fileResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await UploadAsync(client, room.Id, "ftypM4A "u8.ToArray(), "audio/mp4", "voz.m4a")).StatusCode);
+        await using var db = Db(); Assert.Empty(await db.RoomUploads.ToArrayAsync());
+        Assert.False(Directory.Exists(uploads));
+        Assert.Equal(HttpStatusCode.BadRequest, (await UploadAsync(client, room.Id, "fake image"u8.ToArray(), "image/png", "falsa.png")).StatusCode);
+    }
+
+    [SkippableFact] public async Task PinnedMessagesPersistWithControllerPermissionsAndClearOnDeletion()
+    {
+        RequireSql(); await using var app = Factory();
+        var (a, _) = await ClientAsync(app, "Anfitrión"); var (b, peer) = await ClientAsync(app, "Amiga"); var room = await RoomAsync(a);
+        await using var owner = Hub(app, a); await using var guest = Hub(app, b); await owner.StartAsync(); await guest.StartAsync();
+        await owner.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode); await guest.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+        var first = await guest.InvokeAsync<RoomMessage>("SendChat", room.Id, new SendChatCommand("Primer mensaje"));
+        await Assert.ThrowsAsync<HubException>(() => guest.InvokeAsync<RoomMessage[]>("PinChat", room.Id, new ChatTarget(first.Id)));
+        await owner.InvokeAsync<RoomMessage[]>("PinChat", room.Id, new ChatTarget(first.Id));
+        Assert.True((await guest.InvokeAsync<RoomMessage>("PinnedChat", room.Id)).Pinned);
+        await guest.InvokeAsync<RoomMessage>("EditChat", room.Id, new EditChatCommand(first.Id, "Editado"));
+        Assert.Equal("Editado", (await owner.InvokeAsync<RoomMessage>("PinnedChat", room.Id)).Text);
+        await owner.InvokeAsync("SetCohost", room.Id, peer.User.Id, true);
+        var second = await guest.InvokeAsync<RoomMessage>("SendChat", room.Id, new SendChatCommand("[[onda:sticker:temazo]]"));
+        await guest.InvokeAsync<RoomMessage[]>("PinChat", room.Id, new ChatTarget(second.Id));
+        var history = await owner.InvokeAsync<RoomMessage[]>("History", room.Id);
+        Assert.Single(history, x => x.Pinned);
+        Assert.Equal(second.Id, (await owner.InvokeAsync<RoomMessage>("PinnedChat", room.Id)).Id);
+        Assert.Equal("Sticker: ¡Qué temazo!", RoomChatService.Quote(history.Single(x => x.Id == second.Id)).Text);
+        await guest.InvokeAsync<RoomMessage>("DeleteChat", room.Id, new ChatTarget(second.Id));
+        Assert.Null(await owner.InvokeAsync<RoomMessage?>("PinnedChat", room.Id));
+        await Assert.ThrowsAsync<HubException>(() => owner.InvokeAsync<RoomMessage[]>("PinChat", room.Id, new ChatTarget(second.Id)));
+    }
+
+    [SkippableFact] public async Task SpaEntryRevalidatesForBothDirectAndRoomNavigation()
+    {
+        RequireSql();
+        var web = Path.Combine(uploads, "web"); Directory.CreateDirectory(web);
+        await File.WriteAllTextAsync(Path.Combine(web, "index.html"), "<!doctype html><title>ONDA QA</title>");
+        await using var app = Factory().WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?> {["PublicAssetsPath"] = web})));
+        var client = app.CreateClient(new WebApplicationFactoryClientOptions {BaseAddress = new Uri("https://onda.lunalav.pe")});
+        foreach (var path in new[] {"/index.html", "/", "/room?id=qa"})
+        {
+            var response = await client.GetAsync(path);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.True(response.Headers.CacheControl!.NoStore);
+            Assert.Contains("ONDA QA", await response.Content.ReadAsStringAsync());
+        }
     }
 
     [SkippableFact] public async Task AccountDeletionAndMaintenanceRemoveChatDataAndOrphans()

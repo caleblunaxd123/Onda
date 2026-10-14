@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import {create} from 'zustand';
 import {ApiError, request} from '../../api';
 
-export type Listener = {id: string; displayName: string; email: string | null; guest: boolean};
+export type Listener = {id: string; displayName: string; email: string | null; guest: boolean; provider?: 'google' | 'email' | 'guest'};
 export type Session = {token: string; expiresAt: string; user: Listener};
 export type SessionResponse = Session & {recoveryCode: string | null};
 const key = 'onda.listener.session.v1';

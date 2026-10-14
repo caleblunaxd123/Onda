@@ -9,6 +9,7 @@ import {Button, Card, Chip, Label, Muted, Page, ScreenHeader, Sheet} from '../sr
 import {FormField} from '../src/components/forms';
 import {accountRequest, signOut, useAuth, type Listener, type SessionResponse} from '../src/features/account/session';
 import {syncLibrary, useCloudSync} from '../src/features/account/cloud-sync';
+import {GoogleLoginButton} from '../src/features/account/google';
 
 export default function AccountScreen() {
   const c = useTheme(); const auth = useAuth(); const library = useLibrary(); const cloud = useCloudSync();
@@ -52,6 +53,7 @@ export default function AccountScreen() {
         {user && <Button title="Cambiar cómo me ven" secondary onPress={() => {setName(user.displayName); setEditingName(true); setError('');}}/>}
       </Card>
       {(!user || user.guest) ? <>
+        <GoogleLoginButton onSession={session => setRecovery(session.recoveryCode ?? '')} onError={setError}/>
         <View style={{flexDirection: 'row', gap: 8}}><Chip label="Iniciar sesión" selected={mode === 'login'} onPress={() => {setMode('login'); setError('');}}/><Chip label="Crear cuenta" selected={mode === 'register'} onPress={() => {setMode('register'); setError('');}}/></View>
         {mode === 'register' && <FormField label="Tu nombre" value={name} onChange={setName} placeholder="Cómo te verán en las salas" maxLength={40}/>}
         <FormField label="Correo electrónico" value={email} onChange={setEmail} keyboardType="email-address" placeholder="tu@correo.com" maxLength={254}/>
@@ -62,6 +64,8 @@ export default function AccountScreen() {
         <Pressable accessibilityRole="button" onPress={() => {setMode(mode === 'recover' ? 'login' : 'recover'); setError('');}} style={{minHeight: 44, justifyContent: 'center'}}><Label style={{color: c.primaryText, textAlign: 'center'}}>{mode === 'recover' ? 'Volver a iniciar sesión' : 'Tengo un código de recuperación'}</Label></Pressable>
         <Muted>El correo identifica tu cuenta. La recuperación usa tu código privado; aún no se envían correos automáticos.</Muted>
       </> : <>
+        {user.provider !== 'google' && <GoogleLoginButton onSession={session => setRecovery(session.recoveryCode ?? '')} onError={setError}/>}
+        {user.provider === 'google' && <Muted>Cuenta conectada con Google.</Muted>}
         <Card>
           <Label style={{fontWeight: '800', fontSize: 19}}>Tu biblioteca, en todos tus dispositivos</Label>
           <Muted>Al activarla, ONDA combinará radios, videos, música guardada y colecciones. Las nuevas altas y eliminaciones se sincronizan; puedes detenerla cuando quieras.</Muted>
@@ -87,7 +91,7 @@ export default function AccountScreen() {
     </Sheet>}
     {deleting && <Sheet title="Eliminar cuenta" onClose={() => {setDeleting(false); setPassword('');}}>
       <Muted>Se eliminarán tu cuenta, sesiones, biblioteca de la nube y salas creadas. Tu biblioteca de este dispositivo permanece. Las copias cifradas vencen a los 14 días.</Muted>
-      <FormField label="Confirma tu contraseña" value={password} onChange={setPassword} secure/>
+      <FormField label={user?.provider === 'google' ? 'Contraseña o código de recuperación' : 'Confirma tu contraseña'} value={password} onChange={setPassword} secure/>
       {error && <Label accessibilityRole="alert" style={{color: c.live}}>{error}</Label>}
       <Button title={busy ? 'Eliminando…' : 'Eliminar cuenta definitivamente'} disabled={busy || password.length < 10} onPress={() => void remove()}/>
     </Sheet>}

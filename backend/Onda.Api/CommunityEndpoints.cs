@@ -9,6 +9,25 @@ public static class CommunityEndpoints
     public static void MapCommunityEndpoints(this WebApplication app)
     {
         var auth = app.MapGroup("/api/v1/auth").CacheOutput(p => p.NoCache());
+        auth.MapGet("/providers", (IConfiguration config) => Results.Ok(new {google = new {
+            enabled = !string.IsNullOrWhiteSpace(config["Google:WebClientId"]), webClientId = config["Google:WebClientId"], iosClientId = config["Google:IosClientId"],
+        }}));
+        auth.MapPost("/google/challenge", (IConfiguration config, GoogleChallenges challenges) => string.IsNullOrWhiteSpace(config["Google:WebClientId"])
+            ? Results.Problem("Google todavía no está disponible. Puedes entrar con correo o como invitado.", statusCode: 503)
+            : Results.Ok(new {nonce = challenges.Create()})).RequireRateLimiting("account");
+        auth.MapPost("/google", async (GoogleLogin input, ClaimsPrincipal user, IGoogleIdentityVerifier verifier, GoogleChallenges challenges,
+            IConfiguration config, AccountService accounts, RoomPresence presence, IHubContext<RoomsHub> hub, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(config["Google:WebClientId"])) return Results.Problem("Google todavía no está disponible.", statusCode: 503);
+            if (input.IdToken is not {Length: > 0 and <= 8192} || input.Nonce is not {Length: 64}) return Results.Problem("No se pudo verificar el acceso con Google.", statusCode: 401);
+            var identity = await verifier.VerifyAsync(input.IdToken, ct);
+            if (identity is null || identity.Nonce != input.Nonce || !challenges.Consume(input.Nonce)) return Results.Problem("El acceso con Google venció o no es válido. Inténtalo otra vez.", statusCode: 401);
+            var current = user.Identity?.IsAuthenticated == true ? user.ListenerId() : (Guid?)null;
+            var session = await accounts.GoogleAsync(identity, current, ct);
+            if (session is null) return Results.Problem("Este correo ya tiene una cuenta. Inicia sesión con su contraseña antes de conectar Google.", statusCode: 409);
+            if (current == session.User.Id) await NotifyRevoked(presence.Revoke(session.User.Id), hub);
+            return Results.Ok(session);
+        }).RequireRateLimiting("account");
         auth.MapPost("/guest", async (GuestAccount input, AccountService accounts, CancellationToken ct) => Results.Ok(await accounts.GuestAsync(input.DisplayName, ct))).RequireRateLimiting("account");
         auth.MapPost("/register", async (RegisterAccount input, ClaimsPrincipal user, AccountService accounts, RoomPresence presence, IHubContext<RoomsHub> hub, CancellationToken ct) =>
         {

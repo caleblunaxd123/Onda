@@ -13,7 +13,7 @@ export type ChatAttachment = {id: string; name: string; mime: string; kind: 'ima
 export type ChatReply = {id: string; sender: string; text: string; deleted: boolean};
 export type ChatMessage = {id: string; senderId: string; sender: string; text: string; kind: string; at: string;
   replyToId?: string | null; reply?: ChatReply | null; editedAt?: string | null; deleted?: boolean;
-  reactions?: ChatReaction[] | null; attachments?: ChatAttachment[] | null; revision?: number};
+  reactions?: ChatReaction[] | null; attachments?: ChatAttachment[] | null; revision?: number; pinned?: boolean};
 export function orderedQueue(items: QueueItem[]) {return [...items].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.votes - a.votes);}
 export function projectedPosition(position: number, playing: boolean, at?: number, now = Date.now()) {
   return Math.max(0, position + (playing && at !== undefined ? Math.max(0, now - at) / 1000 : 0));

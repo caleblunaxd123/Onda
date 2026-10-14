@@ -4,8 +4,8 @@ import { Ionicons } from '../../src/icons';
 import { useTheme } from '../../src/theme';
 import { Label, MiniPlayer } from '../../src/ui';
 const items = {
-  index: {icon: 'home', title: 'Inicio'}, world: {icon: 'earth', title: 'Mundo'}, radar: {icon: 'radio', title: 'Radar'},
-  rooms: {icon: 'people', title: 'Juntos'}, library: {icon: 'albums', title: 'Biblioteca'},
+  index: {icon: 'people', title: 'Inicio'}, radio: {icon: 'radio', title: 'Radio'}, world: {icon: 'earth', title: 'Mundo'}, radar: {icon: 'compass', title: 'Radar'},
+  library: {icon: 'albums', title: 'Biblioteca'},
 } as const;
 export default function TabLayout() {
   const c = useTheme();
@@ -14,6 +14,7 @@ export default function TabLayout() {
     <View accessibilityRole="tablist" style={{flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.border, paddingTop: 6, backgroundColor: c.surface}}>
       {state.routes.map((route, index) => {
         const item = items[route.name as keyof typeof items]; const focused = state.index === index;
+        if (!item) return null;
         return <Pressable key={route.key} accessibilityRole="tab" accessibilityLabel={item.title} accessibilityState={{selected: focused}}
           onPress={() => {const e = navigation.emit({type: 'tabPress', target: route.key, canPreventDefault: true}); if (!focused && !e.defaultPrevented) navigation.navigate(route.name);}}
           onLongPress={() => navigation.emit({type: 'tabLongPress', target: route.key})} style={{flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center'}}>
@@ -25,6 +26,6 @@ export default function TabLayout() {
       })}
     </View>
   </View>}>
-    <Tabs.Screen name="index"/><Tabs.Screen name="world"/><Tabs.Screen name="radar"/><Tabs.Screen name="rooms"/><Tabs.Screen name="library"/>
+    <Tabs.Screen name="index"/><Tabs.Screen name="radio"/><Tabs.Screen name="world"/><Tabs.Screen name="radar"/><Tabs.Screen name="library"/><Tabs.Screen name="rooms" options={{href: null}}/>
   </Tabs>;
 }

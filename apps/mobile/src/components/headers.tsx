@@ -23,10 +23,10 @@ export function ScreenHeader({title, subtitle, back, children}: PropsWithChildre
 const logo = require('../../assets/brand/onda-logo-header.png');
 
 /** Tab screen header from the owner's model: ONDA logo, brand waveform, optional title and trailing actions. */
-export function BrandHeader({title, subtitle, emoji, children}: PropsWithChildren<{title?: string; subtitle?: string; emoji?: string}>) {
+export function BrandHeader({title, subtitle, emoji, calm = false, children}: PropsWithChildren<{title?: string; subtitle?: string; emoji?: string; calm?: boolean}>) {
   const c = useTheme(); const playback = usePlayer();
-  return <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10, backgroundColor: c.bg, experimental_backgroundImage: c.headerGlow} as ViewStyle}>
-    <View pointerEvents="none" style={{position: 'absolute', right: 70, top: 6}}><Waveform active={playback.state === 'playing'} height={46} opacity={c.isDark ? 0.55 : 0.4}/></View>
+  return <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10, backgroundColor: c.bg, ...(!calm && {experimental_backgroundImage: c.headerGlow})} as ViewStyle}>
+    {!calm && <View pointerEvents="none" style={{position: 'absolute', right: 70, top: 6}}><Waveform active={playback.state === 'playing'} height={46} opacity={c.isDark ? 0.55 : 0.4}/></View>}
     <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48}}>
       <Image source={logo} accessibilityRole="header" accessibilityLabel="ONDA" resizeMode="contain" style={{width: 128, height: 36}}/>
       <View style={{flexDirection: 'row', gap: 8}}>{children}</View>

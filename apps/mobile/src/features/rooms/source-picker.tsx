@@ -30,6 +30,7 @@ export function SourcePicker({
   youtubeQuery = "",
   onChoose,
   onBrowseClose,
+  onBrowseYoutube,
 }: {
   value: MediaInput;
   onChange: (value: MediaInput) => void;
@@ -38,6 +39,7 @@ export function SourcePicker({
   youtubeQuery?: string;
   onChoose?: (value: MediaInput) => void;
   onBrowseClose?: () => void;
+  onBrowseYoutube?: () => void;
 }) {
   const c = useTheme();
   const country = useLibrary((s) => s.country);
@@ -105,7 +107,8 @@ export function SourcePicker({
             onPress={() => {
               if (item.kind === "youtube") {
                 if (!youtubeSelected) onChange({ kind: "youtube" });
-                setYoutubeOpen(true);
+                if (onBrowseYoutube) onBrowseYoutube();
+                else setYoutubeOpen(true);
                 return;
               }
               setYoutubeOpen(false);

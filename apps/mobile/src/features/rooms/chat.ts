@@ -3,6 +3,17 @@ import type {ChatAttachment, ChatMessage, ChatReply} from './types';
 /** Pure chat-state helpers shared by the SignalR client and the UI. Kept free of React/IO so they are unit tested. */
 export const chatLimits = {text: 2000, attachments: 3, bytes: 10 * 1024 * 1024, editMinutes: 15, memory: 2000, voiceSeconds: 180};
 export const deletedText = 'Mensaje eliminado';
+/** Bundled stickers are small identifiers in messages; no file is uploaded or stored. */
+export const stickers = [
+  {id: 'temazo', emoji: '🎧', label: '¡Qué temazo!', color: '#49CEDC'},
+  {id: 'fiesta', emoji: '🥳', label: '¡Vamos!', color: '#B9A2FA'},
+  {id: 'amor', emoji: '😍', label: 'Me encanta', color: '#F6A2BE'},
+  {id: 'risa', emoji: '😂', label: 'No puedo más', color: '#FFC875'},
+  {id: 'chill', emoji: '😌', label: 'Modo relax', color: '#94D3AD'},
+  {id: 'aplausos', emoji: '👏', label: '¡Bravo!', color: '#8BBDF4'},
+] as const;
+export const stickerText = (id: string) => `[[onda:sticker:${id}]]`;
+export const stickerOf = (text: string) => stickers.find(x => stickerText(x.id) === text);
 const order = (a: ChatMessage, b: ChatMessage) => Date.parse(a.at) - Date.parse(b.at) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 export function attachmentLabel(items?: ChatAttachment[] | null) {
@@ -12,7 +23,7 @@ export function attachmentLabel(items?: ChatAttachment[] | null) {
 /** Mirrors the server quote so live edits/deletes refresh replies without reloading history. */
 export function quoteOf(message: ChatMessage): ChatReply {
   if (message.deleted) return {id: message.id, sender: message.sender, text: deletedText, deleted: true};
-  return {id: message.id, sender: message.sender, text: message.text ? message.text.slice(0, 160) : attachmentLabel(message.attachments), deleted: false};
+  return {id: message.id, sender: message.sender, text: stickerOf(message.text) ? 'Sticker: ' + stickerOf(message.text)!.label : message.text ? message.text.slice(0, 160) : attachmentLabel(message.attachments), deleted: false};
 }
 function refreshQuotes(list: ChatMessage[], changed: ChatMessage) {
   return list.map(x => x.replyToId === changed.id && !x.deleted ? {...x, reply: quoteOf(changed)} : x);
@@ -96,6 +107,8 @@ export function fileExtension(name: string) {
 /** Short accessible description used by TalkBack and the reply bar. */
 export function describeMessage(message: ChatMessage) {
   if (message.deleted) return deletedText;
+  const sticker = stickerOf(message.text);
+  if (sticker) return 'Sticker: ' + sticker.label;
   const parts = [message.text, ...(message.attachments ?? []).map(x => x.kind === 'image' ? 'Foto' : x.kind === 'audio' ? `Nota de voz de ${formatDuration(x.durationMs)}` : `Archivo ${x.name}`)];
   return parts.filter(Boolean).join('. ');
 }

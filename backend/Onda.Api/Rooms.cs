@@ -156,6 +156,14 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
         finally {gate.Release();}
     }
     public async Task<RoomMessage[]> History(Guid id) {await MemberAsync(id); return await chat.HistoryAsync(id, Ct);}
+    public async Task<RoomMessage?> PinnedChat(Guid id) {await MemberAsync(id); return await chat.PinnedAsync(id, Ct);}
+    public async Task<RoomMessage[]> PinChat(Guid id, ChatTarget command)
+    {
+        Limit("chat-change", 12, 10);
+        var changed = await ChatAsync(id, room => chat.PinAsync(id, room.OwnerId == Account || RoomService.Cohosts(room).Contains(Account), command, Ct));
+        foreach (var message in changed) await Clients.Group(id.ToString()).SendAsync("MessageUpdated", message);
+        return changed;
+    }
     public async Task<ChatPage> ChatHistory(Guid id, Guid before) {Limit("history", 10, 30); await MemberAsync(id); return await chat.OlderAsync(id, before, Ct);}
     /// <summary>Legacy text-only command kept for clients released before the extended chat.</summary>
     public async Task SendMessage(Guid id, string text)

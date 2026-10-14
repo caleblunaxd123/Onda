@@ -8,11 +8,20 @@ import type {AudioSource} from 'expo-audio';
 import {useTheme} from '../../theme';
 import {Ionicons} from '../../icons';
 import {Chip, IconButton, Label, Muted} from '../../ui';
-import {attachmentLabel, dayLabel, describeMessage, fileExtension, formatBytes, formatDuration, linkParts, summarizeReactions} from './chat';
+import {attachmentLabel, dayLabel, describeMessage, fileExtension, formatBytes, formatDuration, linkParts, stickerOf, summarizeReactions} from './chat';
 import {discardOutgoing, retryOutgoing, reviseOutgoing, type Outgoing} from './chat-draft';
 import {audioSource, resolveImage, saveAttachment} from './chat-files';
 import {toggleVoice, useVoicePlayer} from './voice';
 import type {ChatAttachment, ChatMessage, ChatReply} from './types';
+
+export function StickerBubble({text, onLongPress}: {text: string; onLongPress?: () => void}) {
+  const c = useTheme(); const item = stickerOf(text);
+  if (!item) return null;
+  return <View accessibilityLabel={'Sticker: ' + item.label} style={{width: 156, minHeight: 140, borderRadius: 24, padding: 14, gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: item.color + '22'}}>
+    <Label onLongPress={onLongPress} style={{fontSize: 60, lineHeight: 74}}>{item.emoji}</Label>
+    <Label onLongPress={onLongPress} style={{fontSize: 14, fontWeight: '900', color: c.text}}>{item.label}</Label>
+  </View>;
+}
 
 /** Authorized photo thumbnail. The bytes come from the private endpoint; nothing public is involved. */
 export function ChatImage({room, item, onOpen, onLongPress}: {room: string; item: ChatAttachment; onOpen: (source: ImageSourcePropType) => void; onLongPress?: () => void}) {
@@ -165,7 +174,7 @@ export function OutgoingBubble({item}: {item: Outgoing}) {
       style={{padding: 10, gap: 6, borderRadius: 16, borderTopRightRadius: 4, backgroundColor: c.accentSoft, opacity: failed ? 1 : .8, borderWidth: failed ? 1 : 0, borderColor: c.live}}>
       {item.replyTo && <Quote compact reply={{id: item.replyTo.id, sender: item.replyTo.sender, text: describeMessage(item.replyTo) || 'Adjunto', deleted: false}}/>}
       {item.attachments.map(x => <Muted key={x.key} style={{fontSize: 12}}>{x.kind === 'image' ? '📷 Foto' : x.kind === 'audio' ? `🎤 Nota de voz ${formatDuration(x.durationMs)}` : `📄 ${x.name}`}</Muted>)}
-      {!!item.text && <Label style={{fontSize: 14}}>{item.text}</Label>}
+      {!!item.text && (stickerOf(item.text) ? <StickerBubble text={item.text}/> : <Label style={{fontSize: 14}}>{item.text}</Label>)}
       <View style={{flexDirection: 'row', gap: 4, alignItems: 'center', alignSelf: 'flex-end'}}>
         <Muted style={{fontSize: 10, color: failed ? c.live : c.muted}}>{failed ? 'No se envió' : 'Enviando'}</Muted>
         <Ionicons name={failed ? 'alert-circle' : 'time-outline'} size={13} color={failed ? c.live : c.muted}/>

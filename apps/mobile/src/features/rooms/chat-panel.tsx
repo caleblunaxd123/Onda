@@ -1,17 +1,15 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {AccessibilityInfo, ActivityIndicator, FlatList, Image, Platform, Pressable, TextInput, View, type ImageSourcePropType} from 'react-native';
+import {AccessibilityInfo, ActivityIndicator, FlatList, Platform, Pressable, ScrollView, TextInput, View, type ImageSourcePropType} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {useTheme} from '../../theme';
 import {Ionicons} from '../../icons';
 import {ActionRow, Chip, Label, Muted, Sheet, type IconName} from '../../ui';
 import {Avatar} from './presentation';
-import {canDelete, canEdit, chatLimits, continuesGroup, describeMessage, emojiPanel, formatBytes, formatDuration, isJumboEmoji, myReaction, pruneTyping, sameDay, typingLabel} from './chat';
-import {addAttachment, ensureDraftRoom, removeAttachment, replyTo, retryAttachment, sendDraft, setComposing, setDraftText, startEditing, stopEditing, useChatDraft,
-  type PendingAttachment} from './chat-draft';
-import {discardLocal, saveAttachment, voiceAttachmentAsync} from './chat-files';
-import {ChatImage, DaySeparator, FileCard, ImageViewer, LinkedText, OutgoingBubble, Quote, Reactions, SwipeToReply, VoiceBar, VoiceNote} from './chat-parts';
-import {deleteChat, loadOlderMessages, notifyTyping, reactChat, useHiddenMessages, useRoom} from './client';
-import {useVoiceRecorder, type VoiceClip} from './voice';
+import {canDelete, canEdit, chatLimits, continuesGroup, describeMessage, emojiPanel, isJumboEmoji, myReaction, pruneTyping, sameDay, stickerOf, stickers, typingLabel} from './chat';
+import {ensureDraftRoom, replyTo, sendDraft, sendSticker, setComposing, setDraftText, startEditing, stopEditing, useChatDraft} from './chat-draft';
+import {saveAttachment} from './chat-files';
+import {ChatImage, DaySeparator, FileCard, ImageViewer, LinkedText, OutgoingBubble, Quote, Reactions, StickerBubble, SwipeToReply, VoiceNote} from './chat-parts';
+import {deleteChat, loadOlderMessages, notifyTyping, reactChat, roomCommand, useHiddenMessages, useRoom} from './client';
 import type {RoomLayoutProps} from './room-layout';
 import type {ChatAttachment, ChatMessage} from './types';
 
@@ -23,7 +21,7 @@ export function RoomChat(p: RoomLayoutProps) {
   const room = p.room.id;
   const owner = p.userId === p.room.ownerId;
   const hidden = useHiddenMessages(s => s.ids);
-  const {typing, olderAvailable, loadingOlder} = useRoom();
+  const {typing, olderAvailable, loadingOlder, pinned} = useRoom();
   const data = useMemo(() => p.messages.filter(x => !hidden.includes(x.id)), [p.messages, hidden]);
   const outbox = useChatDraft(s => s.outbox);
   const list = useRef<FlatList<ChatMessage>>(null);
@@ -72,7 +70,7 @@ export function RoomChat(p: RoomLayoutProps) {
                 ? <ChatImage key={attachment.id} room={room} item={attachment} onOpen={source => setViewer({source, item: attachment})} onLongPress={() => setSelected(item)}/>
                 : attachment.kind === 'audio' ? <VoiceNote key={attachment.id} room={room} item={attachment} mine={mine} onLongPress={() => setSelected(item)}/>
                 : <FileCard key={attachment.id} room={room} item={attachment} onError={fail} onLongPress={() => setSelected(item)}/>)}
-              {!!item.text && (isJumboEmoji(item.text) && !item.attachments?.length
+              {!!item.text && (stickerOf(item.text) ? <StickerBubble text={item.text} onLongPress={() => setSelected(item)}/> : isJumboEmoji(item.text) && !item.attachments?.length
                 ? <Label onLongPress={() => setSelected(item)} style={{fontSize: 46, lineHeight: 56}}>{item.text.trim()}</Label>
                 : <LinkedText text={item.text} onLongPress={() => setSelected(item)}/>)}
             </>}
@@ -91,6 +89,13 @@ export function RoomChat(p: RoomLayoutProps) {
     </SwipeToReply></>;
   };
   return <>
+    {pinned && !hidden.includes(pinned.id) && <Pressable accessibilityRole="button" accessibilityLabel={'Mensaje fijado de ' + pinned.sender + ': ' + describeMessage(pinned)}
+      onPress={() => setSelected(pinned)} style={{marginHorizontal: 14, marginTop: 8, padding: 10, borderRadius: 14, backgroundColor: c.surface, flexDirection: 'row', gap: 10, alignItems: 'center'}}>
+      <Ionicons name="pin" size={18} color={c.primaryText}/><View style={{flex: 1}}>
+        <Label style={{fontSize: 11, fontWeight: '800', color: c.primaryText}}>Fijado · {pinned.sender}</Label>
+        <Label numberOfLines={2} style={{fontSize: 12}}>{describeMessage(pinned)}</Label>
+      </View>
+    </Pressable>}
     <FlatList ref={list} data={data} keyExtractor={item => item.id} renderItem={renderMessage}
       contentContainerStyle={{padding: 14, gap: 12, flexGrow: 1}} keyboardShouldPersistTaps="handled"
       maintainVisibleContentPosition={Platform.OS === 'web' ? undefined : {minIndexForVisible: 0}}
@@ -112,7 +117,7 @@ export function RoomChat(p: RoomLayoutProps) {
       ListEmptyComponent={<View style={{flex: 1, minHeight: 90, alignItems: 'center', justifyContent: 'center', gap: 8}}>
         <Ionicons name="chatbubbles-outline" size={28} color={c.muted}/>
         <Label style={{fontWeight: '700'}}>Aquí empieza el momento.</Label>
-        <Muted style={{fontSize: 12, textAlign: 'center'}}>Escribe, manda un sticker o graba una nota de voz.</Muted>
+        <Muted style={{fontSize: 12, textAlign: 'center'}}>Mensajes, stickers y reacciones para tu grupo.</Muted>
       </View>}/>
     {away && <View style={{alignItems: 'center', paddingBottom: 6}}>
       <Chip label="Últimos mensajes" icon="arrow-down" onPress={() => {follow.current = true; setAway(false); list.current?.scrollToEnd({animated: true});}}/>
@@ -123,14 +128,14 @@ export function RoomChat(p: RoomLayoutProps) {
       <Ionicons name="alert-circle-outline" size={16} color={c.live}/><Label style={{flex: 1, fontSize: 12}}>{notice}</Label><Ionicons name="close" size={16} color={c.muted}/>
     </Pressable>}
     <Composer {...p} onError={fail}/>
-    {selected && <MessageActions message={selected} me={p.userId} owner={owner} onClose={() => setSelected(null)} onError={fail}
+    {selected && <MessageActions message={selected} me={p.userId} owner={owner} controller={p.controller} onClose={() => setSelected(null)} onError={fail}
       onMember={() => {setSelected(null); p.onMember({id: selected.senderId, name: selected.sender});}}/>}
     {viewer && <ImageViewer source={viewer.source} onClose={() => setViewer(null)}
       onSave={() => void saveAttachment(room, viewer.item).catch((e: Error) => fail(e.message))}/>}
   </>;
 }
 
-function MessageActions({message, me, owner, onClose, onError, onMember}: {message: ChatMessage; me?: string; owner: boolean; onClose: () => void; onError: (m: string) => void; onMember: () => void}) {
+function MessageActions({message, me, owner, controller, onClose, onError, onMember}: {message: ChatMessage; me?: string; owner: boolean; controller: boolean; onClose: () => void; onError: (m: string) => void; onMember: () => void}) {
   const c = useTheme();
   const mine = message.senderId === me;
   const current = myReaction(message, me);
@@ -146,6 +151,8 @@ function MessageActions({message, me, owner, onClose, onError, onMember}: {messa
       </Pressable>)}
     </View>}
     {!message.deleted && <ActionRow icon="arrow-undo-outline" label="Responder" onPress={() => {replyTo(message); onClose();}}/>}
+    {controller && !message.deleted && <ActionRow icon="pin-outline" label={message.pinned ? 'Desfijar mensaje' : 'Fijar mensaje para la sala'}
+      onPress={() => run(() => pinner(message.id))}/>}
     {canEdit(message, me) && <ActionRow icon="create-outline" label="Editar" detail="Hasta 15 min" onPress={() => {startEditing(message); onClose();}}/>}
     {!message.deleted && !!message.text && <ActionRow icon="copy-outline" label="Copiar texto" onPress={() => {void Clipboard.setStringAsync(message.text); onClose();}}/>}
     {canDelete(message, me, owner) && <ActionRow icon="trash-outline" label={mine ? 'Eliminar para todos' : 'Eliminar para todos (moderación)'}
@@ -155,36 +162,15 @@ function MessageActions({message, me, owner, onClose, onError, onMember}: {messa
   </Sheet>;
 }
 
+function pinner(messageId: string) {const room = useRoom.getState().room; return roomCommand('PinChat', room?.id, {messageId});}
+
 function Composer(p: RoomLayoutProps & {onError: (message: string) => void}) {
   const c = useTheme();
   const draft = useChatDraft();
   const [menu, setMenu] = useState(false);
-  const discardClip = useCallback((clip: VoiceClip) => discardLocal({uri: clip.uri, temporary: true}), []);
-  const voice = useVoiceRecorder(discardClip);
+  const [showStickers, setShowStickers] = useState(true);
   const text = draft.text;
-  const uploading = draft.pending.some(x => x.status === 'uploading');
-  const canSend = p.connected && !draft.sending && (!!text.trim() || draft.pending.length > 0 || (!!draft.editing && !!draft.editing.attachments?.length));
-  const sendVoice = async () => {
-    const clip = voice.take(); if (!clip) return;
-    try {addAttachment(await voiceAttachmentAsync(clip.uri, clip.durationMs), true);}
-    catch {discardClip(clip); p.onError('No se pudo preparar la nota de voz.');}
-  };
-  if (voice.phase === 'recording' || voice.phase === 'starting' || voice.phase === 'review') {
-    const review = voice.phase === 'review' && voice.clip;
-    return <View style={{paddingHorizontal: 14, paddingTop: 6, paddingBottom: 10, gap: 8}}>
-      <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8, borderRadius: 24, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border}}>
-        <RoundButton icon="trash-outline" label={review ? 'Descartar nota de voz' : 'Cancelar grabación'} onPress={() => void voice.cancel()} tint={c.live}/>
-        {review ? <View style={{flex: 1}}><VoiceBar id={'local:' + review.uri} durationMs={review.durationMs} source={async () => review.uri}/></View>
-          : <View style={{flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8}} accessibilityLiveRegion="polite">
-            <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: c.live}}/>
-            <Label style={{fontVariant: ['tabular-nums'], fontWeight: '700'}}>{formatDuration(voice.duration)}</Label>
-            <Muted style={{fontSize: 11}}>/ {formatDuration(chatLimits.voiceSeconds * 1000)} · Solo tú dejas de oír la sala</Muted>
-          </View>}
-        {review ? <RoundButton icon="arrow-up" label="Enviar nota de voz" primary disabled={!p.connected} onPress={() => void sendVoice()}/>
-          : <RoundButton icon="stop" label="Terminar grabación" primary disabled={voice.phase === 'starting'} onPress={() => void voice.stop()}/>}
-      </View>
-    </View>;
-  }
+  const canSend = p.connected && !draft.sending && !!text.trim();
   return <View style={{paddingHorizontal: 14, paddingTop: 4, paddingBottom: 10, gap: 8}}>
     {(draft.replyTo || draft.editing) && <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
       <Ionicons name={draft.editing ? 'create-outline' : 'arrow-undo-outline'} size={18} color={c.primaryText}/>
@@ -194,12 +180,21 @@ function Composer(p: RoomLayoutProps & {onError: (message: string) => void}) {
       </View>
       <RoundButton icon="close" label={draft.editing ? 'Cancelar edición' : 'Cancelar respuesta'} onPress={() => draft.editing ? stopEditing() : replyTo(null)}/>
     </View>}
-    {draft.pending.length > 0 && <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8}}>
-      {draft.pending.map(item => <PendingChip key={item.key} item={item}/>)}
-    </View>}
     {!!draft.error && <Label accessibilityRole="alert" style={{fontSize: 12, color: c.live}}>{draft.error}</Label>}
-    {!!voice.error && <Pressable accessibilityRole="button" onPress={voice.clearError}><Label accessibilityRole="alert" style={{fontSize: 12, color: c.live}}>{voice.error}</Label></Pressable>}
-    {menu && <View style={{gap: 8, padding: 10, borderRadius: 18, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border}}>
+    {menu && <ScrollView keyboardShouldPersistTaps="handled" style={{maxHeight: 240, borderRadius: 18, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border}} contentContainerStyle={{gap: 8, padding: 10}}>
+      <View style={{flexDirection: 'row', gap: 8}}>
+        <Chip label="Stickers" selected={showStickers} onPress={() => setShowStickers(true)}/>
+        <Chip label="Emojis" selected={!showStickers} onPress={() => setShowStickers(false)}/>
+        <Chip label="Invitar" icon="person-add-outline" onPress={() => {setMenu(false); p.onSheet('invite');}}/>
+      </View>
+      {showStickers && <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8}}>
+        {stickers.map(item => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={'Enviar sticker: ' + item.label}
+          disabled={!p.connected || draft.sending} onPress={() => {setMenu(false); void sendSticker(item.id);}}
+          style={{width: '30%', flexGrow: 1, minHeight: 86, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 16, backgroundColor: item.color + '22'}}>
+          <Label style={{fontSize: 32, lineHeight: 40}}>{item.emoji}</Label><Label style={{fontSize: 10, fontWeight: '800'}}>{item.label}</Label>
+        </Pressable>)}
+      </View>}
+      {!showStickers && <>
       <Muted style={{fontSize: 11, fontWeight: '700'}}>EMOJIS Y STICKERS · solos se ven en grande</Muted>
       <View style={{flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between'}}>
         {emojiPanel.map(emoji => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Añadir ${emoji}`}
@@ -208,49 +203,29 @@ function Composer(p: RoomLayoutProps & {onError: (message: string) => void}) {
           <Label style={{fontSize: 24}}>{emoji}</Label>
         </Pressable>)}
       </View>
+      </>}
       <Muted style={{fontSize: 11, fontWeight: '700'}}>REACCIÓN FLOTANTE PARA LA SALA</Muted>
       <View style={{flexDirection: 'row', gap: 4}}>
         {['❤️', '🔥', '👏', '😂', '😮', '🎵'].map(emoji => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Reacción flotante ${emoji} para la sala`}
           disabled={!p.connected} onPress={() => {setMenu(false); void p.act('React', p.room.id, emoji);}}
           style={{minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center'}}><Label style={{fontSize: 22}}>{emoji}</Label></Pressable>)}
       </View>
-    </View>}
+    </ScrollView>}
     <View style={{flexDirection: 'row', gap: 8, alignItems: 'flex-end'}}>
-      {!draft.editing && <RoundButton icon={menu ? 'close' : 'happy-outline'} label={menu ? 'Cerrar emojis' : 'Emojis, stickers y reacciones'} onPress={() => setMenu(x => !x)}/>}
+      {!draft.editing && <RoundButton icon={menu ? 'close' : 'add'} label={menu ? 'Cerrar stickers y emojis' : 'Stickers, emojis e invitaciones'} onPress={() => setMenu(x => !x)}/>}
       <TextInput accessibilityLabel={draft.editing ? 'Editar mensaje' : 'Mensaje para la sala'} value={text}
         onChangeText={value => {setDraftText(value); if (value.trim()) notifyTyping();}}
         onFocus={() => setComposing(true)} onBlur={() => setComposing(false)}
         placeholder={draft.editing ? 'Edita tu mensaje' : 'Escribe a la sala…'} placeholderTextColor={c.muted} maxLength={chatLimits.text} multiline
         style={{flex: 1, minHeight: 46, maxHeight: 120, borderWidth: 1, borderColor: c.border, borderRadius: 24, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
           backgroundColor: c.surface, color: c.text, fontSize: 14}}/>
-      {canSend || draft.editing || draft.pending.length
-        ? <RoundButton icon={draft.editing ? 'checkmark' : 'arrow-up'} primary busy={draft.sending || (draft.autoSend && uploading)}
-          label={draft.editing ? 'Guardar edición' : uploading ? 'Enviar cuando termine de subir' : 'Enviar mensaje'} disabled={!canSend} onPress={() => void sendDraft()}/>
-        : <RoundButton icon="mic-outline" label="Grabar nota de voz" disabled={!p.connected} onPress={() => void voice.start()}/>}
+      {canSend || draft.editing
+        ? <RoundButton icon={draft.editing ? 'checkmark' : 'arrow-up'} primary busy={draft.sending}
+          label={draft.editing ? 'Guardar edición' : 'Enviar mensaje'} disabled={!canSend} onPress={() => void sendDraft()}/>
+        : <RoundButton icon="arrow-up" label="Enviar mensaje" primary disabled onPress={() => {}}/>}
     </View>
     {text.length > chatLimits.text - 200 && <Muted style={{fontSize: 11, alignSelf: 'flex-end'}}>{text.length}/{chatLimits.text}</Muted>}
     {!!p.reaction && <Label accessibilityLiveRegion="polite" style={{position: 'absolute', right: 20, top: -36, fontSize: 28}}>{p.reaction}</Label>}
-  </View>;
-}
-
-function PendingChip({item}: {item: PendingAttachment}) {
-  const c = useTheme();
-  const label = item.kind === 'image' ? 'Foto' : item.kind === 'audio' ? `Nota de voz ${formatDuration(item.durationMs)}` : item.name;
-  return <View accessible accessibilityLabel={`${label}, ${formatBytes(item.size)}. ${item.status === 'uploading' ? `Subiendo ${Math.round(item.progress * 100)}%` : item.status === 'error' ? item.error : 'Listo para enviar'}`}
-    style={{flexDirection: 'row', alignItems: 'center', gap: 8, padding: 6, paddingRight: 2, borderRadius: 14, backgroundColor: c.surface, borderWidth: 1,
-      borderColor: item.status === 'error' ? c.live : c.border, maxWidth: '100%'}}>
-    {item.kind === 'image' ? <Image source={{uri: item.uri}} style={{width: 44, height: 44, borderRadius: 10}}/>
-      : <View style={{width: 44, height: 44, borderRadius: 10, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center'}}>
-        <Ionicons name={item.kind === 'audio' ? 'mic-outline' : 'document-outline'} size={20} color={c.primaryText}/>
-      </View>}
-    <View style={{maxWidth: 150}}>
-      <Label numberOfLines={1} style={{fontSize: 12, fontWeight: '700'}}>{label}</Label>
-      <Muted numberOfLines={2} style={{fontSize: 10, color: item.status === 'error' ? c.live : c.muted}}>
-        {item.status === 'uploading' ? `Subiendo ${Math.round(item.progress * 100)}%` : item.status === 'error' ? item.error : formatBytes(item.size)}
-      </Muted>
-    </View>
-    {item.status === 'error' && <RoundButton icon="refresh" label="Reintentar subida" small onPress={() => retryAttachment(item.key)}/>}
-    <RoundButton icon="close" label={item.status === 'uploading' ? 'Cancelar subida' : 'Quitar adjunto'} small onPress={() => removeAttachment(item.key)}/>
   </View>;
 }
 

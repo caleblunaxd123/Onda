@@ -7,7 +7,7 @@ public sealed record MessageReply(Guid Id, string Sender, string Text, bool Dele
 public sealed record ChatAttachment(Guid Id, string Name, string Mime, string Kind, long Length, int? DurationMs = null);
 public sealed record RoomMessage(Guid Id, Guid SenderId, string Sender, string Text, string Kind, DateTimeOffset At,
     Guid? ReplyToId = null, MessageReply? Reply = null, DateTimeOffset? EditedAt = null, bool Deleted = false,
-    MessageEmoji[]? Reactions = null, ChatAttachment[]? Attachments = null, long Revision = 0);
+    MessageEmoji[]? Reactions = null, ChatAttachment[]? Attachments = null, long Revision = 0, bool Pinned = false);
 public sealed record RoomReaction(Guid SenderId, string Emoji);
 public sealed class RoomPresence(TimeProvider clock)
 {

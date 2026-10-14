@@ -24,6 +24,8 @@ builder.Services.AddAuthorization(o => o.AddPolicy("RegisteredListener", p => p.
 builder.Services.Configure<PasswordHasherOptions>(o => o.IterationCount = 210000);
 builder.Services.AddScoped<IPasswordHasher<ListenerAccount>, PasswordHasher<ListenerAccount>>();
 builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<IGoogleIdentityVerifier, GoogleIdentityVerifier>();
+builder.Services.AddSingleton<GoogleChallenges>();
 builder.Services.AddScoped<LibrarySyncService>();
 builder.Services.AddSingleton<RoomPresence>();
 builder.Services.AddScoped<RoomService>();
@@ -144,7 +146,12 @@ api.MapPost("/assistant/discover", async (AssistantRequest input, DiscoveryAssis
 app.MapHub<RoomsHub>("/hubs/rooms", o => o.CloseOnAuthenticationExpiration = true);
 if (builder.Configuration["PublicAssetsPath"] is { } assets && Directory.Exists(assets))
 {
-    var files = new StaticFileOptions {FileProvider = new PhysicalFileProvider(assets)};
+    var files = new StaticFileOptions {FileProvider = new PhysicalFileProvider(assets), OnPrepareResponse = context =>
+    {
+        // SPA entry must revalidate across releases. Hashed bundles keep long-lived caching.
+        if (context.File.Name.Equals("index.html", StringComparison.OrdinalIgnoreCase))
+            context.Context.Response.Headers.CacheControl = "no-store, max-age=0";
+    }};
     app.UseStaticFiles(files);
     app.MapGet("/downloads/ONDA-beta.apk", () => File.Exists(Path.Combine(assets, "downloads", "ONDA-beta.apk"))
         ? Results.File(Path.Combine(assets, "downloads", "ONDA-beta.apk"), "application/vnd.android.package-archive", "ONDA-beta.apk", enableRangeProcessing: true)

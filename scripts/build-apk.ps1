@@ -12,11 +12,19 @@ $env:EXPO_PUBLIC_API_URL = $ApiUrl
 # Never let apps/mobile/.env.local (or a Gradle daemon started with another environment) choose the API.
 $env:EXPO_NO_DOTENV = '1'
 # EXPO_PUBLIC_* values are inlined at transform time and Metro reuses cached transforms: start clean.
-foreach ($cache in @((Join-Path $env:TEMP 'metro-cache'), 'node_modules/.cache')) { if (Test-Path $cache) { Remove-Item $cache -Recurse -Force } }
+$ondaCacheTargets = @([IO.Path]::GetFullPath((Join-Path $env:TEMP 'metro-cache')), [IO.Path]::GetFullPath((Join-Path $root 'apps/mobile/node_modules/.cache')))
+foreach ($ondaCacheTarget in $ondaCacheTargets) {
+  if (Test-Path -LiteralPath $ondaCacheTarget) {
+    $ondaCacheItem = Get-Item -LiteralPath $ondaCacheTarget -Force
+    $ondaCacheResolved = (Resolve-Path -LiteralPath $ondaCacheTarget).ProviderPath
+    if ($ondaCacheItem.LinkType -or $ondaCacheResolved -ne $ondaCacheTarget) { throw 'Refusing to remove a redirected cache directory.' }
+    Remove-Item -LiteralPath $ondaCacheResolved -Recurse -Force
+  }
+}
 if (-not $env:ANDROID_HOME) { $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
-# --clean: the generated project is disposable and the package id differs between variants.
+# SDK 57 recreates the native project by default; the package id differs between variants.
 $env:CI = '1'
-npx expo prebuild --platform android --no-install --clean
+npx expo prebuild --platform android --no-install
 if ($LASTEXITCODE -ne 0) { throw 'Prebuild failed' }
 Push-Location android
 .\gradlew.bat --no-daemon assembleRelease "-PreactNativeArchitectures=$Abis"

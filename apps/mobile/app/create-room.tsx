@@ -7,7 +7,7 @@ import { Ionicons } from "../src/icons";
 import { Button, Card, Chip, Label, Muted, Page, ScreenHeader, Sheet } from "../src/ui";
 import { FormField } from "../src/components/forms";
 import { accountRequest, ensureListener, useAuth } from "../src/features/account/session";
-import { streamServices, type MediaInput, type MediaKind, type Room } from "../src/features/rooms/types";
+import { type MediaInput, type MediaKind, type Room } from "../src/features/rooms/types";
 
 type Provider = {id: string; kind: MediaKind; name: string; icon: "logo-youtube" | "radio-outline" | "musical-notes-outline" | "link-outline" | "tv-outline"; color: string; note?: string};
 /** Rave-style grid: tap a source and you are in your room. Subscription services say clearly how they work. */
@@ -16,7 +16,6 @@ const providers: Provider[] = [
   {id: "radio", kind: "radio", name: "Radio", icon: "radio-outline", color: "#47D9EA"},
   {id: "audio", kind: "audio", name: "Música", icon: "musical-notes-outline", color: "#B7A0FF", note: "Por enlace"},
   {id: "video", kind: "video", name: "Video", icon: "link-outline", color: "#FBC786", note: "MP4/WebM por enlace"},
-  ...streamServices.map(service => ({id: service.id, kind: "stream" as const, name: service.label, icon: "tv-outline" as const, color: service.color, note: "Con tu cuenta"})),
 ];
 
 export default function CreateRoomScreen() {
@@ -50,7 +49,7 @@ export default function CreateRoomScreen() {
     finally {creating.current = false; setBusy(null);}
   };
   return <View style={{flex: 1, backgroundColor: c.bg}}>
-    <ScreenHeader title="Crear sala" subtitle="Elige una fuente. Entrarás directamente a tu sala." back />
+    <ScreenHeader title="¿Qué compartimos?" subtitle="Elige una fuente y entra a tu sala." back />
     <Page>
       {selected && <Card>
         <Label style={{fontWeight: "800"}}>{saved?.media.title ?? "Tu emisora seleccionada"}</Label>
@@ -60,21 +59,31 @@ export default function CreateRoomScreen() {
         {providers.map((provider) => <Pressable key={provider.id} accessibilityRole="button"
           accessibilityLabel={`Crear sala de ${provider.name}${provider.note ? ", " + provider.note.toLowerCase() : ""}`}
           accessibilityState={{disabled: !!busy}} disabled={!!busy} onPress={() => void create(provider.kind, undefined, provider.id)}
-          style={({pressed}) => ({width: "48%", minHeight: 96, padding: 14, borderRadius: 20, gap: 8, justifyContent: "center", backgroundColor: c.surface,
+          style={({pressed}) => ({width: "48%", minHeight: 132, padding: 16, borderRadius: 20, gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: c.surface,
             borderWidth: 1, borderColor: busy === provider.id ? c.primary : c.border, opacity: busy && busy !== provider.id ? .5 : pressed ? .7 : 1})}>
-          <View style={{flexDirection: "row", alignItems: "center", gap: 10}}>
-            <View style={{width: 38, height: 38, borderRadius: 12, backgroundColor: provider.color + "22", alignItems: "center", justifyContent: "center"}}>
-              <Ionicons name={provider.icon} size={22} color={provider.color} />
-            </View>
-            <Label numberOfLines={1} style={{flex: 1, fontSize: 16, fontWeight: "900"}}>{provider.name}</Label>
-          </View>
+          <Ionicons name={provider.icon} size={34} color={provider.color} />
+          <Label numberOfLines={1} style={{fontSize: 18, fontWeight: "900"}}>{provider.name}</Label>
           <Muted numberOfLines={1} style={{fontSize: 11}}>{busy === provider.id ? "Entrando…" : provider.note ?? "Busca dentro de tu sala"}</Muted>
         </Pressable>)}
       </View>
-      {error && <Label accessibilityRole="alert" style={{color: c.live}}>{error}</Label>}
-      <Muted style={{fontSize: 12}}>{privateRoom ? "Sala privada" : "Sala pública"} · Tus amigos pueden entrar por enlace sin cuenta.</Muted>
-      <Muted style={{fontSize: 11}}>{autoRecovery ? "Si te desconectas durante 60 segundos, el control pasa a una persona conectada." : "El control permanece contigo si te desconectas."}</Muted>
-      <Button title="Opciones de sala" secondary icon="options-outline" disabled={!!busy} onPress={() => setOptions(true)} />
+      {error && <View style={{gap: 8}}>
+        <Label accessibilityRole="alert" style={{color: c.live}}>{error}</Label>
+        <Button title="Ver mis salas abiertas" secondary icon="people-outline" onPress={() => router.replace({pathname: "/rooms", params: {view: "mine"}})}/>
+      </View>}
+      <Pressable accessibilityRole="button" accessibilityLabel="Crear sala con otro servicio, sincronización manual" disabled={!!busy}
+        onPress={() => void create("stream")} style={({pressed}) => ({padding: 16, borderRadius: 18, backgroundColor: c.surface, flexDirection: "row", alignItems: "center", gap: 12, opacity: busy || pressed ? .6 : 1})}>
+        <Ionicons name="tv-outline" size={26} color={c.muted}/>
+        <View style={{flex: 1, gap: 4}}><Label style={{fontWeight: "800"}}>Otros servicios</Label>
+          <Muted style={{fontSize: 12}}>Netflix, Prime, Disney+ y más · con tu cuenta</Muted>
+          <Muted style={{fontSize: 11}}>Se abren fuera de ONDA. Sincronización manual.</Muted>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={c.muted}/>
+      </Pressable>
+      <View style={{flexDirection: "row", alignItems: "center", gap: 8}}>
+        <Ionicons name={privateRoom ? "lock-closed-outline" : "earth-outline"} size={17} color={c.primaryText}/>
+        <Muted style={{flex: 1, fontSize: 12}}>{privateRoom ? "Solo con invitación" : "Pública"} · Entran por enlace, sin cuenta.</Muted>
+        <Chip label="Opciones" icon="options-outline" onPress={() => setOptions(true)}/>
+      </View>
     </Page>
     {options && <Sheet title="Opciones de sala" onClose={() => setOptions(false)}>
       {!user && <FormField label="Tu nombre (opcional)" value={displayName} onChange={setDisplayName} maxLength={40} placeholder="Cómo te verán tus amigos" />}

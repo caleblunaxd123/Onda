@@ -11,13 +11,13 @@ import type {ChatMessage, Room} from './types';
 
 type RoomState = {room: Room | null; messages: ChatMessage[]; status: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed'; error: string; reaction: string; clockOffset: number; muted: string[]; audioMuted: boolean; votes: string[];
   /** Typing signals from others; each expires on its own after a few seconds. */
-  typing: TypingMap; olderAvailable: boolean; loadingOlder: boolean;
+  typing: TypingMap; olderAvailable: boolean; loadingOlder: boolean; pinned: ChatMessage | null;
   /** Recording or listening to a voice note pauses only this device's room audio; nothing is published to the room. */
   chatAudio: boolean;
   /** Last measured round trip to the server (ms), shown when sync quality matters. */
   latencyMs: number | null};
 export const useRoom = create<RoomState>(() => ({room: null, messages: [], status: 'idle', error: '', reaction: '', clockOffset: 0, muted: [], audioMuted: false, votes: [],
-  typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false, latencyMs: null}));
+  typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false, latencyMs: null, pinned: null}));
 /** "Delete for me" is local to this device: the message stays for everyone else. */
 export const useHiddenMessages = create<{ids: string[]; hide: (id: string) => void}>()(persist(set => ({
   ids: [], hide: id => set(s => ({ids: [...s.ids.filter(x => x !== id), id].slice(-1000)})),
@@ -44,7 +44,7 @@ function applyRoom(room: Room) {
 export async function leaveRoom() {
   generation++; const old = connection; connection = null; joinedCode = null;
   if (player.getSnapshot().station?.id === lastRadio) pauseAudio(); lastRadio = undefined;
-  useRoom.setState({room: null, messages: [], status: 'idle', error: '', reaction: '', audioMuted: false, votes: [], typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false, latencyMs: null});
+  useRoom.setState({room: null, messages: [], status: 'idle', error: '', reaction: '', audioMuted: false, votes: [], typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false, latencyMs: null, pinned: null});
   if (old) await old.stop().catch(() => {});
 }
 /**
@@ -91,11 +91,14 @@ export async function enterRoom(id: string, code?: string | null) {
     });
     const votes = await hub.invoke<string[]>('MyVotes', id);
     if (valid()) useRoom.setState({votes});
+    const pinned = await hub.invoke<ChatMessage | null>('PinnedChat', id).catch(() => null);
+    if (valid()) useRoom.setState({pinned});
   };
   hub.on('State', (room: Room) => {if (valid()) applyRoom(room);});
   const resample = setInterval(() => {if (!valid()) clearInterval(resample); else if (hub.state === HubConnectionState.Connected) void sampleClock(hub, valid);}, 60000);
   hub.on('Message', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: upsertMessage(s.messages, message), typing: clearTyping(s.typing, message.senderId)}));});
-  hub.on('MessageUpdated', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: upsertMessage(s.messages, message)}));});
+  hub.on('MessageUpdated', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: upsertMessage(s.messages, message),
+    pinned: message.pinned && !message.deleted ? message : s.pinned?.id === message.id ? null : s.pinned}));});
   hub.on('Typing', (event: {senderId: string; sender: string}) => {
     if (!valid() || useRoom.getState().muted.includes(event.senderId)) return;
     useRoom.setState(s => ({typing: addTyping(s.typing, event)}));

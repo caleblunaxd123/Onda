@@ -36,6 +36,38 @@ public class CommunityTests : IAsyncLifetime
         await using var db = Db(); await db.Database.EnsureDeletedAsync();
     }
     private void RequireSql() => Skip.IfNot(available, "SQL Server no disponible para probar cuentas y salas.");
+    [SkippableFact] public async Task GoogleIdentityUpgradesGuestAndNeverTakesOverAnotherPasswordAccount()
+    {
+        RequireSql(); await using var db = Db(); var accounts = Accounts(db);
+        var guest = await accounts.GuestAsync("Mi identidad", default);
+        var google = await accounts.GoogleAsync(new("google-subject-qa", "google-qa@example.com", "Google name", "nonce"), guest.User.Id, default);
+        Assert.NotNull(google); Assert.Equal(guest.User.Id, google.User.Id); Assert.Equal("Mi identidad", google.User.DisplayName);
+        Assert.Equal("google", google.User.Provider); Assert.NotNull(google.RecoveryCode);
+        Assert.Null(await accounts.AuthenticateAsync(guest.Token, default));
+        Assert.Null(await accounts.LoginAsync(new("google-qa@example.com", "una-password-larga"), default));
+        var again = await accounts.GoogleAsync(new("google-subject-qa", "google-qa@example.com", "Google", "nonce"), null, default);
+        Assert.Equal(google.User.Id, again!.User.Id);
+        var email = await accounts.RegisterAsync(new("Correo", "password-qa@example.com", "password-qa-larga"), null, default);
+        Assert.NotNull(email);
+        Assert.Null(await accounts.GoogleAsync(new("google-subject-qa", "google-qa@example.com", "Google", "nonce"), email.User.Id, default));
+        Assert.Null(await accounts.GoogleAsync(new("another-google-sub", "password-qa@example.com", "Other", "nonce"), null, default));
+        Assert.False(await accounts.DeleteAsync(google.User.Id, "incorrecto", default));
+        Assert.True(await accounts.DeleteAsync(google.User.Id, google.RecoveryCode, default));
+    }
+    [Fact] public void GoogleChallengesAreSingleUseAndBoundToTheirIssuedNonce()
+    {
+        var store = new GoogleChallenges(TimeProvider.System); var nonce = store.Create();
+        Assert.False(store.Consume(new string('a', 64)));
+        Assert.True(store.Consume(nonce)); Assert.False(store.Consume(nonce));
+        var clock = new ManualClock(); var expiring = new GoogleChallenges(clock); var old = expiring.Create(); clock.Advance(301);
+        Assert.False(expiring.Consume(old));
+    }
+    [SkippableFact] public async Task GoogleRemainsDisabledWithoutClientConfiguration()
+    {
+        RequireSql(); await using var app = Factory(); var client = app.CreateClient();
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.PostAsJsonAsync("/api/v1/auth/google/challenge", new {})).StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.PostAsJsonAsync("/api/v1/auth/google", new GoogleLogin("fake", new string('a', 64)))).StatusCode);
+    }
     private WebApplicationFactory<Program> Factory(TimeProvider? clock = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
     {
         builder.UseEnvironment("Development");
