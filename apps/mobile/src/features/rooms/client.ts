@@ -6,15 +6,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import {useAuth} from '../account/session';
 import {addTyping, chatLimits, clearTyping, mergeMessages, oldestPersisted, upsertMessage, type TypingMap} from './chat';
+import {estimateClock, type ClockSample} from './sync-engine';
 import type {ChatMessage, Room} from './types';
 
 type RoomState = {room: Room | null; messages: ChatMessage[]; status: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed'; error: string; reaction: string; clockOffset: number; muted: string[]; audioMuted: boolean; votes: string[];
   /** Typing signals from others; each expires on its own after a few seconds. */
   typing: TypingMap; olderAvailable: boolean; loadingOlder: boolean;
   /** Recording or listening to a voice note pauses only this device's room audio; nothing is published to the room. */
-  chatAudio: boolean};
+  chatAudio: boolean;
+  /** Last measured round trip to the server (ms), shown when sync quality matters. */
+  latencyMs: number | null};
 export const useRoom = create<RoomState>(() => ({room: null, messages: [], status: 'idle', error: '', reaction: '', clockOffset: 0, muted: [], audioMuted: false, votes: [],
-  typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false}));
+  typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false, latencyMs: null}));
 /** "Delete for me" is local to this device: the message stays for everyone else. */
 export const useHiddenMessages = create<{ids: string[]; hide: (id: string) => void}>()(persist(set => ({
   ids: [], hide: id => set(s => ({ids: [...s.ids.filter(x => x !== id), id].slice(-1000)})),
@@ -41,8 +44,22 @@ function applyRoom(room: Room) {
 export async function leaveRoom() {
   generation++; const old = connection; connection = null; joinedCode = null;
   if (player.getSnapshot().station?.id === lastRadio) pauseAudio(); lastRadio = undefined;
-  useRoom.setState({room: null, messages: [], status: 'idle', error: '', reaction: '', audioMuted: false, votes: [], typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false});
+  useRoom.setState({room: null, messages: [], status: 'idle', error: '', reaction: '', audioMuted: false, votes: [], typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false, latencyMs: null});
   if (old) await old.stop().catch(() => {});
+}
+/**
+ * NTP-style clock sampling against the server (ServerTime): keeps the lowest round trip, whose error is bounded
+ * by half of it. Older servers without the method keep the offset estimated from Join/Snapshot.
+ */
+async function sampleClock(hub: HubConnection, valid: () => boolean) {
+  const samples: ClockSample[] = [];
+  for (let i = 0; i < 5 && valid(); i++) {
+    const sentMs = Date.now();
+    try {const serverMs = await hub.invoke<number>('ServerTime'); samples.push({sentMs, serverMs, receivedMs: Date.now()});}
+    catch {return;}
+  }
+  const clock = estimateClock(samples);
+  if (clock && valid()) useRoom.setState({clockOffset: clock.offsetMs, latencyMs: clock.rttMs});
 }
 export async function enterRoom(id: string, code?: string | null) {
   const expected = generation + 1;
@@ -59,8 +76,10 @@ export async function enterRoom(id: string, code?: string | null) {
   const join = async () => {
     const before = Date.now(); const room = await hub.invoke<Room>('Join', id, joinedCode);
     if (!valid()) return;
-    useRoom.setState({clockOffset: Date.parse(room.serverNow) - (before + Date.now()) / 2, status: 'connected'});
+    // Coarse estimate until the sampled one (sampleClock) is available.
+    useRoom.setState(state => ({clockOffset: state.latencyMs === null ? Date.parse(room.serverNow) - (before + Date.now()) / 2 : state.clockOffset, status: 'connected'}));
     applyRoom(room);
+    void sampleClock(hub, valid);
     const history = await hub.invoke<ChatMessage[]>('History', id);
     if (valid()) useRoom.setState(s => {
       const persisted = history.filter(x => x.kind !== 'system');
@@ -74,6 +93,7 @@ export async function enterRoom(id: string, code?: string | null) {
     if (valid()) useRoom.setState({votes});
   };
   hub.on('State', (room: Room) => {if (valid()) applyRoom(room);});
+  const resample = setInterval(() => {if (!valid()) clearInterval(resample); else if (hub.state === HubConnectionState.Connected) void sampleClock(hub, valid);}, 60000);
   hub.on('Message', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: upsertMessage(s.messages, message), typing: clearTyping(s.typing, message.senderId)}));});
   hub.on('MessageUpdated', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: upsertMessage(s.messages, message)}));});
   hub.on('Typing', (event: {senderId: string; sender: string}) => {
@@ -108,7 +128,8 @@ export async function roomCommand(method: string, ...args: unknown[]) {
 export async function refreshRoom() {
   const room = useRoom.getState().room; if (!room) return;
   const before = Date.now(); const snapshot = await roomCommand('Snapshot', room.id) as Room;
-  useRoom.setState({clockOffset: Date.parse(snapshot.serverNow) - (before + Date.now()) / 2}); applyRoom(snapshot);
+  if (useRoom.getState().latencyMs === null) useRoom.setState({clockOffset: Date.parse(snapshot.serverNow) - (before + Date.now()) / 2});
+  applyRoom(snapshot);
 }
 export function muteMember(id: string) {useRoom.setState(s => ({muted: s.muted.includes(id) ? s.muted.filter(x => x !== id) : [...s.muted, id].slice(-200)}));}
 export function toggleRoomAudio() {useRoom.setState(s => ({audioMuted: !s.audioMuted})); const room = useRoom.getState().room; if (room) applyRoom(room);}

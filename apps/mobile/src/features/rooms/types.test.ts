@@ -49,3 +49,16 @@ describe('watch with your own account', () => {
     expect(parseClock('abc')).toBeNull();
   });
 });
+
+describe('isolated room player page', () => {
+  it('generates valid JavaScript carrying the sync configuration', () => {
+    for (const kind of ['youtube', 'video'] as const) {
+      const html = roomPlayerHtml({kind, title: 'x', url: 'https://example.com/a.mp4', videoId: kind === 'youtube' ? 'M7lc1UVf-VE' : null, station: null}, false, 'https://onda.lunalav.pe',
+        {tolerance: 0.4, seekThreshold: 2.5, maxRateDelta: 0.04, correctionWindow: 8});
+      const script = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
+      expect(() => new Function(script)).not.toThrow();
+      expect(script).toContain('"seekThreshold":2.5');
+      expect(script).not.toContain('</script');
+    }
+  });
+});

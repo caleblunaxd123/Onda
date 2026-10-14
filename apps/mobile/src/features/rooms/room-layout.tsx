@@ -1,8 +1,9 @@
 import {SeekBar} from "./seek-bar";
 import { RoomQueue, RoomPeople } from "./room-panels";
 import { RoomChat } from "./chat-panel";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   useWindowDimensions,
   Linking,
@@ -17,7 +18,7 @@ import { Ionicons } from "../../icons";
 import { Button, IconButton, Label, Muted } from "../../ui";
 import { MediaFrame, type MediaEvent } from "./media-frame";
 import { MemberStack, RadioStage } from "./presentation";
-import { StreamStage } from "./stream";
+import { StreamRoomStage } from "./stream";
 import {
   orderedQueue,
   projectedPosition,
@@ -72,18 +73,29 @@ export function RoomLayout(p: RoomLayoutProps) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const [theater, setTheater] = useState(false);
+  const [keyboard, setKeyboard] = useState(false);
+  useEffect(() => {
+    const shown = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () => setKeyboard(true));
+    const hidden = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setKeyboard(false));
+    return () => {shown.remove(); hidden.remove();};
+  }, []);
   const dimensions = useWindowDimensions();
   const wide = Platform.OS === "web" && dimensions.width >= 900 && !theater;
+  const typing = keyboard && !wide && p.tab === "chat";
+  // Subscription titles have no embedded player: the room's reference clock is the position.
+  const current = () => p.room.media.kind === "stream" ? projectedPosition(p.desiredPosition, p.room.isPlaying, p.positionAt) : p.position;
+  const contentLabel = p.room.media.kind === "youtube" ? "YouTube" : p.room.media.kind === "radio" ? "Buscar emisoras" : "Elegir contenido";
+  const chooseContent = () => p.room.media.kind === "youtube" ? p.onBrowseYoutube() : p.onSheet("add");
   const owner = p.room.members.find((x) => x.id === p.room.ownerId);
   const isOwner = p.userId === p.room.ownerId;
   const queue = orderedQueue(p.room.queue);
   // Subscription titles have no embedded player: the room clock is the position.
-  const current = () => p.room.media.kind === "stream" ? projectedPosition(p.desiredPosition, p.room.isPlaying, p.positionAt) : p.position;
+
   const exit = () =>
     router.canGoBack() ? router.back() : router.replace("/rooms");
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "web" ? undefined : "padding"}
       style={{ flex: 1, backgroundColor: c.bg, paddingBottom: insets.bottom }}
     >
       <View
@@ -131,19 +143,20 @@ export function RoomLayout(p: RoomLayoutProps) {
           paddingTop: wide ? 12 : 0,
         }}
       >
-        <View style={wide ? { flex: 1.7 } : undefined}>
+        {/* While typing on a phone the stage collapses (still mounted, so playback continues) and the chat gets the space. */}
+        <View style={wide ? { flex: 1.7 } : typing ? { height: 0, overflow: "hidden" } : undefined}>
           <View style={{ paddingHorizontal: 14, gap: 9 }}>
-            {!p.room.media.url ? (
+            {p.room.media.kind === "stream" ? (
+              <StreamRoomStage media={p.room.media} playing={p.connected && p.room.isPlaying} position={p.desiredPosition} positionAt={p.positionAt}
+                controller={p.controller} connected={p.connected} onPlayback={p.onPlayback} />
+            ) : !p.room.media.url ? (
               <View style={{minHeight: 190, padding: 22, borderRadius: 20, backgroundColor: c.surface, alignItems: "center", justifyContent: "center", gap: 10}}>
-                <Ionicons name={p.room.media.kind === "youtube" ? "logo-youtube" : p.room.media.kind === "radio" ? "radio-outline" : p.room.media.kind === "stream" ? "tv-outline" : "play-circle-outline"} size={44} color={c.primary} />
+                <Ionicons name={p.room.media.kind === "youtube" ? "logo-youtube" : p.room.media.kind === "radio" ? "radio-outline" : "play-circle-outline"} size={44} color={c.primary} />
                 <Label style={{fontSize: 20, fontWeight: "800"}}>Tu sala está lista</Label>
                 <Muted style={{textAlign: "center"}}>{p.controller ? "Busca el contenido que quieres compartir." : "El anfitrión está eligiendo el contenido. Puedes proponer algo en la cola."}</Muted>
               </View>
             ) : p.room.media.kind === "radio" ? (
               <RadioStage media={p.room.media} status={p.radioStatus} />
-            ) : p.room.media.kind === "stream" ? (
-              <StreamStage media={p.room.media} playing={p.connected && p.room.isPlaying} position={p.desiredPosition} positionAt={p.positionAt}
-                controller={p.controller} connected={p.connected} onPlayback={p.onPlayback} />
             ) : (
               <MediaFrame
               key={`${p.room.media.url ?? p.room.media.kind}:${p.frameRevision ?? 0}`}
@@ -167,6 +180,9 @@ export function RoomLayout(p: RoomLayoutProps) {
                 }}
               >
                 <Muted accessibilityRole="alert">{p.mediaError}</Muted>
+                {p.room.media.kind === "youtube" && p.controller && (
+                  <Button title="Elegir otro video" icon="search-outline" onPress={p.onBrowseYoutube} />
+                )}
                 {p.room.media.url && (
                   <Button
                     title="Abrir fuente"
@@ -317,6 +333,14 @@ export function RoomLayout(p: RoomLayoutProps) {
                 label="Volver a sincronizar"
                 onPress={p.resync}
               />
+              {!!p.room.media.url && !wide && (
+                <IconButton
+                  icon={p.room.media.kind === "youtube" ? "logo-youtube" : "add"}
+                  label={contentLabel}
+                  disabled={!p.connected || p.busy}
+                  onPress={chooseContent}
+                />
+              )}
               <View style={{ flex: 1 }} />
               <Pressable
                 accessibilityRole="button"
@@ -342,9 +366,9 @@ export function RoomLayout(p: RoomLayoutProps) {
                 {p.error}
               </Muted>
             )}
-            <Button title={p.room.media.kind === "youtube" ? "YouTube" : p.room.media.kind === "radio" ? "Buscar emisoras" : "Elegir contenido"}
+            {(!p.room.media.url || wide) && <Button title={contentLabel}
               secondary icon={p.room.media.kind === "youtube" ? "logo-youtube" : "add-outline"}
-              disabled={!p.connected || p.busy} onPress={() => p.room.media.kind === "youtube" ? p.onBrowseYoutube() : p.onSheet("add")} />
+              disabled={!p.connected || p.busy} onPress={chooseContent} />}
           </View>
         </View>
         <View

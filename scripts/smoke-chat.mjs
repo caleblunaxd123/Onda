@@ -45,6 +45,9 @@ try {
   const shared = await streamState;
   ok('subscription title shared without query', shared.media.category === 'netflix' && shared.media.url === 'https://www.netflix.com/watch/81234567');
   ok('non-title link rejected', await a.invoke('ChangeMedia', room.id, {media: {kind: 'stream', url: 'https://www.netflix.com/browse'}, version: shared.version}).then(() => false, () => true));
+  const rtts = [];
+  for (let i = 0; i < 5; i++) {const sent = Date.now(); await a.invoke('ServerTime').catch(() => null); rtts.push(Date.now() - sent);}
+  ok(`server clock sampling (lowest round trip ${Math.min(...rtts)} ms)`, rtts.length === 5);
   const typing = waitFor(b, 'Typing');
   await a.invoke('Typing', room.id);
   ok('typing reaches the other connection', (await typing).senderId === ana.user.id);
@@ -65,25 +68,25 @@ try {
   ok('legacy SendMessage still works', await a.invoke('SendMessage', room.id, 'Cliente anterior').then(() => true, () => false));
 
   const photo = await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(png, 'foto.png', 'image/png'));
-  ok('photo upload accepted', photo.status === 200 && photo.json.kind === 'image');
+  ok('photos are not accepted in room chat', photo.status === 400 && String(photo.json?.detail ?? '').includes('notas de voz'));
+  const doc = await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(Buffer.from('%PDF-1.4 qa'), 'guia.pdf', 'application/octet-stream'));
+  ok('files are not accepted in room chat', doc.status === 400);
   const voice = await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(m4a, 'nota.m4a', 'audio/mp4', {durationMs: '4200'}));
   ok('voice note upload with duration', voice.status === 200 && voice.json.kind === 'audio' && voice.json.durationMs === 4200);
-  const doc = await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(Buffer.from('%PDF-1.4 qa'), 'guia.pdf', 'application/octet-stream'));
-  ok('document stored as download', doc.status === 200 && doc.json.kind === 'file');
-  ok('fake image rejected by signature', (await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(Buffer.from('not an image'), 'x.png', 'image/png'))).status === 400);
-  ok('unsent upload hidden from others', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${photo.json.id}`, ana.token)).status === 404);
-  const withFiles = await b.invoke('SendChat', room.id, {text: '', replyToId: null, attachmentIds: [photo.json.id, voice.json.id, doc.json.id]});
-  ok('message with three attachments', withFiles.attachments.length === 3);
-  const fetched = await http('GET', `/api/v1/rooms/${room.id}/attachments/${photo.json.id}`, ana.token);
-  ok('member downloads sent photo', fetched.status === 200);
-  ok('outsider cannot download', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${photo.json.id}`, eve.token)).status === 403);
-  ok('no token cannot download', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${photo.json.id}`, null)).status === 401);
-  ok('attachment reused is rejected', await a.invoke('SendChat', room.id, {text: 'x', replyToId: null, attachmentIds: [photo.json.id]}).then(() => false, () => true));
+  ok('fake audio rejected by signature', (await http('POST', `/api/v1/rooms/${room.id}/attachments`, leo.token, form(Buffer.from('not audio'), 'x.m4a', 'audio/mp4'))).status === 400);
+  ok('unsent upload hidden from others', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, ana.token)).status === 404);
+  const withFiles = await b.invoke('SendChat', room.id, {text: '', replyToId: null, attachmentIds: [voice.json.id]});
+  ok('voice note message', withFiles.attachments.length === 1);
+  const fetched = await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, ana.token);
+  ok('member downloads sent voice note', fetched.status === 200);
+  ok('outsider cannot download', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, eve.token)).status === 403);
+  ok('no token cannot download', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, null)).status === 401);
+  ok('attachment reused is rejected', await a.invoke('SendChat', room.id, {text: 'x', replyToId: null, attachmentIds: [voice.json.id]}).then(() => false, () => true));
 
   const deleted = waitFor(a, 'MessageUpdated', m => m.id === withFiles.id && m.deleted);
   await b.invoke('DeleteChat', room.id, {messageId: withFiles.id});
   ok('author deletes for everyone', (await deleted).attachments.length === 0);
-  ok('deleted files are gone', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${photo.json.id}`, ana.token)).status === 404);
+  ok('deleted files are gone', (await http('GET', `/api/v1/rooms/${room.id}/attachments/${voice.json.id}`, ana.token)).status === 404);
   const moderated = await a.invoke('DeleteChat', room.id, {messageId: reply.id});
   ok('owner moderates others', moderated.deleted);
   const history = await b.invoke('History', room.id);

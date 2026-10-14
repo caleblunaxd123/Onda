@@ -1,13 +1,10 @@
-import {File, Paths, UploadType} from 'expo-file-system';
-import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from 'expo-image-picker';
-import {ImageManipulator, SaveFormat} from 'expo-image-manipulator';
+import {Directory, File, Paths, UploadType} from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import type {AudioSource} from 'expo-audio';
 import type {ImageSourcePropType} from 'react-native';
 import {apiBase} from '../../api';
 import {useAuth} from '../account/session';
-import {chatLimits, localKey, uploadError, type LocalAttachment, type UploadHandle} from './chat';
+import {chatLimits, localKey, uploadError, UploadError, type LocalAttachment, type UploadHandle} from './chat';
 import type {ChatAttachment} from './types';
 
 /** Native transport for private chat attachments. The token travels only in the Authorization header. */
@@ -19,31 +16,13 @@ function authHeaders() {
   return {Authorization: `Bearer ${token}`};
 }
 const sharedPrefix = 'onda-chat-';
+const uploadPrefix = 'onda-upload-';
 export function discardLocal(item: Pick<LocalAttachment, 'uri' | 'temporary'>) {
   if (!item.temporary) return;
   try {const file = new File(item.uri); if (file.exists) file.delete();} catch {/* already gone */}
-}
-
-export async function pickImage(): Promise<LocalAttachment | null> {
-  const result = await ImagePicker.launchImageLibraryAsync({mediaTypes: ['images'], quality: 1, allowsMultipleSelection: false, exif: false});
-  const asset = result.canceled ? null : result.assets[0];
-  if (!asset) return null;
-  // Re-encode as JPEG within 2048 px: smaller uploads and no EXIF/location metadata leaves the device.
-  const context = ImageManipulator.manipulate(asset.uri);
-  if (Math.max(asset.width, asset.height) > 2048) context.resize(asset.width >= asset.height ? {width: 2048} : {height: 2048});
-  const image = await context.renderAsync();
-  const saved = await image.saveAsync({compress: 0.82, format: SaveFormat.JPEG});
-  const size = new File(saved.uri).size;
-  return {key: localKey(), uri: saved.uri, name: 'foto.jpg', mime: 'image/jpeg', kind: 'image', size, width: saved.width, height: saved.height, temporary: true};
-}
-
-export async function pickDocument(): Promise<LocalAttachment | null> {
-  const result = await DocumentPicker.getDocumentAsync({copyToCacheDirectory: true, multiple: false});
-  const asset = result.canceled ? null : result.assets[0];
-  if (!asset) return null;
-  const size = asset.size ?? new File(asset.uri).size;
-  // Documents are always delivered as downloads, whatever their type, so they are sent as opaque bytes.
-  return {key: localKey(), uri: asset.uri, name: asset.name || 'archivo', mime: 'application/octet-stream', kind: 'file', size, temporary: true};
+  // Documents live in their own folder so the upload keeps the real file name; remove that folder too.
+  const folder = item.uri.slice(0, item.uri.lastIndexOf('/'));
+  if (folder.slice(folder.lastIndexOf('/') + 1).startsWith(uploadPrefix)) try {new Directory(folder).delete();} catch {/* already gone */}
 }
 
 export async function voiceAttachmentAsync(uri: string, durationMs: number): Promise<LocalAttachment> {
@@ -62,7 +41,7 @@ export function uploadAttachment(room: string, item: LocalAttachment, onProgress
     let result;
     try {result = await task.uploadAsync();}
     catch (error) {if (controller.signal.aborted) throw new Error('Envío cancelado.'); throw new Error(uploadError(0, String(error)));}
-    if (result.status < 200 || result.status >= 300) throw new Error(uploadError(result.status, result.body));
+    if (result.status < 200 || result.status >= 300) throw new UploadError(uploadError(result.status, result.body), result.status);
     return JSON.parse(result.body) as ChatAttachment;
   })();
   return {promise, cancel: () => controller.abort()};

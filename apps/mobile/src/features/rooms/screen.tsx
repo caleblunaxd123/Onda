@@ -49,6 +49,15 @@ import {
   type Room,
 } from "./types";
 
+/** Messages for the official IFrame API error codes; ONDA never works around an embedding restriction. */
+function youtubeErrorMessage(code: number | undefined, host: boolean) {
+  const next = host ? " Elige otro video." : " El anfitrión puede elegir otro; tú puedes proponer uno en la cola.";
+  if (code === 101 || code === 150) return "Quien subió este video no permite verlo fuera de YouTube." + next;
+  if (code === 100) return "Este video es privado o fue eliminado." + next;
+  if (code === 2) return "El enlace de este video no es válido." + next;
+  return "Este video no pudo reproducirse aquí." + next;
+}
+
 export default function RoomScreen() {
   const c = useTheme();
   const auth = useAuth();
@@ -218,10 +227,7 @@ export default function RoomScreen() {
     if (event.kind === "error")
       setMediaFailure({
         source,
-        message:
-          room?.media.kind === "youtube"
-            ? "Este video no pudo reproducirse aquí. Puede estar restringido; abre la fuente o elige otro."
-            : "No se pudo reproducir este archivo. Prueba otro enlace o formato.",
+        message: room?.media.kind === "youtube" ? youtubeErrorMessage(event.code, host) : "No se pudo reproducir este archivo. Prueba otro enlace o formato.",
       });
     if (event.kind === "tap") setTapSource(source);
     if (event.kind === "started") setTapSource("");

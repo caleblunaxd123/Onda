@@ -43,7 +43,7 @@ export function addAttachment(item: LocalAttachment, autoSend = false) {
   set(s => ({pending: [...s.pending, {...item, status: 'uploading', progress: 0}], autoSend: s.autoSend || autoSend, error: '', editing: null}));
   start(state.roomId, item);
 }
-function start(roomId: string, item: LocalAttachment) {
+function start(roomId: string, item: LocalAttachment, attempt = 0) {
   const handle = uploadAttachment(roomId, item, progress => patch(item.key, {progress}));
   uploads.set(item.key, handle);
   handle.promise.then(remote => {
@@ -52,9 +52,14 @@ function start(roomId: string, item: LocalAttachment) {
     patch(item.key, {status: 'ready', progress: 1, remote});
     const draft = useChatDraft.getState();
     if (draft.autoSend && draft.pending.every(x => x.status === 'ready')) void sendDraft();
-  }, (error: Error) => {
+  }, (error: Error & {status?: number}) => {
     if (uploads.get(item.key) !== handle) return;
     uploads.delete(item.key);
+    // Returning from the system picker can briefly reconnect the room; a presence refusal is retried once.
+    if (attempt === 0 && error.status === 403) {
+      setTimeout(() => {if (useChatDraft.getState().pending.some(x => x.key === item.key)) start(roomId, item, 1);}, 2500);
+      return;
+    }
     patch(item.key, {status: 'error', error: error.message});
     set({autoSend: false});
   });
@@ -63,6 +68,7 @@ export function retryAttachment(key: string) {
   const {roomId, pending} = useChatDraft.getState(); const item = pending.find(x => x.key === key);
   if (!roomId || !item) return;
   patch(key, {status: 'uploading', progress: 0, error: undefined});
+  set({error: ''});
   start(roomId, item);
 }
 export function removeAttachment(key: string) {

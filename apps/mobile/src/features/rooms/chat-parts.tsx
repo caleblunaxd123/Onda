@@ -15,7 +15,7 @@ import {toggleVoice, useVoicePlayer} from './voice';
 import type {ChatAttachment, ChatMessage, ChatReply} from './types';
 
 /** Authorized photo thumbnail. The bytes come from the private endpoint; nothing public is involved. */
-export function ChatImage({room, item, onOpen}: {room: string; item: ChatAttachment; onOpen: (source: ImageSourcePropType) => void}) {
+export function ChatImage({room, item, onOpen, onLongPress}: {room: string; item: ChatAttachment; onOpen: (source: ImageSourcePropType) => void; onLongPress?: () => void}) {
   const c = useTheme();
   const [source, setSource] = useState<ImageSourcePropType | null>(null);
   const [failed, setFailed] = useState(false);
@@ -26,7 +26,7 @@ export function ChatImage({room, item, onOpen}: {room: string; item: ChatAttachm
     return () => {alive = false;};
   }, [room, item, attempt]);
   return <Pressable accessibilityRole="imagebutton" accessibilityLabel={failed ? 'No se pudo cargar la foto. Reintentar' : 'Foto. Ver en grande'}
-    onPress={() => failed ? setAttempt(x => x + 1) : source && onOpen(source)}
+    onPress={() => failed ? setAttempt(x => x + 1) : source && onOpen(source)} onLongPress={onLongPress}
     style={{width: 220, maxWidth: '100%', aspectRatio: 4 / 3, borderRadius: 12, overflow: 'hidden', backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center'}}>
     {source && !failed && <Image source={source} accessibilityIgnoresInvertColors resizeMode="cover" onError={() => setFailed(true)} style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0}}/>}
     {failed ? <View style={{alignItems: 'center', gap: 4, padding: 8}}><Ionicons name="refresh" size={20} color={c.muted}/><Muted style={{fontSize: 11}}>Toca para reintentar</Muted></View>
@@ -34,11 +34,11 @@ export function ChatImage({room, item, onOpen}: {room: string; item: ChatAttachm
   </Pressable>;
 }
 
-export function VoiceNote({room, item, mine}: {room: string; item: ChatAttachment; mine?: boolean}) {
-  return <VoiceBar id={item.id} durationMs={item.durationMs ?? 0} mine={mine} source={() => audioSource(room, item)}/>;
+export function VoiceNote({room, item, mine, onLongPress}: {room: string; item: ChatAttachment; mine?: boolean; onLongPress?: () => void}) {
+  return <VoiceBar id={item.id} durationMs={item.durationMs ?? 0} mine={mine} onLongPress={onLongPress} source={() => audioSource(room, item)}/>;
 }
 /** Play/pause bar shared by received notes and the local pre-listen. Playback is local to this device only. */
-export function VoiceBar({id, durationMs, source, mine}: {id: string; durationMs: number; source: () => Promise<AudioSource>; mine?: boolean}) {
+export function VoiceBar({id, durationMs, source, mine, onLongPress}: {id: string; durationMs: number; source: () => Promise<AudioSource>; mine?: boolean; onLongPress?: () => void}) {
   const c = useTheme();
   const voice = useVoicePlayer();
   const active = voice.id === id;
@@ -46,7 +46,7 @@ export function VoiceBar({id, durationMs, source, mine}: {id: string; durationMs
   const fraction = active && total > 0 ? Math.min(1, voice.position / total) : 0;
   return <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 200}}>
     <Pressable accessibilityRole="button" accessibilityLabel={active && voice.playing ? 'Pausar nota de voz' : `Escuchar nota de voz de ${formatDuration(total)}`}
-      onPress={() => void toggleVoice(id, source)}
+      onPress={() => void toggleVoice(id, source)} onLongPress={onLongPress}
       style={{width: 44, height: 44, borderRadius: 22, backgroundColor: mine ? c.surface : c.primary, alignItems: 'center', justifyContent: 'center'}}>
       {active && voice.loading ? <ActivityIndicator color={mine ? c.primary : c.onPrimary}/>
         : <Ionicons name={active && voice.playing ? 'pause' : 'play'} size={20} color={mine ? c.primaryText : c.onPrimary}/>}
@@ -60,11 +60,11 @@ export function VoiceBar({id, durationMs, source, mine}: {id: string; durationMs
   </View>;
 }
 
-export function FileCard({room, item, onError}: {room: string; item: ChatAttachment; onError: (message: string) => void}) {
+export function FileCard({room, item, onError, onLongPress}: {room: string; item: ChatAttachment; onError: (message: string) => void; onLongPress?: () => void}) {
   const c = useTheme();
   const [busy, setBusy] = useState(false);
   return <Pressable accessibilityRole="button" accessibilityLabel={`Archivo ${item.name}, ${formatBytes(item.length)}. Guardar o compartir`} disabled={busy}
-    onPress={() => {setBusy(true); void saveAttachment(room, item).catch((e: Error) => onError(e.message)).finally(() => setBusy(false));}}
+    onPress={() => {setBusy(true); void saveAttachment(room, item).catch((e: Error) => onError(e.message)).finally(() => setBusy(false));}} onLongPress={onLongPress}
     style={({pressed}) => ({flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 200, padding: 8, borderRadius: 12, backgroundColor: c.surfaceAlt, opacity: pressed ? .7 : 1})}>
     <View style={{width: 40, height: 40, borderRadius: 10, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center'}}>
       <Ionicons name="document-text-outline" size={20} color={c.accent}/>
@@ -124,9 +124,9 @@ export function DaySeparator({at}: {at: string}) {
 }
 
 /** Message text with tappable https links (opened outside the app; never with a token). */
-export function LinkedText({text}: {text: string}) {
+export function LinkedText({text, onLongPress}: {text: string; onLongPress?: () => void}) {
   const c = useTheme();
-  return <Label selectable style={{fontSize: 14}}>
+  return <Label onLongPress={onLongPress} style={{fontSize: 14}}>
     {linkParts(text).map((part, i) => part.url
       ? <Text key={i} accessibilityRole="link" onPress={() => void Linking.openURL(part.url!)} style={{color: c.primaryText, textDecorationLine: 'underline'}}>{part.text}</Text>
       : part.text)}

@@ -61,21 +61,26 @@ export function StreamStage({media, playing, position, positionAt, controller, c
   }, [playing]);
   const current = projectedPosition(position, playing, positionAt, Math.max(now, positionAt));
   const parsed = parseClock(text);
-  return <View style={{padding: 18, gap: 12, borderRadius: 20, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border}}>
-    <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-      <View style={{paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: (service?.color ?? c.primary) + '26'}}>
-        <Label style={{fontSize: 12, fontWeight: '900', color: service?.color ?? c.primaryText}}>{service?.label ?? 'Streaming'}</Label>
+  return <View style={{padding: 14, gap: 10, borderRadius: 20, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border}}>
+    <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+      <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: c.surfaceAlt}}>
+        <View style={{width: 8, height: 8, borderRadius: 4, backgroundColor: service?.color ?? c.primary}}/>
+        <Label style={{fontSize: 12, fontWeight: '900'}}>{service?.label ?? 'Streaming'}</Label>
       </View>
-      <Muted style={{fontSize: 11, flex: 1}}>Con la cuenta de cada persona</Muted>
+      <Muted numberOfLines={1} style={{fontSize: 11, flex: 1}}>Cada persona con su cuenta</Muted>
     </View>
-    <Label numberOfLines={2} style={{fontSize: 18, fontWeight: '800'}}>{media.title}</Label>
-    <View accessible accessibilityLiveRegion="polite" accessibilityLabel={`${playing ? 'Reproduciendo' : 'En pausa'} en ${formatClock(current)}`}
-      style={{alignItems: 'center', paddingVertical: 8, gap: 2}}>
-      <Label style={{fontSize: 44, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 50}}>{formatClock(current)}</Label>
-      <Muted style={{fontSize: 12, color: playing ? c.primaryText : c.muted}}>{playing ? '▶ La sala está reproduciendo' : '❚❚ La sala está en pausa'}</Muted>
+    <View style={{flexDirection: 'row', alignItems: 'center', gap: 12}}>
+      <View accessible accessibilityLiveRegion="polite" accessibilityLabel={`${playing ? 'Reproduciendo' : 'En pausa'} en ${formatClock(current)}. Pon tu reproductor en ese tiempo.`} style={{flex: 1}}>
+        <Label style={{fontSize: 34, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 40}}>{formatClock(current)}</Label>
+        <Muted style={{fontSize: 12, color: playing ? c.primaryText : c.muted}}>{playing ? '▶ Reloj de referencia de la sala' : '❚❚ La sala está en pausa'}</Muted>
+        <Muted style={{fontSize: 11}}>Sincronización manual: ONDA no controla el reproductor del servicio.</Muted>
+      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Abrir en ${service?.label ?? 'el servicio'}`} onPress={() => void Linking.openURL(media.url!)}
+        style={({pressed}) => ({minHeight: 48, paddingHorizontal: 16, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: c.primary, opacity: pressed ? .8 : 1})}>
+        <Ionicons name="open-outline" size={18} color={c.onPrimary}/>
+        <Label style={{fontWeight: '800', color: c.onPrimary}}>Abrir</Label>
+      </Pressable>
     </View>
-    <Button title={`Abrir en ${service?.label ?? 'el servicio'}`} icon="open-outline" onPress={() => void Linking.openURL(media.url!)}/>
-    <Muted style={{fontSize: 12}}>Pon tu reproductor en {formatClock(current)} y sigue la pausa y el play de la sala. {controller ? 'Usa los controles de abajo para todos.' : ''}</Muted>
     {controller && (editing
       ? <View style={{gap: 8}}>
         <FormField label="Ir al minuto (h:mm:ss o mm:ss)" value={text} onChange={setText} keyboardType="numbers-and-punctuation" maxLength={8} placeholder={formatClock(current)}/>
@@ -90,4 +95,22 @@ export function StreamStage({media, playing, position, positionAt, controller, c
         <Label style={{color: c.primaryText, fontWeight: '700'}}>Ajustar el tiempo de la sala</Label>
       </Pressable>)}
   </View>;
+}
+
+/**
+ * Room stage for subscription titles. These services do not allow third-party embedding or remote control, so ONDA
+ * does not try to: each person opens the title in the official app or site with their own account, and the room
+ * shares a reference clock (set by the host), the pause state and the chat.
+ */
+export function StreamRoomStage(p: {
+  media: RoomMedia; playing: boolean; position: number; positionAt: number; controller: boolean; connected: boolean;
+  onPlayback: (playing: boolean, position: number) => void;
+}) {
+  const c = useTheme();
+  if (!p.media.url) return <View style={{padding: 16, gap: 10, borderRadius: 20, backgroundColor: c.surface}}>
+    <Label style={{fontSize: 18, fontWeight: '800'}}>{p.controller ? 'Pega el enlace del título' : 'El anfitrión está eligiendo qué ver'}</Label>
+    <Muted style={{fontSize: 12}}>{explanation}</Muted>
+  </View>;
+  return <StreamStage media={p.media} playing={p.playing} position={p.position} positionAt={p.positionAt} controller={p.controller}
+    connected={p.connected} onPlayback={p.onPlayback}/>;
 }

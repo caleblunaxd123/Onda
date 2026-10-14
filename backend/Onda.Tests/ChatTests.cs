@@ -41,12 +41,12 @@ public class ChatTests : IAsyncLifetime
         public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
         public override DateTimeOffset GetUtcNow() => Now;
     }
-    private WebApplicationFactory<Program> Factory(TimeProvider? clock = null) => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+    private WebApplicationFactory<Program> Factory(TimeProvider? clock = null, string? kinds = "image,audio,file") => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
     {
         builder.UseEnvironment("Development");
         if (clock is not null) builder.ConfigureServices(services => services.AddSingleton(clock));
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
-            {["ConnectionStrings:Onda"] = Connection, ["Catalog:SyncEnabled"] = "false", ["Chat:UploadsPath"] = uploads}));
+            {["ConnectionStrings:Onda"] = Connection, ["Catalog:SyncEnabled"] = "false", ["Chat:UploadsPath"] = uploads, ["Chat:AllowedKinds"] = kinds}));
     });
     private static async Task<(HttpClient Client, AccountSession Session)> ClientAsync(WebApplicationFactory<Program> app, string user)
     {
@@ -227,6 +227,21 @@ public class ChatTests : IAsyncLifetime
         await using var db = Db();
         Assert.False(await db.RoomUploads.AnyAsync(x => x.MessageId == sent.Id));
         Assert.False(File.Exists(Path.Combine(uploads, photo.Id.ToString("N") + ".bin")));
+    }
+
+    [SkippableFact] public async Task ChatAcceptsOnlyVoiceNotesByDefault()
+    {
+        RequireSql(); await using var app = Factory(kinds: null);
+        var (ownerClient, _) = await ClientAsync(app, "Anfitrión"); var room = await RoomAsync(ownerClient);
+        await using var owner = Hub(app, ownerClient); await owner.StartAsync(); await owner.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+        var before = Directory.Exists(uploads) ? Directory.GetFiles(uploads, "*.bin").Length : 0;
+        var photo = await UploadAsync(ownerClient, room.Id, Png(800, 600), "image/png", "foto.png");
+        Assert.Equal(HttpStatusCode.BadRequest, photo.StatusCode);
+        Assert.Contains("notas de voz", await photo.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.BadRequest, (await UploadAsync(ownerClient, room.Id, "%PDF-1.7"u8.ToArray(), "application/pdf", "a.pdf")).StatusCode);
+        var voiceBytes = new byte[32]; "ftypM4A "u8.CopyTo(voiceBytes.AsSpan(4));
+        Assert.Equal(HttpStatusCode.OK, (await UploadAsync(ownerClient, room.Id, voiceBytes, "audio/mp4", "nota.m4a", 3000)).StatusCode);
+        Assert.Equal(before + 1, Directory.GetFiles(uploads, "*.bin").Length);
     }
 
     [SkippableFact] public async Task AccountDeletionAndMaintenanceRemoveChatDataAndOrphans()

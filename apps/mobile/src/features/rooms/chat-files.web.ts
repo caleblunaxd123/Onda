@@ -1,11 +1,8 @@
-import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from 'expo-image-picker';
-import {ImageManipulator, SaveFormat} from 'expo-image-manipulator';
 import type {AudioSource} from 'expo-audio';
 import type {ImageSourcePropType} from 'react-native';
 import {apiBase} from '../../api';
 import {useAuth} from '../account/session';
-import {chatLimits, localKey, uploadError, type LocalAttachment, type UploadHandle} from './chat';
+import {chatLimits, localKey, uploadError, UploadError, type LocalAttachment, type UploadHandle} from './chat';
 import type {ChatAttachment} from './types';
 
 /** Web transport: files are fetched with the Authorization header into object URLs; tokens never go into a URL. */
@@ -19,26 +16,6 @@ function authHeaders() {
 const objectUrls = new Map<string, Promise<string>>();
 export function discardLocal(item: Pick<LocalAttachment, 'uri' | 'temporary'>) {
   if (item.temporary && item.uri.startsWith('blob:')) URL.revokeObjectURL(item.uri);
-}
-
-export async function pickImage(): Promise<LocalAttachment | null> {
-  const result = await ImagePicker.launchImageLibraryAsync({mediaTypes: ['images'], quality: 1, allowsMultipleSelection: false});
-  const asset = result.canceled ? null : result.assets[0];
-  if (!asset) return null;
-  const context = ImageManipulator.manipulate(asset.uri);
-  if (Math.max(asset.width, asset.height) > 2048) context.resize(asset.width >= asset.height ? {width: 2048} : {height: 2048});
-  const saved = await (await context.renderAsync()).saveAsync({compress: 0.82, format: SaveFormat.JPEG});
-  const blob = await (await fetch(saved.uri)).blob();
-  const uri = URL.createObjectURL(blob);
-  return {key: localKey(), uri, name: 'foto.jpg', mime: 'image/jpeg', kind: 'image', size: blob.size, width: saved.width, height: saved.height, temporary: true, blob};
-}
-
-export async function pickDocument(): Promise<LocalAttachment | null> {
-  const result = await DocumentPicker.getDocumentAsync({multiple: false});
-  const asset = result.canceled ? null : result.assets[0];
-  if (!asset) return null;
-  const blob = asset.file ?? await (await fetch(asset.uri)).blob();
-  return {key: localKey(), uri: asset.uri, name: asset.name || 'archivo', mime: 'application/octet-stream', kind: 'file', size: blob.size, blob};
 }
 
 export async function voiceAttachmentAsync(uri: string, durationMs: number): Promise<LocalAttachment> {
@@ -60,7 +37,7 @@ export function uploadAttachment(room: string, item: LocalAttachment, onProgress
     request.upload.onprogress = event => {if (event.lengthComputable) onProgress(event.loaded / event.total);};
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) resolve(JSON.parse(request.responseText) as ChatAttachment);
-      else reject(new Error(uploadError(request.status, request.responseText)));
+      else reject(new UploadError(uploadError(request.status, request.responseText), request.status));
     };
     request.onerror = () => reject(new Error(uploadError(0, '')));
     request.onabort = () => reject(new Error('Envío cancelado.'));

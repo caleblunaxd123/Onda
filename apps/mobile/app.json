@@ -56,14 +56,6 @@
             "backgroundColor": "#25344A"
           }
         }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "ONDA abre tus fotos solo cuando eliges una para enviarla al chat de una sala.",
-          "cameraPermission": false,
-          "microphonePermission": "ONDA usa el micrófono solo mientras grabas una nota de voz para el chat de una sala."
-        }
       ]
     ],
     "experiments": {

@@ -5,10 +5,10 @@ import {useTheme} from '../../theme';
 import {Ionicons} from '../../icons';
 import {ActionRow, Chip, Label, Muted, Sheet, type IconName} from '../../ui';
 import {Avatar} from './presentation';
-import {canDelete, canEdit, chatLimits, continuesGroup, describeMessage, formatBytes, formatDuration, myReaction, pruneTyping, sameDay, typingLabel} from './chat';
+import {canDelete, canEdit, chatLimits, continuesGroup, describeMessage, emojiPanel, formatBytes, formatDuration, isJumboEmoji, myReaction, pruneTyping, sameDay, typingLabel} from './chat';
 import {addAttachment, ensureDraftRoom, removeAttachment, replyTo, retryAttachment, sendDraft, setDraftText, startEditing, stopEditing, useChatDraft,
   type PendingAttachment} from './chat-draft';
-import {discardLocal, pickDocument, pickImage, saveAttachment, voiceAttachmentAsync} from './chat-files';
+import {discardLocal, saveAttachment, voiceAttachmentAsync} from './chat-files';
 import {ChatImage, DaySeparator, FileCard, ImageViewer, LinkedText, OutgoingBubble, Quote, Reactions, SwipeToReply, VoiceBar, VoiceNote} from './chat-parts';
 import {deleteChat, loadOlderMessages, notifyTyping, reactChat, useHiddenMessages, useRoom} from './client';
 import {useVoiceRecorder, type VoiceClip} from './voice';
@@ -59,11 +59,9 @@ export function RoomChat(p: RoomLayoutProps) {
       <View style={{alignSelf: mine ? 'flex-end' : 'flex-start', maxWidth: '88%', flexDirection: 'row', gap: 7, marginTop: grouped ? -8 : 0}}>
         {!mine && (grouped ? <View style={{width: 26}}/> : <Avatar member={{id: item.senderId, name: item.sender}} size={26}/>)}
         <View style={{gap: 4, alignItems: mine ? 'flex-end' : 'flex-start', flexShrink: 1}}>
-          <Pressable accessibilityRole="button" accessibilityHint="Abre opciones: reaccionar, responder y más. Desliza a la derecha para responder"
-            accessibilityLabel={`${mine ? 'Tú' : item.sender}, ${time(item.at)}: ${description}${item.editedAt ? '. Editado' : ''}${mine && !item.deleted ? '. Enviado' : ''}`}
-            onPress={() => setSelected(item)} onLongPress={() => setSelected(item)} delayLongPress={250}
-            style={({pressed}) => ({padding: 10, gap: 6, borderRadius: 16, borderTopLeftRadius: mine || grouped ? 16 : 4, borderTopRightRadius: mine && !grouped ? 4 : 16,
-              backgroundColor: item.deleted ? 'transparent' : mine ? c.accentSoft : c.surface, borderWidth: item.deleted ? 1 : 0, borderColor: c.border, opacity: pressed ? .85 : 1})}>
+          {/* Not one big button: quote, photo, voice note, file and links stay individually reachable (TalkBack, web). */}
+          <View style={{padding: 10, gap: 6, borderRadius: 16, borderTopLeftRadius: mine || grouped ? 16 : 4, borderTopRightRadius: mine && !grouped ? 4 : 16,
+            backgroundColor: item.deleted ? 'transparent' : mine ? c.accentSoft : c.surface, borderWidth: item.deleted ? 1 : 0, borderColor: c.border}}>
             {!grouped && !mine && <Label style={{fontSize: 11, fontWeight: '800', color: c.primaryText}}>{item.sender}</Label>}
             {item.deleted ? <View style={{flexDirection: 'row', gap: 6, alignItems: 'center'}}>
               <Ionicons name="trash-outline" size={14} color={c.muted}/>
@@ -71,16 +69,22 @@ export function RoomChat(p: RoomLayoutProps) {
             </View> : <>
               {item.reply && <Quote reply={item.reply} onPress={() => jumpTo(item.reply!.id)}/>}
               {(item.attachments ?? []).map(attachment => attachment.kind === 'image'
-                ? <ChatImage key={attachment.id} room={room} item={attachment} onOpen={source => setViewer({source, item: attachment})}/>
-                : attachment.kind === 'audio' ? <VoiceNote key={attachment.id} room={room} item={attachment} mine={mine}/>
-                : <FileCard key={attachment.id} room={room} item={attachment} onError={fail}/>)}
-              {!!item.text && <LinkedText text={item.text}/>}
+                ? <ChatImage key={attachment.id} room={room} item={attachment} onOpen={source => setViewer({source, item: attachment})} onLongPress={() => setSelected(item)}/>
+                : attachment.kind === 'audio' ? <VoiceNote key={attachment.id} room={room} item={attachment} mine={mine} onLongPress={() => setSelected(item)}/>
+                : <FileCard key={attachment.id} room={room} item={attachment} onError={fail} onLongPress={() => setSelected(item)}/>)}
+              {!!item.text && (isJumboEmoji(item.text) && !item.attachments?.length
+                ? <Label onLongPress={() => setSelected(item)} style={{fontSize: 46, lineHeight: 56}}>{item.text.trim()}</Label>
+                : <LinkedText text={item.text} onLongPress={() => setSelected(item)}/>)}
             </>}
-            <View style={{flexDirection: 'row', gap: 4, alignItems: 'center', alignSelf: 'flex-end'}}>
+            <Pressable accessibilityRole="button" hitSlop={10} onPress={() => setSelected(item)} onLongPress={() => setSelected(item)}
+              accessibilityLabel={`${mine ? 'Tú' : item.sender}, ${time(item.at)}: ${description}${item.editedAt ? '. Editado' : ''}${mine && !item.deleted ? '. Enviado' : ''}`}
+              accessibilityHint="Abre opciones: reaccionar, responder, editar o eliminar"
+              style={{flexDirection: 'row', gap: 4, alignItems: 'center', alignSelf: 'flex-end', minHeight: 20}}>
               <Muted style={{fontSize: 10}}>{item.editedAt ? 'Editado · ' : ''}{time(item.at)}</Muted>
               {mine && !item.deleted && <Ionicons name="checkmark" size={13} color={c.muted}/>}
-            </View>
-          </Pressable>
+              <Ionicons name="chevron-down" size={12} color={c.muted}/>
+            </Pressable>
+          </View>
           {!item.deleted && <Reactions message={item} me={p.userId} onToggle={emoji => react(item, emoji)}/>}
         </View>
       </View>
@@ -108,7 +112,7 @@ export function RoomChat(p: RoomLayoutProps) {
       ListEmptyComponent={<View style={{flex: 1, minHeight: 90, alignItems: 'center', justifyContent: 'center', gap: 8}}>
         <Ionicons name="chatbubbles-outline" size={28} color={c.muted}/>
         <Label style={{fontWeight: '700'}}>Aquí empieza el momento.</Label>
-        <Muted style={{fontSize: 12, textAlign: 'center'}}>Escribe, comparte una foto o graba una nota de voz.</Muted>
+        <Muted style={{fontSize: 12, textAlign: 'center'}}>Escribe, manda un sticker o graba una nota de voz.</Muted>
       </View>}/>
     {away && <View style={{alignItems: 'center', paddingBottom: 6}}>
       <Chip label="Últimos mensajes" icon="arrow-down" onPress={() => {follow.current = true; setAway(false); list.current?.scrollToEnd({animated: true});}}/>
@@ -160,11 +164,6 @@ function Composer(p: RoomLayoutProps & {onError: (message: string) => void}) {
   const text = draft.text;
   const uploading = draft.pending.some(x => x.status === 'uploading');
   const canSend = p.connected && !draft.sending && (!!text.trim() || draft.pending.length > 0 || (!!draft.editing && !!draft.editing.attachments?.length));
-  const pick = async (kind: 'image' | 'file') => {
-    setMenu(false);
-    try {const item = kind === 'image' ? await pickImage() : await pickDocument(); if (item) addAttachment(item);}
-    catch {p.onError(kind === 'image' ? 'No se pudo abrir tus fotos.' : 'No se pudo abrir el selector de archivos.');}
-  };
   const sendVoice = async () => {
     const clip = voice.take(); if (!clip) return;
     try {addAttachment(await voiceAttachmentAsync(clip.uri, clip.durationMs), true);}
@@ -200,16 +199,24 @@ function Composer(p: RoomLayoutProps & {onError: (message: string) => void}) {
     </View>}
     {!!draft.error && <Label accessibilityRole="alert" style={{fontSize: 12, color: c.live}}>{draft.error}</Label>}
     {!!voice.error && <Pressable accessibilityRole="button" onPress={voice.clearError}><Label accessibilityRole="alert" style={{fontSize: 12, color: c.live}}>{voice.error}</Label></Pressable>}
-    {menu && <View style={{flexDirection: 'row', gap: 8}}>
-      <Chip label="Foto" icon="image-outline" onPress={() => void pick('image')}/>
-      <Chip label="Archivo" icon="document-outline" onPress={() => void pick('file')}/>
-      <View style={{flex: 1}}/>
-      {['❤️', '🔥', '👏', '😂'].map(emoji => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Reacción flotante ${emoji} para la sala`}
-        disabled={!p.connected} onPress={() => {setMenu(false); void p.act('React', p.room.id, emoji);}}
-        style={{minWidth: 40, minHeight: 44, alignItems: 'center', justifyContent: 'center'}}><Label style={{fontSize: 19}}>{emoji}</Label></Pressable>)}
+    {menu && <View style={{gap: 8, padding: 10, borderRadius: 18, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border}}>
+      <Muted style={{fontSize: 11, fontWeight: '700'}}>EMOJIS Y STICKERS · solos se ven en grande</Muted>
+      <View style={{flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between'}}>
+        {emojiPanel.map(emoji => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Añadir ${emoji}`}
+          onPress={() => setDraftText((useChatDraft.getState().text + emoji).slice(0, chatLimits.text))}
+          style={({pressed}) => ({width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: pressed ? c.surfaceAlt : 'transparent'})}>
+          <Label style={{fontSize: 24}}>{emoji}</Label>
+        </Pressable>)}
+      </View>
+      <Muted style={{fontSize: 11, fontWeight: '700'}}>REACCIÓN FLOTANTE PARA LA SALA</Muted>
+      <View style={{flexDirection: 'row', gap: 4}}>
+        {['❤️', '🔥', '👏', '😂', '😮', '🎵'].map(emoji => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Reacción flotante ${emoji} para la sala`}
+          disabled={!p.connected} onPress={() => {setMenu(false); void p.act('React', p.room.id, emoji);}}
+          style={{minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center'}}><Label style={{fontSize: 22}}>{emoji}</Label></Pressable>)}
+      </View>
     </View>}
     <View style={{flexDirection: 'row', gap: 8, alignItems: 'flex-end'}}>
-      {!draft.editing && <RoundButton icon={menu ? 'close' : 'add'} label={menu ? 'Cerrar adjuntos' : 'Adjuntar foto o archivo'} disabled={!p.connected} onPress={() => setMenu(x => !x)}/>}
+      {!draft.editing && <RoundButton icon={menu ? 'close' : 'happy-outline'} label={menu ? 'Cerrar emojis' : 'Emojis, stickers y reacciones'} onPress={() => setMenu(x => !x)}/>}
       <TextInput accessibilityLabel={draft.editing ? 'Editar mensaje' : 'Mensaje para la sala'} value={text}
         onChangeText={value => {setDraftText(value); if (value.trim()) notifyTyping();}}
         placeholder={draft.editing ? 'Edita tu mensaje' : 'Escribe a la sala…'} placeholderTextColor={c.muted} maxLength={chatLimits.text} multiline

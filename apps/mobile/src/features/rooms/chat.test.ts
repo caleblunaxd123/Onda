@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {addTyping, canDelete, canEdit, clearTyping, continuesGroup, dayLabel, describeMessage, linkParts, formatBytes, formatDuration, mergeMessages, myReaction, oldestPersisted,
+import {addTyping, canDelete, canEdit, clearTyping, continuesGroup, dayLabel, describeMessage, isJumboEmoji, linkParts, formatBytes, formatDuration, mergeMessages, myReaction, oldestPersisted,
   pruneTyping, quoteOf, summarizeReactions, typingLabel, upsertMessage} from './chat';
 import type {ChatMessage} from './types';
 
@@ -100,5 +100,18 @@ describe('whatsapp-style presentation', () => {
     expect(linkParts('Mira https://onda.lunalav.pe/room?code=AB12. y http://x.com')).toEqual([
       {text: 'Mira '}, {text: 'https://onda.lunalav.pe/room?code=AB12', url: 'https://onda.lunalav.pe/room?code=AB12'}, {text: '. y http://x.com'}]);
     expect(linkParts('sin enlaces')).toEqual([{text: 'sin enlaces'}]);
+  });
+});
+
+describe('emoji stickers', () => {
+  it('shows one to three emojis big and leaves normal text alone', () => {
+    expect(isJumboEmoji('🔥')).toBe(true);
+    expect(isJumboEmoji(' 😂😂 ')).toBe(true);
+    expect(isJumboEmoji('❤️🔥🎉')).toBe(true);
+    expect(isJumboEmoji('👨‍👩‍👧')).toBe(true);
+    expect(isJumboEmoji('😂😂😂😂')).toBe(false);
+    expect(isJumboEmoji('jaja 😂')).toBe(false);
+    expect(isJumboEmoji('123')).toBe(false);
+    expect(isJumboEmoji('')).toBe(false);
   });
 });

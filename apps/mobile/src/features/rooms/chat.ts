@@ -104,6 +104,8 @@ export function describeMessage(message: ChatMessage) {
 export type LocalAttachment = {key: string; uri: string; name: string; mime: string; kind: 'image' | 'audio' | 'file'; size: number;
   durationMs?: number; width?: number; height?: number; temporary?: boolean; blob?: Blob};
 export type UploadHandle = {promise: Promise<ChatAttachment>; cancel: () => void};
+/** Upload failure carrying the HTTP status (0 when offline or cancelled). */
+export class UploadError extends Error {constructor(message: string, readonly status: number) {super(message);}}
 export const localKey = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 /** Spanish message for a failed attachment request (server problem detail when present). */
 export function uploadError(status: number, body: string) {
@@ -142,3 +144,21 @@ export function linkParts(text: string): {text: string; url?: string}[] {
   if (last < text.length) parts.push({text: text.slice(last)});
   return parts;
 }
+
+let emojiPattern: {only: RegExp; each: RegExp} | null | undefined;
+function emojiRegex() {
+  if (emojiPattern !== undefined) return emojiPattern;
+  try {emojiPattern = {only: new RegExp(String.raw`^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|\u200d|\ufe0f|\s)+$`, 'u'), each: new RegExp(String.raw`\p{Extended_Pictographic}`, 'gu')};}
+  catch {emojiPattern = null;}
+  return emojiPattern;
+}
+/** One to three emojis and nothing else are shown big, like stickers. */
+export function isJumboEmoji(text: string) {
+  const pattern = emojiRegex(); const value = text.trim();
+  if (!pattern || !value || !pattern.only.test(value)) return false;
+  const count = value.match(pattern.each)?.length ?? 0;
+  return count >= 1 && count <= 3;
+}
+/** Emoji and «sticker» panel of the composer (Rave-style chat: no photos or files). */
+export const emojiPanel = ['😂', '😍', '🥰', '😎', '🤩', '😭', '😱', '🤯', '🥳', '😴', '🤔', '🙄', '😅', '😉', '🤗', '🫶',
+  '❤️', '🔥', '👏', '🙌', '💯', '✨', '🎉', '🎶', '🎧', '🍿', '🎬', '📺', '👀', '💀', '👍', '👎', '🙏', '💃', '🕺', '🤣'];

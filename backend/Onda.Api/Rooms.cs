@@ -190,6 +190,8 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
         var message = await ChatAsync(id, _ => chat.ReactAsync(id, Account, DisplayName, command, Ct));
         await Clients.Group(id.ToString()).SendAsync("MessageUpdated", message); return message;
     }
+    /// <summary>Server clock (Unix ms) for NTP-style offset/latency sampling; clients keep the lowest round trip.</summary>
+    public long ServerTime() {Limit("clock", 30, 10); return clock.GetUtcNow().ToUnixTimeMilliseconds();}
     /// <summary>Ephemeral typing signal; never stored. Extra calls inside the rate window are ignored silently.</summary>
     public async Task Typing(Guid id)
     {
