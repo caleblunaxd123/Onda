@@ -1,8 +1,8 @@
 # Pruebas
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
-  con `ONDA_TEST_SQL` definido). 95 pruebas; ninguna omitida en la validación Windows con SQL Server real.
-- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 56 pruebas.
+  con `ONDA_TEST_SQL` definido). 96 pruebas; ninguna omitida en la validación Windows con SQL Server real.
+- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 60 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
 - Compatibilidad: en apps/mobile `npx expo install --check`; bundling `npx expo export --platform android`.

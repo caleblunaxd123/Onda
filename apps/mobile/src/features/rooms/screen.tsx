@@ -36,6 +36,7 @@ import {
 import type { MediaEvent } from "./media-frame";
 import { RoomLayout } from "./room-layout";
 import { SourcePicker } from "./source-picker";
+import { youtubeVideoUrl } from "./youtube-navigation";
 import {
   orderedQueue,
   playbackPosition,
@@ -77,6 +78,8 @@ export default function RoomScreen() {
     duration: 0,
   });
   const positionRef = useRef(0);
+  const navigating = useRef(false);
+  const [frameRevision, setFrameRevision] = useState(0);
   const [timelineNow, setTimelineNow] = useState(() => Date.now());
   const room = state.room;
   const isOwner = room?.ownerId === auth.session?.user.id;
@@ -177,6 +180,25 @@ export default function RoomScreen() {
     });
   };
   const mediaEvent = (event: MediaEvent) => {
+    if (event.kind === "source") {
+      const url = event.url && youtubeVideoUrl(event.url);
+      const latest = useRoom.getState().room;
+      if (!url || !latest || url === latest.media.url || navigating.current) return;
+      if (!host || !ready) { setFrameRevision((x) => x + 1); return; }
+      navigating.current = true;
+      void act("ChangeMedia", latest.id, {
+        media: { kind: latest.media.category === "music" ? "audio" : "video", url },
+        version: latest.version,
+        playing: event.playing ?? true,
+        positionSeconds: Math.max(0, Math.min(86400, event.position ?? 0)),
+      }).then(async (ok) => {
+        if (!ok) {
+          await refreshRoom().catch(() => {});
+          setFrameRevision((x) => x + 1);
+        }
+      }).finally(() => { navigating.current = false; });
+      return;
+    }
     if (event.kind === "ready") {
       positionRef.current = 0;
       setMediaProgress({ source, position: 0, duration: 0 });
@@ -330,6 +352,7 @@ export default function RoomScreen() {
   return (
     <RoomLayout
       room={room}
+      frameRevision={frameRevision}
       userId={sessionId}
       controller={host}
       connected={ready}
@@ -441,10 +464,23 @@ export default function RoomScreen() {
         <Sheet title="Qué compartimos después" onClose={() => setSheet(null)}>
           <SourcePicker value={input} onChange={setInput} />
           {actionError && <Muted>{actionError}</Muted>}
+          {host && <Button
+            title={busy ? "Cambiando…" : "Reproducir para todos"}
+            icon="play-outline"
+            disabled={busy || !ready || (input.kind === "radio" ? !input.stationId : !input.url?.trim())}
+            onPress={() => {
+              const latest = useRoom.getState().room;
+              if (!latest) return;
+              void act("ChangeMedia", latest.id, { media: input, version: latest.version }).then((ok) => {
+                if (ok) { setSheet(null); setInput({ kind: "video" }); }
+              });
+            }}
+          />}
           <Button
-            title={busy ? "Añadiendo…" : "Proponer a la sala"}
+            title={busy ? "Añadiendo…" : "Añadir a la cola"}
+            secondary={host}
             disabled={
-              busy ||
+              busy || !ready ||
               (input.kind === "radio" && !input.stationId) ||
               (input.kind !== "radio" && !input.url?.trim())
             }

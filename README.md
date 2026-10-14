@@ -18,6 +18,8 @@ Continuación: [handoff para Claude Code](docs/CLAUDE_HANDOFF.md).
 - Diseño según docs/design-reference.png, tema claro/oscuro/automático. Capturas: docs/screenshots.
 - Salas públicas/privadas con invitados, chat, reacciones, cola con votos, controles del anfitrión, transferencia de control,
   expulsión, reportes, reconexión y códigos renovables. Radio, YouTube/YouTube Music y archivos HTTPS de audio/video.
+- Explorador de YouTube integrado en Android: elegir otro video, reproducir para todos o proponerlo en la cola.
+  En web, búsqueda de YouTube en otra pestaña y pegado del enlace; cambios del reproductor compartidos por el anfitrión.
 - Cuentas opcionales con recuperación por código privado y biblioteca sincronizada: radios, colecciones y multimedia;
   historial solo con consentimiento. Asistente de descubrimiento con IA local y respaldo por reglas; pasaporte basado en escuchas reales.
 

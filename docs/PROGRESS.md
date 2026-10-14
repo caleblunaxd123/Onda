@@ -1,6 +1,11 @@
 # Progreso — actualizado 2026-10-13
 
 ## Beta 0.3: salas y diseño
+Incremento de navegación: explorador de YouTube dentro de Android, selección de video y opciones
+«Reproducir para todos»/«Añadir a la cola». Cambios de video del reproductor oficial compartidos por
+el anfitrión/coanfitrión, con versión y roles verificados; invitados conservan el contenido de la sala.
+Sin Google Cloud configurado: la búsqueda web abre YouTube en otra pestaña y permite pegar el enlace.
+API `navigation` publicada y prueba con dos WebSockets HTTPS completada. 96 backend / 60 móvil.
 Diseño cinematográfico en sala/creación/reproducción, lobby con portadas reales y buscador, inicio renovado.
 Modo cine, disposición web en dos columnas, seek por teclado/gestos, chat con scroll automático.
 Copiar invitación, pegar enlace, elegir desde biblioteca; portadas en multimedia guardada.

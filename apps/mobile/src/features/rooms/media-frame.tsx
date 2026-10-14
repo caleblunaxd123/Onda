@@ -5,7 +5,7 @@ import {apiBase} from '../../api';
 import {roomPlayerHtml} from './player-html';
 import {projectedPosition, type RoomMedia} from './types';
 
-export type MediaEvent = {kind: 'ready' | 'progress' | 'control' | 'ended' | 'error' | 'tap' | 'started'; position?: number; duration?: number; playing?: boolean; code?: number};
+export type MediaEvent = {kind: 'ready' | 'progress' | 'control' | 'ended' | 'error' | 'tap' | 'started' | 'source'; position?: number; duration?: number; playing?: boolean; code?: number; url?: string};
 export type FrameProps = {media: RoomMedia; host: boolean; playing: boolean; position: number; muted: boolean; onEvent: (event: MediaEvent) => void; theater?: boolean; positionAt?: number};
 export function MediaFrame({media, host, playing, position, positionAt, muted, onEvent, theater}: FrameProps) {
   const window = useWindowDimensions();

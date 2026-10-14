@@ -16,6 +16,7 @@ public sealed record RoomView(Guid Id, string Name, bool IsPrivate, Guid OwnerId
 public sealed record RoomSummary(Guid Id, string Name, bool IsPrivate, Guid OwnerId, RoomMedia Media, int Listeners);
 public sealed record CreateRoom(string? Name, bool IsPrivate, MediaInput Media, bool AutoRecovery = false);
 public sealed record PlaybackCommand(bool Playing, double PositionSeconds, long Version);
+public sealed record ChangeMediaCommand(MediaInput Media, long Version, bool Playing = true, double PositionSeconds = 0);
 public sealed record RoomReportRequest(Guid? AccountId, string? Reason);
 
 public sealed class RoomService(OndaDbContext db, MediaResolver resolver, RoomPresence presence, TimeProvider clock)
@@ -165,6 +166,32 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
             room.PlaybackUpdatedAt = clock.GetUtcNow(); await rooms.SaveAsync(room, Ct); await BroadcastAsync(id);
         }
         finally {semaphore.Release();}
+    }
+    public async Task ChangeMedia(Guid id, ChangeMediaCommand command)
+    {
+        Limit("change", 6, 10);
+        await MemberAsync(id, controller: true);
+        if (!double.IsFinite(command.PositionSeconds) || command.PositionSeconds is < 0 or > 86400)
+            throw new HubException("Posición de reproducción inválida.");
+        var media = await resolver.ResolveAsync(command.Media, Ct) ?? throw new HubException("Usa una radio del catálogo, YouTube o un enlace HTTPS compatible.");
+        // Metadata resolution can take time; reload roles/version after taking the room lock.
+        db.ChangeTracker.Clear();
+        var gate = presence.RoomLock(id); await gate.WaitAsync(Ct);
+        try
+        {
+            var room = await MemberAsync(id, controller: true);
+            if (command.Version != room.Version) throw new HubException("La sala cambió. Actualízala antes de elegir otro contenido.");
+            var queue = RoomService.Queue(room);
+            var removed = queue.Where(x => x.Media.Url == media.Url).Select(x => x.Id).ToArray();
+            queue.RemoveAll(x => removed.Contains(x.Id));
+            room.Media = JsonSerializer.Serialize(media); room.Queue = JsonSerializer.Serialize(queue);
+            room.IsPlaying = command.Playing; room.PositionSeconds = media.Kind == "radio" ? 0 : command.PositionSeconds;
+            room.PlaybackUpdatedAt = clock.GetUtcNow();
+            await rooms.SaveAsync(room, Ct);
+            foreach (var item in removed) presence.ForgetItem(id, item);
+            await BroadcastAsync(id);
+        }
+        finally {gate.Release();}
     }
     public async Task AddToQueue(Guid id, MediaInput input)
     {

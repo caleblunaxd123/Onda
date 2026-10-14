@@ -152,6 +152,36 @@ public class CommunityTests : IAsyncLifetime
         await owner.InvokeAsync("CloseRoom", room.Id);
         Assert.Equal(HttpStatusCode.NotFound, (await ownerClient.GetAsync("/api/v1/rooms/invite/" + room.InviteCode)).StatusCode);
     }
+    [SkippableFact] public async Task ChoosingAnotherVideoBroadcastsToGroupAndPreservesOtherProposals()
+    {
+        RequireSql(); await using var app = Factory();
+        using var ownerClient = await ClientAsync(app, "Anfitrión"); using var peerClient = await ClientAsync(app, "Amiga");
+        var created = await ownerClient.PostAsJsonAsync("/api/v1/rooms/", new CreateRoom("Navegación", true, new("video", "https://youtu.be/M7lc1UVf-VE", Title: "Inicial")));
+        created.EnsureSuccessStatusCode(); var room = (await created.Content.ReadFromJsonAsync<RoomView>())!;
+        await using var owner = Hub(app, ownerClient); await using var peer = Hub(app, peerClient);
+        await owner.StartAsync(); await peer.StartAsync(); await owner.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+        await peer.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+        var input = new MediaInput("video", "https://m.youtube.com/watch?v=aqz-KE-bpKQ", Title: "Siguiente");
+        await Assert.ThrowsAsync<HubException>(() => peer.InvokeAsync("ChangeMedia", room.Id, new ChangeMediaCommand(input, room.Version)));
+        await peer.InvokeAsync("AddToQueue", room.Id, input);
+        await peer.InvokeAsync("AddToQueue", room.Id, new MediaInput("video", "https://youtu.be/dQw4w9WgXcQ", Title: "Conservar"));
+        var before = await owner.InvokeAsync<RoomView>("Snapshot", room.Id);
+        var selected = before.Queue.Single(x => x.Media.VideoId == "aqz-KE-bpKQ");
+        await peer.InvokeAsync("Vote", room.Id, selected.Id);
+        var received = new TaskCompletionSource<RoomView>(TaskCreationOptions.RunContinuationsAsynchronously);
+        peer.On<RoomView>("State", value => {if (value.Media.VideoId == "aqz-KE-bpKQ") received.TrySetResult(value);});
+        await owner.InvokeAsync("ChangeMedia", room.Id, new ChangeMediaCommand(input, before.Version, true, 3));
+        Assert.Equal("aqz-KE-bpKQ", (await received.Task.WaitAsync(TimeSpan.FromSeconds(10))).Media.VideoId);
+        var changed = await peer.InvokeAsync<RoomView>("Snapshot", room.Id);
+        Assert.Equal("aqz-KE-bpKQ", changed.Media.VideoId); Assert.True(changed.IsPlaying); Assert.Equal(3, changed.PositionSeconds);
+        Assert.Equal("Conservar", changed.Queue.Single().Media.Title); Assert.Empty(await peer.InvokeAsync<Guid[]>("MyVotes", room.Id));
+        await Assert.ThrowsAsync<HubException>(() => owner.InvokeAsync("ChangeMedia", room.Id, new ChangeMediaCommand(input, before.Version)));
+        var peerId = changed.Members.Single(x => x.Name == "Amiga").Id;
+        await owner.InvokeAsync("SetCohost", room.Id, peerId, true);
+        changed = await peer.InvokeAsync<RoomView>("Snapshot", room.Id);
+        await peer.InvokeAsync("ChangeMedia", room.Id, new ChangeMediaCommand(new("video", "https://youtu.be/M7lc1UVf-VE", Title: "Otra vez"), changed.Version, false));
+        Assert.False((await owner.InvokeAsync<RoomView>("Snapshot", room.Id)).IsPlaying);
+    }
     private sealed record RoomList(RoomSummary[] Items);
     private sealed class ManualClock : TimeProvider
     {

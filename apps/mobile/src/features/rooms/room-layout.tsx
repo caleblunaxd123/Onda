@@ -26,6 +26,7 @@ import {
 type Tab = "chat" | "queue" | "people";
 export type RoomLayoutProps = {
   room: Room;
+  frameRevision?: number;
   userId?: string;
   controller: boolean;
   connected: boolean;
@@ -131,7 +132,7 @@ export function RoomLayout(p: RoomLayoutProps) {
               <RadioStage media={p.room.media} status={p.radioStatus} />
             ) : (
               <MediaFrame
-              key={p.room.media.url ?? p.room.media.kind}
+              key={`${p.room.media.url ?? p.room.media.kind}:${p.frameRevision ?? 0}`}
                 media={p.room.media}
                 host={p.controller}
                 playing={p.connected && p.room.isPlaying}
@@ -327,6 +328,9 @@ export function RoomLayout(p: RoomLayoutProps) {
                 {p.error}
               </Muted>
             )}
+            <Button title={p.room.media.kind === "youtube" ? "Buscar otro video" : "Elegir más contenido"}
+              secondary icon={p.room.media.kind === "youtube" ? "logo-youtube" : "add-outline"}
+              disabled={!p.connected || p.busy} onPress={() => p.onSheet("add")} />
           </View>
         </View>
         <View

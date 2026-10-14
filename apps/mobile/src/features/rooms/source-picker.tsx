@@ -19,6 +19,7 @@ import { FormField } from "../../components/forms";
 import type { Station } from "../../types";
 import type { MediaInput } from "./types";
 import { MediaPoster } from "./presentation";
+import { YoutubeBrowser } from "./youtube-browser";
 export function SourcePicker({
   value,
   onChange,
@@ -188,6 +189,7 @@ export function SourcePicker({
         </>
       ) : (
         <>
+          <YoutubeBrowser onSelect={(url) => onChange({ kind: value.kind === "audio" ? "audio" : "video", url })} />
           {bookmarks.some((x) =>
             value.kind === "audio"
               ? x.media.category === "music" || x.media.kind === "audio"
