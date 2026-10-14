@@ -18,8 +18,11 @@ inspect_analysis_view. No se modificó Claude ni se instaló la skill opcional d
 
 El self-test del MCP local observó 207 herramientas y seis prompts, sin faltantes/duplicados. Doctor
 confirmó el registro Codex alineado. `environment_healthy=false` señala motores opcionales ausentes.
-**El catálogo de esta conversación aún no expone REA**; se usó su CLI real. El registro requerirá que
-Codex recargue la configuración; no se afirma haber llamado REA mediante el catálogo actual.
+En el primer diagnóstico el catálogo no exponía REA y se usó su CLI real. En la investigación posterior
+ya aparecen las seis herramientas MCP: se ejecutó analyze_javascript_application/inspect_analysis_view
+sobre scripts públicos de rave.io. También se añadió JADX headless local para el APK legítimo de Rave,
+con JBR 21, heap 3072 MiB y sin instalaciones globales. Evidencias y límites en
+[investigación Rave](research-rave/10_EXECUTIVE_SUMMARY.md).
 Configuración respaldada conforme a la [documentación oficial de MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
 
 ## Artefactos propios
@@ -45,8 +48,9 @@ Las salidas JSON completas se conservan en `.tools/rea-onda-api-artifact.json` y
 3. Confirmado por integración: dos controles con la misma versión compiten; el servidor acepta uno.
    El bloqueo de sala y la recarga dentro de Join protegen cambios simultáneos de cierre/anfitrión.
 
-Rave se tomó como referencia de comportamiento visible en las capturas del propietario. No se obtuvo
-ni descompiló su APK y no se infiere que use una arquitectura concreta. No se copiaron código o recursos
+La primera iteración tomó las capturas como referencia, antes de disponer del APK. Posteriormente se
+instaló Rave 9.0.49 desde Play, se verificaron los tres APK y se analizaron manifest/clases/método de sync
+con REA/JADX. El bloqueo explícito de emulador impidió pruebas dinámicas. No se copiaron código o recursos
 propietarios ni se intentó evitar DRM, autenticación o restricciones de proveedores.
 
 Siguiente investigación útil: HLS propio con expo-video, medición de drift en cinco reproductores reales
