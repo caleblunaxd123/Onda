@@ -26,7 +26,9 @@ cargó. Inspección real del DLL propio y métodos RoomsHub documentada en `rea-
 P0/P1: rechazo de snapshots viejos, limpieza del temporizador de reloj, prueba SQL con cinco conexiones,
 seek YouTube en pausa, deduplicación/revisiones del puente, cue oficial al entrar pausado y orden de pausa
 antes de seek para no cancelar buffering. Estado de pausa visible y botones compartidos ±10 segundos.
-La candidata se probó temporalmente en el emulador; producción conserva la API anterior de moderación.
+La candidata se probó en el emulador y quedó instalada con datos intactos: Android rechazó downgrade
+a 0.6.0. Su chat muestra aviso de bloques hasta publicar la API nueva; no se borró almacenamiento.
+Producción conserva la API anterior de moderación. Sala/cuenta QA propias eliminadas.
 
 Decisiones actuales del propietario: producto multimedia social; inicio sencillo como lista de salas;
 identidad ONDA Experience neón (claro/suave alternativos); Crear sala → fuente/privacidad → entrar → buscar dentro. El chat NO permite subir fotos,

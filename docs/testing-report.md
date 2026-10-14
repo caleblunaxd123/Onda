@@ -12,6 +12,7 @@
 Logs locales: `.tools/rea-sync-backend-tests.log`, `.tools/rea-player-mobile-tests.log`,
 `.tools/rea-player-types.log`, `.tools/rea-player-lint.log`, `.tools/google-enabled-public-smoke.log`.
 REA CLI y MCP local fueron ejecutados; ver evidencias y alcance estático en [investigación](rea-investigation.md).
+CI del commit `31f5360`: [backend y móvil correctos](https://github.com/caleblunaxd123/Onda/actions/runs/38578515302).
 
 ## Android
 

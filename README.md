@@ -25,8 +25,8 @@ Estado de lanzamiento: [verificación y pendientes reales](docs/LAUNCH_READINESS
   En web, búsqueda de YouTube en otra pestaña y pegado del enlace; cambios del reproductor compartidos por el anfitrión.
 - Chat ligero: respuestas, reacciones, edición, borrado, mensajes fijados y seis stickers incluidos.
   Sin subida de fotos, archivos ni grabaciones; los stickers viajan como identificadores pequeños.
-- Google preparado para Android/web, con verificación en servidor y nonce de un solo uso.
-  Desactivado hasta configurar OAuth: [activación](docs/GOOGLE_SIGN_IN.md).
+- Google activo y probado en Android, con verificación en servidor y nonce de un solo uso.
+  OAuth en Testing; web completo/iOS pendientes: [estado y límites](docs/GOOGLE_SIGN_IN.md).
 - Cuentas opcionales con recuperación por código privado y biblioteca sincronizada: radios, colecciones y multimedia;
   historial solo con consentimiento. Asistente de descubrimiento con IA local y respaldo por reglas; pasaporte basado en escuchas reales.
 
