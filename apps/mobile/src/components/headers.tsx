@@ -9,8 +9,7 @@ import {IconButton} from './controls';
 
 /** Consistent screen header: large title, optional subtitle, back button for stacked screens and trailing actions. */
 export function ScreenHeader({title, subtitle, back, children}: PropsWithChildren<{title: string; subtitle?: string; back?: boolean}>) {
-  const c = useTheme();
-  return <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 6, backgroundColor: c.bg}}>
+  return <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12}}>
     {back && <IconButton icon="chevron-back" label="Volver" plain onPress={() => router.canGoBack() ? router.back() : router.replace('/')}/>}
     <View style={{flex: 1}}>
       <Label accessibilityRole="header" numberOfLines={1} style={{fontSize: back ? 20 : 26, lineHeight: back ? 26 : 32, fontWeight: '800', letterSpacing: -0.3}}>{title}</Label>
@@ -25,7 +24,7 @@ const logo = require('../../assets/brand/onda-logo-header.png');
 /** Tab screen header from the owner's model: ONDA logo, brand waveform, optional title and trailing actions. */
 export function BrandHeader({title, subtitle, emoji, calm = false, children}: PropsWithChildren<{title?: string; subtitle?: string; emoji?: string; calm?: boolean}>) {
   const c = useTheme(); const playback = usePlayer();
-  return <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10, backgroundColor: c.bg, ...(!calm && {experimental_backgroundImage: c.headerGlow})} as ViewStyle}>
+  return <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10} as ViewStyle}>
     {!calm && <View pointerEvents="none" style={{position: 'absolute', right: 70, top: 6}}><Waveform active={playback.state === 'playing'} height={46} opacity={c.isDark ? 0.55 : 0.4}/></View>}
     <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48}}>
       <Image source={logo} accessibilityRole="header" accessibilityLabel="ONDA" resizeMode="contain" style={{width: 128, height: 36}}/>

@@ -1,10 +1,10 @@
-import {MediaPoster} from '../rooms/presentation';
+import {OndaContentCard} from '../rooms/presentation';
 import {useMemo, useState} from 'react';
 import {FlatList, Keyboard, Pressable, TextInput, View} from 'react-native';
 import {router, useLocalSearchParams} from 'expo-router';
 import {uniqueBroadcasts, useLibrary} from '../../library';
 import {mediaLabel} from '../rooms/types';
-import {useTheme} from '../../theme';
+import {gradientStyle, useTheme} from '../../theme';
 import {player} from '../../player';
 import {Ionicons} from '../../icons';
 import {matchesText, flag} from '../../format';
@@ -67,7 +67,7 @@ function LibraryContent({initial}: {initial: Section}) {
     {!selected && <LibraryOverview favorites={library.favorites.length + library.mediaFavorites.length} collections={library.collections.length} countries={savedCountries}/>}
     <View accessibilityRole="tablist" style={{flexDirection: 'row', padding: 4, borderRadius: 99, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border}}>
       {sections.map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected: section === item.id}} onPress={() => chooseSection(item.id)}
-        style={({pressed}) => ({flex: 1, minHeight: 44, borderRadius: 99, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .7 : 1, backgroundColor: section === item.id ? c.primary : 'transparent'})}>
+        style={({pressed}) => ({flex: 1, minHeight: 44, borderRadius: 99, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .7 : 1, ...(section === item.id ? gradientStyle(c.brand, c.primary) : {backgroundColor: 'transparent'})})}>
         <Label style={{fontSize: 12, fontWeight: '700', color: section === item.id ? c.onPrimary : c.muted}}>{item.label}</Label>
       </Pressable>)}
     </View>
@@ -91,11 +91,11 @@ function LibraryContent({initial}: {initial: Section}) {
   </EmptyState>;
   const footer = <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 28}}><Ionicons name="phone-portrait-outline" size={13} color={c.muted}/><Muted style={{fontSize: 11}}>Guardado en este dispositivo{accountId && library.syncAccountId === accountId ? ' · Sincronización activada' : ' · Biblioteca local'}</Muted></View>;
 
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
+  return <View style={{flex: 1}}>
     <BrandHeader title="Tu biblioteca" emoji="💜" subtitle="Tus radios, música y videos."><IconButton icon="add" label="Crear colección" onPress={create}/><IconButton icon="settings-outline" label="Ajustes" onPress={() => router.push('/settings')}/></BrandHeader>
     {isMedia ? <FlatList key="media" data={media} keyExtractor={item => item.id} contentContainerStyle={{padding: 20, paddingTop: 8, gap: 12}} keyboardShouldPersistTaps="handled" ListHeaderComponent={header} ListFooterComponent={footer}
       ListEmptyComponent={<EmptyState icon="bookmark-outline" title="Los buenos descubrimientos se guardan" body="En una sala, toca Guardar contenido. Aquí encontrarás tus videos y canciones para volver a disfrutarlos."/>}
-      renderItem={({item}) => <View style={{flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border}}><Pressable accessibilityRole="button" accessibilityLabel={`Reproducir ${item.media.title}`} onPress={() => router.push({pathname: '/watch', params: {id: item.id}})} style={{flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12}}><MediaPoster media={item.media} style={{width: 88, height: 62, borderRadius: 12}}/><View style={{flex: 1}}><Label numberOfLines={2} style={{fontWeight: '800'}}>{item.media.title}</Label><Muted>{item.media.category === 'music' && item.media.kind === 'youtube' ? 'Música · YouTube' : mediaLabel[item.media.kind]}</Muted></View><Ionicons name="play-circle" size={28} color={c.primaryText}/></Pressable><IconButton icon="bookmark" label="Quitar contenido guardado" onPress={() => library.toggleMedia(item.media)}/></View>}/>
+      renderItem={({item}) => <OndaContentCard media={item.media} onWatch={() => router.push({pathname: '/watch', params: {id: item.id}})} onShare={() => router.push({pathname: '/create-room', params: {bookmark: item.id}})} onRemove={() => library.toggleMedia(item.media)}/>}/>
       : isGrid ? <FlatList key="collections" data={collections} numColumns={2} keyExtractor={item => item.id} columnWrapperStyle={{gap: 12}} contentContainerStyle={{padding: 20, paddingTop: 8, gap: 12}} keyboardShouldPersistTaps="handled"
       ListHeaderComponent={header} ListEmptyComponent={empty} ListFooterComponent={footer}
       renderItem={({item, index}) => <View style={{flex: 1, maxWidth: '48.5%'}}><CollectionCard collection={item} index={index} onPress={() => {setSelectedId(item.id); resetFilters();}}/></View>}/>

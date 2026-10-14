@@ -16,13 +16,13 @@ export default function FullPlayer() {
   const similar = useStationFeed({tag: station?.tags[0], order: 'discover', exclude: station ? [station.id] : []}, {limit: 8, enabled: !!station?.tags[0]});
   const [sheet, setSheet] = useState<'timer' | 'report' | 'collection' | 'queue' | null>(null);
   const close = () => router.canGoBack() ? router.back() : router.replace('/');
-  if (!station) return <View style={{flex: 1, backgroundColor: c.bg, padding: 20}}>
+  if (!station) return <View style={{flex: 1, padding: 20}}>
     <IconButton icon="chevron-down" plain label="Cerrar reproductor" onPress={close}/>
     <EmptyState icon="radio-outline" title="Tu mundo, en directo" body="Elige una emisora en Inicio, Mundo o Radar para empezar."><Button title="Explorar emisoras" onPress={() => router.replace('/')}/></EmptyState>
   </View>;
   const active = isActive(s.state);
   const status = s.state === 'playing' && !s.error ? null : s.error ?? stateLabels[s.state];
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
+  return <View style={{flex: 1}}>
     <ScrollView contentContainerStyle={{paddingBottom: 32}}>
       <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 30, gap: 14, alignItems: 'center', borderBottomLeftRadius: 32, borderBottomRightRadius: 32, backgroundColor: c.featuredFallback, experimental_backgroundImage: c.featured} as ViewStyle}>
         <View style={{flexDirection: 'row', alignSelf: 'stretch', alignItems: 'center'}}>

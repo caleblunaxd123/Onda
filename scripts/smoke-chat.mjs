@@ -71,6 +71,11 @@ try {
   ok('reaction counted', reacted.reactions.length === 1 && reacted.reactions[0].emoji === '🔥');
   const toggled = await b.invoke('ReactChat', room.id, {messageId: first.id, emoji: '🔥'});
   ok('same emoji removes reaction', toggled.reactions.length === 0);
+  for (const emoji of ['🎉', '😍']) {
+    const received = waitFor(b, 'Reaction', event => event.emoji === emoji);
+    await a.invoke('React', room.id, emoji);
+    ok('floating room reaction broadcast: ' + emoji, (await received).emoji === emoji);
+  }
   const updated = waitFor(b, 'MessageUpdated', m => m.id === first.id && !!m.editedAt);
   await a.invoke('EditChat', room.id, {messageId: first.id, text: 'Hola sala (editado)'});
   ok('edit broadcast with edited mark', (await updated).text === 'Hola sala (editado)');

@@ -10,6 +10,7 @@ import { player, prepareAudio, usePlayer } from '../src/player';
 import { lookupStations } from '../src/catalog';
 import { libraryIds, useLibrary } from '../src/library';
 import {useTheme} from '../src/theme';
+import {OndaAmbientBackground} from '../src/components/experience';
 import { deviceCountry } from '../src/region';
 import { Label, MiniPlayer } from '../src/ui';
 import {initializeSession} from '../src/features/account/session';
@@ -57,10 +58,11 @@ function RootShell({wide}: {wide: boolean}) {
   }, []);
   return <GestureHandlerRootView style={{flex: 1, backgroundColor: c.bg}}>
     <View style={[{flex: 1}, Platform.OS === 'web' && {width: '100%', maxWidth: wide ? 1080 : 480, alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: c.border}]}>
-      <SafeAreaProvider><QueryClientProvider client={queryClient}><SafeAreaView edges={['top']} style={{flex: 1, backgroundColor: c.bg}}>
+      <OndaAmbientBackground/>
+      <SafeAreaProvider><QueryClientProvider client={queryClient}><SafeAreaView edges={['top']} style={{flex: 1}}>
         <StatusBar style={c.isDark ? 'light' : 'dark'}/>
         {error ? <View style={{padding: 16}}><Label>{error}</Label></View> : null}
-        <Stack screenOptions={{headerShown: false, contentStyle: {backgroundColor: c.bg}, animation: 'slide_from_right'}}>
+        <Stack screenOptions={{headerShown: false, contentStyle: {backgroundColor: 'transparent'}, animation: 'slide_from_right'}}>
           <Stack.Screen name="(tabs)"/>
           <Stack.Screen name="player" options={{presentation: 'modal', animation: 'slide_from_bottom'}}/>
           <Stack.Screen name="search"/>

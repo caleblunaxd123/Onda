@@ -1,3 +1,10 @@
+# Actualización 0.6 — 2026-10-14
+
+Prioridades actuales: UI compacta/vertical, estabilidad y seguridad gratuita; después retención,
+validación Plus sandbox y, con audiencia, Creator/comunidades/patrocinios.
+Consultar NEXT_LEVEL_PROGRESS, ONDA_NEXT_LEVEL_AUDIT y CLAUDE_NEXT_LEVEL_PROMPT.
+Sin pagos/servicios/IA costosa ni subidas nuevas. El alcance anterior siguiente se conserva como historial.
+
 # Roadmap — ONDA multimedia social
 
 ## Implementado y desplegado (beta 0.5)

@@ -11,7 +11,7 @@ import { deviceCountry } from '../src/region';
 import { Ionicons } from '../src/icons';
 import { Button, Card, Chip, Label, Muted, OptionPicker, Page, ScreenHeader, Sheet, cardStyle, flag, formatCount } from '../src/ui';
 
-const themes = {soft: 'Azul gris suave', system: 'Automático', light: 'Claro', dark: 'Oscuro'} as const;
+const themes = {dark: 'ONDA inmersivo', light: 'Claro', soft: 'Azul gris suave', system: 'Automático'} as const;
 
 export default function Settings() {
   const c = useTheme(); const library = useLibrary();
@@ -28,7 +28,7 @@ export default function Settings() {
     Alert.alert('Borrar datos locales', 'Esta acción elimina tus favoritos, historial, colecciones y búsquedas de este dispositivo.', [{text: 'Cancelar', style: 'cancel'}, {text: 'Borrar', style: 'destructive', onPress: run}]);
   };
   const synced = status.data?.lastCompletedSync ? new Date(status.data.lastCompletedSync).toLocaleString('es', {dateStyle: 'medium', timeStyle: 'short'}) : null;
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
+  return <View style={{flex: 1}}>
     <ScreenHeader title="Perfil y ajustes" back/>
     <Page>
       <Card style={{flexDirection: 'row', alignItems: 'center', gap: 14}}>

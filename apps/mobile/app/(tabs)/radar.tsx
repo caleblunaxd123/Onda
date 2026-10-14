@@ -10,8 +10,8 @@ import { useTheme } from '../../src/theme';
 import { Label, Muted, Artwork, Chip, Favorite, Loading, Message, IconButton, BrandHeader, LiveBadge, PlayButton, flag, tagLabel, cardStyle, stateLabels } from '../../src/ui';
 
 export default function Radar() {
-  const c = useTheme(); const hydrated = useLibraryHydrated();
-  return hydrated ? <RadarContent/> : <View style={{flex: 1, backgroundColor: c.bg}}/>;
+  const hydrated = useLibraryHydrated();
+  return hydrated ? <RadarContent/> : <View style={{flex: 1}}/>;
 }
 
 function RadarContent() {
@@ -27,7 +27,7 @@ function RadarContent() {
   const countryName = countries.data?.find(x => x.code === library.country)?.name ?? library.country;
   const feed = useStationFeed({order: 'discover', seed, country: scope === 'country' ? library.country : undefined,
     boostTags: [...new Set([...profile.tags, ...library.likedTags])].slice(0, 5), boostCountries: [library.country, ...profile.countries], exclude: recentAtOpen}, {limit: 20});
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
+  return <View style={{flex: 1}}>
     <BrandHeader title="Radio Radar" emoji="📡" subtitle={autoTune ? 'Sintonía automática: suena al deslizar.' : 'Desliza y descubre nuevas emisoras.'}>
       <IconButton icon={autoTune ? 'radio' : 'radio-outline'} tint={autoTune ? c.primaryText : undefined} label={autoTune ? 'Desactivar sintonía automática' : 'Activar sintonía automática al deslizar'} onPress={() => setAutoTune(!autoTune)}/>
       <IconButton icon="shuffle" label="Barajar el radar" onPress={() => setSeed(Math.floor(Math.random() * 1e9))}/>

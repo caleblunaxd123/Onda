@@ -12,8 +12,8 @@ import type { Station } from '../../src/types';
 import {DestinationShelf} from '../../src/features/home/destinations';
 
 export default function Home() {
-  const c = useTheme(); const hydrated = useLibraryHydrated(); const onboarded = useLibrary(s => s.onboarded);
-  if (!hydrated) return <View style={{flex: 1, backgroundColor: c.bg}}/>;
+  const hydrated = useLibraryHydrated(); const onboarded = useLibrary(s => s.onboarded);
+  if (!hydrated) return <View style={{flex: 1}}/>;
   if (!onboarded) return <Redirect href="/onboarding"/>;
   return <HomeContent/>;
 }
@@ -51,7 +51,7 @@ function HomeContent() {
   const hello = greeting();
   const cardWidth = Math.min(width, 480) - 40;
   const featuredItems = featured.items.slice(0, 5);
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
+  return <View style={{flex: 1}}>
     <BrandHeader><IconButton icon="sparkles-outline" label="Recomendaciones ONDA AI" onPress={() => router.push('/assistant')}/><IconButton icon="settings-outline" label="Ajustes y perfil" onPress={() => router.push('/settings')}/></BrandHeader>
     <Page>
     <Pressable accessibilityRole="search" accessibilityLabel="Buscar emisoras, países, ciudades y géneros" onPress={() => router.push('/search')} style={[cardStyle(c), {borderRadius: 16, paddingHorizontal: 14, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: -4}]}>

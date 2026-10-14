@@ -1,6 +1,6 @@
-# Validación actual — beta 0.5
+# Validación actual — beta 0.6
 140 backend (SQL real, sin omitidas), 87 móvil + TypeScript/ESLint; export web y APK tres ABI.
-El script `node scripts/smoke-chat.mjs https://onda-api.lunalav.pe` pasó 30/30 en producción:
+El script `node scripts/smoke-chat.mjs https://onda-api.lunalav.pe` pasó 32/32 en producción:
 adjuntos de imagen/archivo/audio rechazados, texto y stickers, respuestas, reacciones, edición, borrado,
 pins/permisos/persistencia, Google desactivado sin OAuth y limpieza de sus propios invitados.
 Nuevo contrato probado con SQL: default no sube ni crea archivos; opt-in de tipos legado sigue probado;
@@ -17,10 +17,19 @@ Web pública: inicio simplificado y selector comprobados en navegador integrado.
 web-050-home.png. Se cerraron/eliminaron solo cuentas/salas creadas para QA por el agente.
 Voz en vivo, HLS nativo, iOS y pruebas físicas siguen pendientes. El histórico siguiente no redefine el alcance actual.
 
+## Revisión UI 0.6
+TypeScript/ESLint y 87 pruebas móviles; 140 SQL y smoke público 32/32 tras añadir reacciones fiesta/enamorado.
+APK tres ABI, JS embebido y orientación portrait. Emulador normal 1080x2400/densidad420;
+QA temporal 720x1280/densidad320/fontScale1.3 con scroll y CTA accesible, luego restaurado.
+Sala compartida con Big Buck Bunny, pin, texto y sticker recibidos por otro cliente sin adjuntos; teclado
+colapsa el stage y deja composer visible. Prueba horizontal provisional mostró player/chat; navegación final
+principal quedó portrait por petición posterior. Capturas android-060-*. Última revisión compacta local.
+No implica pruebas físicas, TalkBack completo, batería ni login Google/sandbox de compras.
+
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
-  con `ONDA_TEST_SQL` definido). 100 pruebas; ninguna omitida en la validación Windows con SQL Server real.
-- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 60 pruebas.
+  con `ONDA_TEST_SQL` definido). 140 pruebas; ninguna omitida en la validación Windows con SQL Server real.
+- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 87 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
 - Compatibilidad: en apps/mobile `npx expo install --check`; bundling `npx expo export --platform android`.

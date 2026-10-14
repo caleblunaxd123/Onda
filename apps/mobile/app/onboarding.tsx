@@ -18,7 +18,7 @@ export default function Onboarding() {
   const [liked, setLiked] = useState<string[]>([]);
   const list = useMemo(() => (countries.data ?? []).filter(x => !text || fold(x.name).includes(fold(text))), [countries.data, text]);
   const finish = () => {library.finishOnboarding(country, liked, country === detected?.code ? 'auto' : 'manual'); router.replace('/');};
-  return <View style={{flex: 1, backgroundColor: c.bg, padding: 20, gap: 16}}>
+  return <View style={{flex: 1, padding: 20, gap: 16}}>
     <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
       <Label style={{fontSize: 26, fontWeight: '900', color: c.primaryText, letterSpacing: 1}}>ONDA</Label>
       <Pressable accessibilityRole="button" onPress={finish} hitSlop={10}><Label style={{color: c.primaryText, fontWeight: '600'}}>Omitir</Label></Pressable>

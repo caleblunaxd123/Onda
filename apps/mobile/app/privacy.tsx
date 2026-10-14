@@ -1,9 +1,7 @@
 import {View} from 'react-native';
-import {useTheme} from '../src/theme';
 import {Card, Label, Muted, Page, ScreenHeader} from '../src/ui';
 export default function Privacy() {
-  const c = useTheme();
-  return <View style={{flex: 1, backgroundColor: c.bg}}><ScreenHeader title="Privacidad y convivencia" back/><Page>
+  return <View style={{flex: 1}}><ScreenHeader title="Privacidad y convivencia" back/><Page>
     <Card><Label style={{fontWeight: '800'}}>Tú eliges qué compartir</Label><Muted>Escuchar radios y explorar funciona sin cuenta. En las salas se ve tu nombre público. El correo y la biblioteca de tu cuenta no se publican.</Muted><Muted>La sincronización es opcional. Solo envía favoritos, colecciones y, si lo marcas, historial a la API de ONDA. Las sesiones se guardan cifradas en el dispositivo; las contraseñas y códigos se almacenan como huellas en el servidor.</Muted></Card>
     <Card><Label style={{fontWeight: '800'}}>Salas y contenido</Label><Muted>Las salas públicas aparecen en Inicio. Las privadas requieren su invitación; quien tenga el código podrá entrar. Los enlaces de contenido se comparten con sus participantes. La emisora o proveedor recibe tu conexión al reproducir.</Muted><Muted>El chat guarda mensajes, respuestas, reacciones y mensajes fijados durante 30 días. Los stickers incluidos viajan como identificadores; no se suben fotos, archivos ni grabaciones. Los adjuntos de versiones anteriores conservan su acceso privado y vencen con la retención del chat. Reportar guarda el motivo y los identificadores necesarios para revisarlo. Puedes silenciar personas y el anfitrión puede expulsarlas.</Muted></Card>
     <Card><Label style={{fontWeight: '800'}}>Convivencia</Label><Muted>Comparte contenido que puedas reproducir y compartir. Evita acoso, amenazas, datos privados de otras personas y spam. Reporta la sala o el mensaje si necesitas revisión. No se solicita GPS ni acceso al micrófono.</Muted></Card>

@@ -8,15 +8,17 @@ import {
   Linking,
   Platform,
   Pressable,
+  ScrollView,
   View,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../../theme";
+import { gradientStyle, useTheme } from "../../theme";
 import { Ionicons } from "../../icons";
 import { Button, IconButton, Label, Muted } from "../../ui";
 import { MediaFrame, type MediaEvent } from "./media-frame";
-import { RadioStage } from "./presentation";
+import { MemberStack, RadioStage } from "./presentation";
+import {OndaAmbientBackground, OndaReactionOverlay} from '../../components/experience';
 import { StreamRoomStage } from "./stream";
 import { YoutubeSearchBar } from "./youtube-bar";
 import { useChatDraft } from "./chat-draft";
@@ -82,7 +84,8 @@ export function RoomLayout(p: RoomLayoutProps) {
     return () => {shown.remove(); hidden.remove();};
   }, []);
   const dimensions = useWindowDimensions();
-  const wide = Platform.OS === "web" && dimensions.width >= 900 && !theater;
+  const wide = (Platform.OS === "web" ? dimensions.width >= 900 : dimensions.width >= 700 && dimensions.width > dimensions.height) && !theater;
+  const StageContainer = wide ? ScrollView : View;
   const composing = useChatDraft((s) => s.composing);
   // Only while writing in the chat: the YouTube search bar lives in the stage and must stay visible.
   const typing = keyboard && composing && !wide && p.tab === "chat";
@@ -100,8 +103,9 @@ export function RoomLayout(p: RoomLayoutProps) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "web" ? undefined : "padding"}
-      style={{ flex: 1, backgroundColor: c.bg }}
+      style={{ flex: 1 }}
     >
+      <OndaAmbientBackground context={p.room.media.kind === 'radio' ? 'radio' : p.room.media.kind === 'audio' ? 'music' : 'social'}/>
       {/* padding-mode KeyboardAvoidingView overrides its own paddingBottom; keep the gesture inset inside it. */}
       <View style={{flex: 1, paddingBottom: keyboard ? 0 : insets.bottom}}>
       {/* Leave, room, search, people and settings stay visible without displacing the conversation. */}
@@ -137,13 +141,13 @@ export function RoomLayout(p: RoomLayoutProps) {
       >
         {/* While writing in the chat on a phone the stage collapses (still mounted, so playback continues). */}
         <View style={wide ? { flex: 1.7 } : typing ? { height: 0, overflow: "hidden" } : undefined}>
-          <View style={{ paddingHorizontal: 12, gap: 8 }}>
-            {!!p.reaction && <View pointerEvents="none" style={{position: "absolute", right: 24, top: 28, zIndex: 2}}><Label style={{fontSize: 46, lineHeight: 56}}>{p.reaction}</Label></View>}
+          <StageContainer {...(wide ? {contentContainerStyle: {paddingHorizontal: 12, gap: 8}} : {style: {paddingHorizontal: 12, gap: 8}})}>
+            <OndaReactionOverlay emoji={p.reaction}/>
             {p.room.media.kind === "stream" ? (
               <StreamRoomStage media={p.room.media} playing={p.connected && p.room.isPlaying} position={p.desiredPosition} positionAt={p.positionAt}
                 controller={p.controller} connected={p.connected} onPlayback={p.onPlayback} />
             ) : !p.room.media.url ? (
-              <View style={{minHeight: 190, padding: 22, borderRadius: 20, backgroundColor: c.surface, alignItems: "center", justifyContent: "center", gap: 10}}>
+              <View style={{minHeight: 175, padding: 22, borderRadius: 24, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, alignItems: "center", justifyContent: "center", gap: 10}}>
                 <Ionicons name={p.room.media.kind === "youtube" ? "logo-youtube" : p.room.media.kind === "radio" ? "radio-outline" : "play-circle-outline"} size={44} color={c.primary} />
                 <Label style={{fontSize: 20, fontWeight: "800"}}>Tu sala está lista</Label>
                 <Muted style={{textAlign: "center"}}>{p.controller ? "Busca el contenido que quieres compartir." : "El anfitrión está eligiendo el contenido. Puedes proponer algo."}</Muted>
@@ -187,7 +191,7 @@ export function RoomLayout(p: RoomLayoutProps) {
               {p.controller && ownTransport && !!p.room.media.url && (
                 <Pressable accessibilityRole="button" accessibilityLabel={p.room.isPlaying ? "Pausar para todos" : "Reproducir para todos"}
                   disabled={!p.connected || p.busy} onPress={() => p.onPlayback(!p.room.isPlaying, p.room.media.kind === "radio" ? 0 : current())}
-                  style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: c.primary, opacity: p.connected ? 1 : 0.5, marginRight: 6 }}>
+                  style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", ...gradientStyle(c.brand, c.primary), opacity: p.connected ? 1 : 0.5, marginRight: 6 }}>
                   <Ionicons name={p.room.isPlaying ? "pause" : "play"} size={22} color={c.onPrimary} />
                 </Pressable>
               )}
@@ -214,7 +218,8 @@ export function RoomLayout(p: RoomLayoutProps) {
             {p.room.media.kind !== "youtube" && !p.room.media.url && <Button title={contentLabel}
               secondary icon="add-outline"
               disabled={!p.connected || p.busy} onPress={chooseContent} />}
-          </View>
+            {!keyboard && <View style={{flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 4}}><Pressable accessibilityRole="button" accessibilityLabel={`Ver ${p.room.members.length} participantes`} onPress={() => p.onTab('people')} style={{flex: 1, flexDirection: 'row', gap: 8, alignItems: 'center', minHeight: 44}}><MemberStack members={p.room.members} owner={p.room.ownerId}/><Muted style={{fontSize: 11}}>{p.room.members.length} {p.room.members.length === 1 ? 'persona' : 'personas'}</Muted></Pressable><IconButton icon="person-add-outline" label="Invitar a mis amigos" onPress={() => p.onSheet('invite')}/></View>}
+          </StageContainer>
         </View>
         <View
           style={{

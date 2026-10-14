@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {AccessibilityInfo, ActivityIndicator, FlatList, Platform, Pressable, ScrollView, TextInput, View, type ImageSourcePropType} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import {useTheme} from '../../theme';
+import {gradientStyle, useTheme} from '../../theme';
 import {Ionicons} from '../../icons';
 import {ActionRow, Chip, Label, Muted, Sheet, type IconName} from '../../ui';
 import {Avatar} from './presentation';
@@ -206,7 +206,7 @@ function Composer(p: RoomLayoutProps & {onError: (message: string) => void}) {
       </>}
       <Muted style={{fontSize: 11, fontWeight: '700'}}>REACCIÓN FLOTANTE PARA LA SALA</Muted>
       <View style={{flexDirection: 'row', gap: 4}}>
-        {['❤️', '🔥', '👏', '😂', '😮', '🎵'].map(emoji => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Reacción flotante ${emoji} para la sala`}
+        {['❤️', '🔥', '😂', '🎉', '😍', '👏'].map(emoji => <Pressable key={emoji} accessibilityRole="button" accessibilityLabel={`Reacción flotante ${emoji} para la sala`}
           disabled={!p.connected} onPress={() => {setMenu(false); void p.act('React', p.room.id, emoji);}}
           style={{minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center'}}><Label style={{fontSize: 22}}>{emoji}</Label></Pressable>)}
       </View>
@@ -225,7 +225,6 @@ function Composer(p: RoomLayoutProps & {onError: (message: string) => void}) {
         : <RoundButton icon="arrow-up" label="Enviar mensaje" primary disabled onPress={() => {}}/>}
     </View>
     {text.length > chatLimits.text - 200 && <Muted style={{fontSize: 11, alignSelf: 'flex-end'}}>{text.length}/{chatLimits.text}</Muted>}
-    {!!p.reaction && <Label accessibilityLiveRegion="polite" style={{position: 'absolute', right: 20, top: -36, fontSize: 28}}>{p.reaction}</Label>}
   </View>;
 }
 
@@ -234,7 +233,7 @@ function RoundButton({icon, label, onPress, primary, disabled, busy, tint, small
   const c = useTheme(); const size = small ? 44 : 46;
   return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled: !!disabled, busy: !!busy}} disabled={disabled || busy} onPress={onPress}
     style={({pressed}) => ({width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center', opacity: disabled ? .45 : pressed ? .7 : 1,
-      backgroundColor: small ? 'transparent' : primary ? c.primary : c.surfaceAlt})}>
+      ...(primary ? gradientStyle(c.brand, c.primary) : {backgroundColor: small ? 'transparent' : c.surfaceAlt})})}>
     {busy ? <ActivityIndicator color={primary ? c.onPrimary : c.primary}/> : <Ionicons name={icon} size={small ? 18 : 22} color={tint ?? (primary ? c.onPrimary : c.text)}/>}
   </Pressable>;
 }

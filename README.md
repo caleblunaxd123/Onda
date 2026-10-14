@@ -3,11 +3,11 @@
 
 Aplicación social de radio, música y video con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: **beta 0.5 desplegada**; faltan pruebas físicas para aceptar el MVP.
+Estado: **beta 0.6 en revisión local**. API/web 0.6 iniciales desplegadas; corrección final compacta/vertical y APK pendientes de publicación. APK público aún 0.5.0. Faltan pruebas físicas.
 
 Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.5.0&build=7.1).
 El APK incluye JavaScript, funciona sin Metro y usa HTTPS. Firma de depuración para beta interna; no es una publicación en tiendas.
-Continuación actual: [prompt completo de salas, diseño y chat para Claude Code](docs/CLAUDE_ROOM_CHAT_PROMPT.md).
+Continuación actual: [prompt completo de salas, diseño y chat para Claude Code](docs/CLAUDE_NEXT_LEVEL_PROMPT.md).
 
 ## Qué incluye
 - Catálogo de ~68.000 emisoras de Radio Browser sincronizado en SQL Server (solo se reproducen streams HTTPS),
@@ -16,10 +16,11 @@ Continuación actual: [prompt completo de salas, diseño y chat para Claude Code
 - Radio personalizada por el país detectado (zona horaria del dispositivo, sin GPS), búsqueda con filtros
   (país, ciudad, idioma, género), mapa por área visible con clusters, Radio Radar con carga progresiva,
   reproductor global con reintentos y fuentes alternativas, reportes de problemas, biblioteca local con colecciones.
-- Diseño según docs/design-reference.png, tema claro/oscuro/automático. Capturas: docs/screenshots.
+- ONDA Experience según docs/design-references: neón contextual, claro/inmersivo/suave/automático.
+  Inicio horizontal compacto y navegación vertical. Capturas: docs/screenshots.
 - Salas públicas/privadas con invitados, chat, reacciones, cola con votos, controles del anfitrión, transferencia de control,
   expulsión, reportes, reconexión y códigos renovables. Radio, YouTube/YouTube Music y archivos HTTPS de audio/video.
-- Crear sala -> elegir fuente -> entrar automáticamente -> buscar contenido en la sala.
+- Crear sala -> fuente y privacidad -> Crear y entrar -> buscar contenido dentro de la sala.
   YouTube abre directamente su navegador Android; la selección del anfitrión comparte el video con el grupo.
   En web, búsqueda de YouTube en otra pestaña y pegado del enlace; cambios del reproductor compartidos por el anfitrión.
 - Chat ligero: respuestas, reacciones, edición, borrado, mensajes fijados y seis stickers incluidos.

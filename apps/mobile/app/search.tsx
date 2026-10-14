@@ -101,7 +101,7 @@ export default function Search() {
       <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8}}>{tagMatches.slice(0, 14).map(t => <Chip key={t.value} label={t.label} onPress={() => chooseTag(t.value)}/>)}</View>
     </View>}/>;
 
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
+  return <View style={{flex: 1}}>
     <ScreenHeader title="Buscar" subtitle="Encuentra lo que te gusta" back/>
     {body}
     {languagePicker}

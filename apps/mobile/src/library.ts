@@ -70,7 +70,7 @@ type Library = {
   removeFromCollection: (id: string, stationId: string) => void;
 };
 export const useLibrary = create<Library>()(persist((set) => ({
-  favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'soft', appearanceVersion: 1, countryMode: 'auto',
+  favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'dark', appearanceVersion: 2, countryMode: 'auto',
   mediaFavorites: [], toggleMedia: media => set(x => ({mediaFavorites: x.mediaFavorites.some(item => item.media.url === media.url)
     ? x.mediaFavorites.filter(item => item.media.url !== media.url)
     : [{id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12), media}, ...x.mediaFavorites].slice(0, 100)})),
@@ -112,7 +112,7 @@ export const useLibrary = create<Library>()(persist((set) => ({
   merge: (persisted, current) => {
     const saved = (persisted ?? {}) as Partial<Library>;
     const existing = !!saved.favorites?.length || !!saved.history?.length || !!saved.collections?.length;
-    return {...current, ...saved, ...(saved.appearanceVersion === 1 ? {} : {theme: 'soft' as const, appearanceVersion: 1}), onboarded: saved.onboarded ?? existing};
+    return {...current, ...saved, ...(saved.appearanceVersion === 2 ? {} : {theme: saved.theme && saved.theme !== 'soft' ? saved.theme : 'dark' as const, appearanceVersion: 2}), onboarded: saved.onboarded ?? existing};
   },
 }));
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "ONDA",
     "slug": "onda",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "scheme": "onda",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -11,13 +11,14 @@
       "bundleIdentifier": "app.onda.radio"
     },
     "android": {
-      "versionCode": 7,
+      "versionCode": 8,
       "package": "app.onda.radio",
       "blockedPermissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ],
       "allowBackup": false,
       "adaptiveIcon": {
@@ -34,8 +35,8 @@
         {
           "enableBackgroundPlayback": true,
           "enableBackgroundRecording": false,
-          "recordAudioAndroid": true,
-          "microphonePermission": "ONDA usa el micrófono solo mientras grabas una nota de voz para el chat de una sala."
+          "recordAudioAndroid": false,
+          "microphonePermission": false
         }
       ],
       "expo-secure-store",
@@ -50,10 +51,10 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 240,
           "resizeMode": "contain",
-          "backgroundColor": "#25344A",
+          "backgroundColor": "#F5F8FC",
           "dark": {
             "image": "./assets/splash-icon.png",
-            "backgroundColor": "#25344A"
+            "backgroundColor": "#080E29"
           }
         }
       ]

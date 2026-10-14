@@ -10,6 +10,7 @@ import {FormField} from '../src/components/forms';
 import {accountRequest, signOut, useAuth, type Listener, type SessionResponse} from '../src/features/account/session';
 import {syncLibrary, useCloudSync} from '../src/features/account/cloud-sync';
 import {GoogleLoginButton} from '../src/features/account/google';
+import {OndaAmbientBackground, OndaMotionCard} from '../src/components/experience';
 
 export default function AccountScreen() {
   const c = useTheme(); const auth = useAuth(); const library = useLibrary(); const cloud = useCloudSync();
@@ -44,9 +45,11 @@ export default function AccountScreen() {
     catch (e) {setError(e instanceof Error ? e.message : 'No se pudo eliminar la cuenta.');} finally {setBusy(false);}
   };
   const enabled = !!user && library.syncAccountId === user.id;
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
+  return <View style={{flex: 1}}>
+    <OndaAmbientBackground/>
     <ScreenHeader title="Tu cuenta" back/>
     <Page>
+      {(!user || user.guest) && <OndaMotionCard><View style={{gap: 6, paddingHorizontal: 4, paddingBottom: 4}}><Label style={{fontSize: 28, lineHeight: 35, fontWeight: '800'}}>Mira, escucha y comparte.</Label><Muted>Tu gente y tus favoritos, en un solo lugar.</Muted></View></OndaMotionCard>}
       <Card>
         <View style={{flexDirection: 'row', gap: 14, alignItems: 'center'}}><View style={{width: 56, height: 56, borderRadius: 28, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center'}}><Ionicons name="person" size={28} color={c.accent}/></View><View style={{flex: 1}}><Label style={{fontSize: 21, fontWeight: '800'}}>{user?.displayName ?? 'Tu mundo, contigo'}</Label><Muted>{user?.email ?? 'Puedes entrar a las salas como invitado.'}</Muted></View></View>
         {user?.guest && <Muted>Conserva tu identidad de invitado al crear una cuenta. Tu contraseña y biblioteca estarán protegidas en ONDA.</Muted>}

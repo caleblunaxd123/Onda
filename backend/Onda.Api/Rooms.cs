@@ -209,7 +209,7 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
     public async Task React(Guid id, string emoji)
     {
         Limit("reaction", 6, 10); await MemberAsync(id);
-        if (!new[] {"❤️", "🔥", "👏", "😂", "🎵"}.Contains(emoji)) throw new HubException("Reacción inválida.");
+        if (!new[] {"❤️", "🔥", "👏", "😂", "🎵", "🎉", "😍"}.Contains(emoji)) throw new HubException("Reacción inválida.");
         await Clients.Group(id.ToString()).SendAsync("Reaction", new RoomReaction(Account, emoji));
     }
     public async Task SetPlayback(Guid id, PlaybackCommand command)

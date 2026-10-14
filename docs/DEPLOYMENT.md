@@ -1,4 +1,4 @@
-# Despliegue verificado — beta 0.5, 2026-10-14
+# Producción y revisión local — 2026-10-14
 
 - Web: https://onda.lunalav.pe
 - API: https://onda-api.lunalav.pe (`/health/live`, `/health/ready`).
@@ -9,6 +9,14 @@
   arm64-v8a, armeabi-v7a y x86_64; JS incluido, HTTPS, firma de depuración para beta interna.
   APK 0.4 anterior conservado en `/opt/onda/releases/ONDA-beta-0.4.0-build5.apk`.
 
+## Revisión 0.6
+API y web inicial 0.6 actualizadas antes de la petición nueva de aprobar producción. La última corrección
+compacta de tarjetas y orientación vertical está en el repositorio/APK local y no se publicó después.
+La ampliación de emojis no necesitó migración de SQL. Smoke público pasó 32/32.
+APK local `dist/ONDA-0.6.0-contabo.apk`, versionCode8; 124.482.718 bytes, SHA256 `812541ec40ef7ad0544e14df02a1ef00a5461912a959c673455c5e1362882e78`.
+Instalado con -r y cuenta/biblioteca conservadas. Orientación portrait y permiso RECORD_AUDIO ausente en APK.
+No publicar esta revisión ni productos/cargos sin autorización. APK público sigue siendo 0.5.0 build7.1.
+
 ## Contabo y Cloudflare
 VPS 217.216.82.43, despliegue `/opt/onda`, acceso SSH del propietario con usuario `deploy`.
 Los registros A `onda` y `onda-api` están proxied en Cloudflare. Caddy existente termina HTTPS y solo acepta
@@ -17,7 +25,7 @@ ASP.NET confía únicamente en el proxy configurado 10.77.0.10. SQL no tiene pue
 No se modificaron rutas ni datos de otras aplicaciones del VPS.
 
 `infra/contabo/compose.yaml`: API, migrador y Ollama; redes existentes `stack_data` (interna) y `stack_web`,
-más red privada `onda_ai`. Imagen activa API `onda-api:20261014-light-social` (chat persistente, pins y Google preparado; subidas deshabilitadas). Adjuntos privados en `/opt/onda/uploads` → `/data/chat-uploads` (UID 1654, 0700), fuera de `public`.
+más red privada `onda_ai`. Imagen activa API `onda-api:20261014-ui-experience` (chat persistente, pins y Google preparado; subidas deshabilitadas). Adjuntos privados en `/opt/onda/uploads` → `/data/chat-uploads` (UID 1654, 0700), fuera de `public`.
 Ollama fijado a digest `sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c`;
 modelo `qwen2.5:1.5b` descargado. Límite API 768 MB/1,5 CPU; Ollama 2 GB/2 CPU.
 IA verificada con `engine=local-ai`, filtros reales y 8 estaciones; respaldo por reglas en indisponibilidad.

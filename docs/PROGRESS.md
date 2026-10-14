@@ -1,11 +1,11 @@
-# Progreso — beta 0.5 (2026-10-14 UTC)
+# Progreso — beta 0.6 (2026-10-14 UTC)
 
 Decisiones actuales del propietario: producto multimedia social; inicio sencillo como lista de salas;
-paleta azul gris suave; Crear sala → fuente → entrar → buscar dentro. El chat NO permite subir fotos,
+identidad ONDA Experience neón (claro/suave alternativos); Crear sala → fuente/privacidad → entrar → buscar dentro. El chat NO permite subir fotos,
 archivos ni grabaciones. Solo texto, respuestas, reacciones, stickers incluidos, edición/borrado y mensajes fijados.
 Voz en vivo pendiente, sin grabar audio. Google se deja preparado, sin activarlo hasta disponer de OAuth.
 
-## Publicado
+## Base 0.5 publicada y conservada
 - Inicio: salas, invitaciones, búsqueda y «Crear sala». Radio pasa a pestaña propia; catálogo, Mundo, Radar,
   biblioteca y ONDA AI se conservan. `/rooms` redirige al inicio, incluyendo el filtro «Mis salas».
 - Selector: cuatro fuentes principales; otros servicios explican que se abren fuera de ONDA y usan reloj manual.
@@ -27,7 +27,7 @@ Voz en vivo pendiente, sin grabar audio. Google se deja preparado, sin activarlo
 
 ## Validación y producción
 - 140 pruebas backend con SQL Server Express real; 87 móviles + TypeScript/ESLint. Export web y APK arm64,
-  armv7 y x86_64. Prueba pública de dos clientes: 30/30, incluida denegación de todos los adjuntos y pins.
+  armv7 y x86_64. Prueba pública de dos clientes: 32/32, incluida denegación de todos los adjuntos y pins.
 - Android: búsqueda real Big Buck Bunny → selección compartida; Sintel a la cola sin cambiar el actual.
   Beta 0.5: mensaje real, fijar, salir/reentrar y ver el fijado; sticker recibido por segundo cliente sin adjuntos.
   Cuenta AndroidQA y biblioteca preservadas con instalación `-r`; se cerraron/eliminaron solo QA propias.
@@ -50,3 +50,13 @@ Voz en vivo pendiente, sin grabar audio. Google se deja preparado, sin activarlo
 
 No afirmar reproducción Netflix/Disney/Prime integrada, búsqueda YouTube web nativa, voz RTC, PiP o casting.
 Ver provider-compatibility.md, TESTING.md, DEPLOYMENT.md y GOOGLE_SIGN_IN.md.
+
+## Revisión 0.6 actual
+- Inicio ambiental, salas horizontales compactas (portada 112 dp/padding 6), CTA que reserva espacio, filtros en sheet.
+- Selector fuente/privacidad/Crear y entrar, perfil/acceso, biblioteca y exploración de salas/guardados/radios con listas virtualizadas.
+- Reacciones animadas con movimiento reducido, avatares reales en la sala y tema claro.
+- Navegación vertical fijada en app.json; emulador restaurado tras QA horizontal, densidad/fontScale normales.
+- API onda-api:20261014-ui-experience y web inicial 0.6 publicadas bajo autorización anterior.
+  La última corrección compacta/vertical y el APK 0.6 quedan locales/en GitHub; no publicados tras la instrucción nueva.
+- No monetización/telemetría nueva. Auditoría y planificación Next Level documentadas; ninguna función comercial simulada.
+- Prompt completo: CLAUDE_NEXT_LEVEL_PROMPT.md. Faltan RTC, HLS, OAuth real, pruebas físicas y seguridad global/comunidades.

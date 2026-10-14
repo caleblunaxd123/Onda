@@ -22,17 +22,17 @@ const light: Palette = {
   live: '#E5384F', border: '#E1E8F2',
   shadow: '0px 6px 18px rgba(15, 26, 53, 0.08)',
   featured: 'linear-gradient(120deg, #0B1B4D 0%, #1D3FA6 52%, #6B2FC9 100%)', featuredFallback: '#1A2C78',
-  brand: 'linear-gradient(135deg, #12D3E6 0%, #1478E0 62%, #6D3BEF 100%)',
+  brand: 'linear-gradient(115deg, #087FAD 0%, #245CDD 48%, #783BFF 100%)',
   headerGlow: 'linear-gradient(180deg, #D8F3FA 0%, #EAF4FC 55%, #F5F8FC 100%)',
 };
 const dark: Palette = {
-  isDark: true, bg: '#0A1226', surface: '#142240', surfaceAlt: '#1B2B4C', text: '#F4F8FF', muted: '#A6B8D0',
-  primary: '#22CBE8', primaryText: '#5EDDF2', onPrimary: '#04202B', accent: '#A78BFA', accentSoft: '#2A2453',
-  live: '#FF5C74', border: '#24365A',
+  isDark: true, bg: '#080E29', surface: '#111A3FEF', surfaceAlt: '#202856', text: '#FFFFFF', muted: '#B8C5E9',
+  primary: '#11DDF4', primaryText: '#6AE9F7', onPrimary: '#FFFFFF', accent: '#B195FF', accentSoft: '#30235E',
+  live: '#FF386B', border: '#434778',
   shadow: '0px 6px 18px rgba(0, 0, 0, 0.35)',
   featured: 'linear-gradient(120deg, #0E1E52 0%, #1F3C9C 52%, #6B2FC9 100%)', featuredFallback: '#1B2C70',
-  brand: 'linear-gradient(135deg, #12D3E6 0%, #1478E0 62%, #6D3BEF 100%)',
-  headerGlow: 'linear-gradient(180deg, #102A52 0%, #0D1A36 60%, #0A1226 100%)',
+  brand: 'linear-gradient(115deg, #087FAD 0%, #245CDD 48%, #783BFF 100%)',
+  headerGlow: 'linear-gradient(145deg, #101A4B 0%, #25105C 70%, #080E29 100%)',
 };
 
 export function useTheme(): Palette {

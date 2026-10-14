@@ -1,7 +1,9 @@
 import {gradientStyle, useTheme} from '../../theme';
 import { useState, type ReactNode } from "react";
-import { Image, Pressable, View, type ViewStyle } from "react-native";
+import { Image, View, type ViewStyle, useWindowDimensions } from "react-native";
 import { Ionicons } from "../../icons";
+import {OndaGradientButton, OndaGlassSurface, OndaPressable} from '../../components/experience';
+import {Button} from '../../components/controls';
 import { Artwork, Label, Muted } from "../../ui";
 import type { Member, RoomMedia, RoomSummary } from "./types";
 
@@ -128,34 +130,40 @@ export function MediaPoster({
     </View>
   );
 }
-/** Rave-style list row: what is playing (thumbnail + title), the room and how many people are in it. */
-export function RoomRow({room, onPress}: {room: RoomSummary; onPress: () => void}) {
-  const c = useTheme();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Entrar a ${room.name}: ${room.media.title}, ${room.listeners} ${room.listeners === 1 ? "persona" : "personas"}`}
-      onPress={onPress}
-      style={({ pressed }) => ({ flexDirection: "row", gap: 12, padding: 8, borderRadius: 18, backgroundColor: c.surface, alignItems: "center", opacity: pressed ? 0.8 : 1 })}>
-      <View style={{width: "36%", maxWidth: 140}}>
-        <MediaPoster media={room.media} style={{height: 76, borderRadius: 12}}/>
-        <View style={{position: "absolute", left: 6, top: 6, width: 24, height: 24, borderRadius: 8, backgroundColor: "#25344AE6", alignItems: "center", justifyContent: "center"}}>
-          <Ionicons name={room.media.kind === "youtube" ? "logo-youtube" : room.media.kind === "radio" ? "radio-outline" : room.media.kind === "audio" ? "musical-notes-outline" : "play-outline"} size={15} color="#FFFFFF"/>
+/** Real room metadata only; presence portraits are not available in the lobby API. */
+export function RoomRow({room, onPress, ownerName}: {room: RoomSummary; onPress: () => void; ownerName?: string}) {
+  const c = useTheme(); const {width, fontScale} = useWindowDimensions();
+  const stacked = width < 320 || fontScale > 1.5;
+  const label = room.media.kind === 'youtube' ? 'YouTube' : room.media.kind === 'radio' ? 'Radio' : room.media.kind === 'audio' ? 'Música' : room.media.kind === 'stream' ? 'Servicio externo' : 'Video';
+  return <OndaPressable accessibilityRole="button" accessibilityLabel={`Unirse a ${room.name}: ${room.media.title}, ${room.listeners} personas conectadas`} onPress={onPress}
+    style={{padding: 6, gap: 10, borderRadius: 20, borderWidth: 1, borderColor: c.border, flexDirection: stacked ? 'column' : 'row',
+      ...gradientStyle(c.isDark ? 'linear-gradient(135deg, #202451EF 0%, #111A3FEE 65%, #30215BEE 100%)' : 'linear-gradient(130deg, #FFFFFF 10%, #F0EAFE 100%)', c.surface), boxShadow: c.shadow}}>
+    <View style={stacked ? {} : {width: '40%'}}>
+      <MediaPoster media={room.media} style={{height: stacked ? 120 : 112, borderRadius: 14}}>
+        <View style={{position: 'absolute', top: 9, left: 8, right: 8, alignItems: 'flex-start'}}>
+          <View style={{paddingHorizontal: 7, paddingVertical: 4, borderRadius: 10, backgroundColor: '#0F174DDD', borderWidth: 1, borderColor: '#FFFFFF35'}}>
+            <Label style={{color: '#FFFFFF', fontWeight: '700', fontSize: 10, lineHeight: 13}}>{label}</Label>
+          </View>
         </View>
+        {room.media.kind === 'radio' && !!room.media.url && <View style={{position: 'absolute', bottom: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 5}}><View style={{width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF386B'}}/><Label style={{color: '#FFFFFF', fontSize: 10, fontWeight: '800'}}>En vivo</Label></View>}
+      </MediaPoster>
+    </View>
+    <View style={{flex: 1, gap: 4, paddingVertical: 2, paddingRight: 3}}>
+      <Label numberOfLines={2} style={{fontSize: 15, lineHeight: 18, fontWeight: '800'}}>{room.media.title}</Label>
+      <Muted numberOfLines={1} style={{fontSize: 11, lineHeight: 15}}>{room.name}</Muted>
+      <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+        {ownerName ? <Avatar member={{id: room.ownerId, name: ownerName}} size={20} host/> : <Ionicons name={room.isPrivate ? 'lock-closed-outline' : 'earth-outline'} size={13} color={c.primaryText}/>}
+        <Muted numberOfLines={1} style={{fontSize: 11, lineHeight: 14, flex: 1}}>{ownerName ? `Por ${ownerName}` : room.isPrivate ? 'Solo invitados' : 'Sala pública'}</Muted>
       </View>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Label numberOfLines={2} style={{ fontSize: 14, fontWeight: "800", lineHeight: 18 }}>{room.media.title}</Label>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <Ionicons name={room.isPrivate ? "lock-closed" : "earth"} size={11} color={c.muted} />
-          <Muted numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>{room.name}</Muted>
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <Ionicons name="people" size={13} color={room.listeners ? c.primaryText : c.muted} />
-          <Muted style={{ fontSize: 11, color: room.listeners ? c.primaryText : c.muted }}>
-            {room.listeners ? `${room.listeners} ${room.listeners === 1 ? "persona" : "personas"} ahora` : "Nadie conectado"}
-          </Muted>
-        </View>
+      <View style={{marginTop: 'auto', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, paddingTop: 3}}>
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}><Ionicons name="people-outline" size={14} color={c.primaryText}/><Muted style={{fontSize: 11, lineHeight: 14}}>{room.listeners}</Muted></View>
+        <View style={{minHeight: 34, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 13, flexDirection: 'row', alignItems: 'center', gap: 5, ...gradientStyle(c.brand, c.primary)}}><Ionicons name="play" size={14} color="#FFFFFF"/><Label style={{color: '#FFFFFF', fontSize: 12, lineHeight: 16, fontWeight: '800'}}>Unirse</Label></View>
       </View>
-    </Pressable>
-  );
+    </View>
+  </OndaPressable>;
+}
+export function OndaContentCard({media, onWatch, onShare, onRemove}: {media: RoomMedia; onWatch: () => void; onShare: () => void; onRemove?: () => void}) {
+  return <OndaGlassSurface style={{padding: 9}}><MediaPoster media={media} style={{height: 180}}/><View style={{padding: 8, gap: 10}}><Label style={{fontSize: 19, lineHeight: 25, fontWeight: '800'}}>{media.title}</Label><Muted>{media.kind === 'youtube' ? 'YouTube' : media.kind === 'audio' ? 'Música por enlace' : media.kind === 'stream' ? 'Servicio externo · reloj manual' : 'Video por enlace'}</Muted><OndaGradientButton title="Reproducir" icon="play" onPress={onWatch}/><Button title="Compartir en una sala" secondary icon="people-outline" onPress={onShare}/>{onRemove && <Button title="Quitar de mi biblioteca" secondary icon="bookmark-outline" onPress={onRemove}/>}</View></OndaGlassSurface>;
 }
 export function RadioStage({
   media,
