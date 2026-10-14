@@ -14,7 +14,7 @@ public sealed record RoomView(Guid Id, string Name, bool IsPrivate, Guid OwnerId
     bool IsPlaying, double PositionSeconds, DateTimeOffset PlaybackUpdatedAt, long Version, RoomMember[] Members, QueueView[] Queue, DateTimeOffset ServerNow,
     Guid[] Cohosts, bool AutoRecovery, DateTimeOffset? HostAbsentSince);
 public sealed record RoomSummary(Guid Id, string Name, bool IsPrivate, Guid OwnerId, RoomMedia Media, int Listeners);
-public sealed record CreateRoom(string? Name, bool IsPrivate, MediaInput Media, bool AutoRecovery = false);
+public sealed record CreateRoom(string? Name, bool IsPrivate, MediaInput Media, bool AutoRecovery = false, string? Provider = null);
 public sealed record PlaybackCommand(bool Playing, double PositionSeconds, long Version);
 public sealed record ChangeMediaCommand(MediaInput Media, long Version, bool Playing = true, double PositionSeconds = 0);
 public sealed record RoomReportRequest(Guid? AccountId, string? Reason);
@@ -45,9 +45,16 @@ public sealed class RoomService(OndaDbContext db, MediaResolver resolver, RoomPr
         try
         {
         if (await db.ListeningRooms.CountAsync(x => x.OwnerId == owner && !x.Closed, ct) >= 3) return null;
-        var media = await resolver.ResolveAsync(input.Media, ct); if (media is null) return null;
+        RoomMedia? media;
+        if (input.Provider is not null)
+        {
+            if (input.Provider is not ("youtube" or "radio" or "audio" or "video") || input.Media.Kind != input.Provider || input.Media.Url is not null || input.Media.StationId is not null) return null;
+            media = new(input.Provider, input.Provider switch {"youtube" => "Elige un video de YouTube", "radio" => "Busca una emisora", "audio" => "Elige música", _ => "Elige un video"}, null, null, null, input.Provider == "audio" ? "music" : "video");
+        }
+        else media = await resolver.ResolveAsync(input.Media, ct);
+        if (media is null) return null;
         var now = clock.GetUtcNow();
-        var room = new ListeningRoom {Id = Guid.NewGuid(), OwnerId = owner, Name = name, IsPrivate = input.IsPrivate, IsPlaying = true, AutoRecovery = input.AutoRecovery,
+        var room = new ListeningRoom {Id = Guid.NewGuid(), OwnerId = owner, Name = name, IsPrivate = input.IsPrivate, IsPlaying = media.Url is not null, AutoRecovery = input.AutoRecovery,
             InviteCode = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(6)),
             Media = JsonSerializer.Serialize(media), Version = 1, CreatedAt = now, UpdatedAt = now, PlaybackUpdatedAt = now};
         db.ListeningRooms.Add(room); await db.SaveChangesAsync(ct); return View(room);
@@ -161,6 +168,7 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
         try
         {
             var room = await MemberAsync(id, controller: true);
+            if (RoomService.Media(room).Url is null) throw new HubException("Elige contenido para la sala antes de reproducir.");
             if (command.Version != room.Version || !double.IsFinite(command.PositionSeconds) || command.PositionSeconds is < 0 or > 86400) throw new HubException("Actualiza la sala antes de cambiar la reproducción.");
             room.IsPlaying = command.Playing; room.PositionSeconds = RoomService.Media(room).Kind == "radio" ? 0 : command.PositionSeconds;
             room.PlaybackUpdatedAt = clock.GetUtcNow(); await rooms.SaveAsync(room, Ct); await BroadcastAsync(id);

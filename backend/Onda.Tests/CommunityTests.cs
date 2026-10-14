@@ -182,6 +182,30 @@ public class CommunityTests : IAsyncLifetime
         await peer.InvokeAsync("ChangeMedia", room.Id, new ChangeMediaCommand(new("video", "https://youtu.be/M7lc1UVf-VE", Title: "Otra vez"), changed.Version, false));
         Assert.False((await owner.InvokeAsync<RoomView>("Snapshot", room.Id)).IsPlaying);
     }
+    [SkippableTheory]
+    [InlineData("youtube")]
+    [InlineData("radio")]
+    [InlineData("audio")]
+    [InlineData("video")]
+    public async Task ProviderCreatesPausedRoomUntilOwnerChoosesContent(string provider)
+    {
+        RequireSql(); await using var app = Factory();
+        using var ownerClient = await ClientAsync(app, "Anfitrión"); using var peerClient = await ClientAsync(app, "Amiga");
+        var created = await ownerClient.PostAsJsonAsync("/api/v1/rooms/", new CreateRoom("Selección directa", true, new(provider), Provider: provider));
+        created.EnsureSuccessStatusCode(); var room = (await created.Content.ReadFromJsonAsync<RoomView>())!;
+        Assert.Equal(provider, room.Media.Kind); Assert.Null(room.Media.Url); Assert.Null(room.Media.VideoId); Assert.False(room.IsPlaying);
+        await using var owner = Hub(app, ownerClient); await using var peer = Hub(app, peerClient);
+        await owner.StartAsync(); await peer.StartAsync(); await owner.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+        var joined = await peer.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+        await Assert.ThrowsAsync<HubException>(() => owner.InvokeAsync("SetPlayback", room.Id, new PlaybackCommand(true, 0, joined.Version)));
+        var received = new TaskCompletionSource<RoomView>(TaskCreationOptions.RunContinuationsAsynchronously);
+        peer.On<RoomView>("State", value => {if (value.Media.Url is not null) received.TrySetResult(value);});
+        await owner.InvokeAsync("ChangeMedia", room.Id, new ChangeMediaCommand(new("video", "https://youtu.be/M7lc1UVf-VE", Title: "Elegido"), joined.Version));
+        Assert.Equal("Elegido", (await received.Task.WaitAsync(TimeSpan.FromSeconds(10))).Media.Title);
+        Assert.True((await peer.InvokeAsync<RoomView>("Snapshot", room.Id)).IsPlaying);
+        var invalid = await ownerClient.PostAsJsonAsync("/api/v1/rooms/", new CreateRoom("Inválida", true, new(provider), Provider: "untrusted"));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+    }
     private sealed record RoomList(RoomSummary[] Items);
     private sealed class ManualClock : TimeProvider
     {

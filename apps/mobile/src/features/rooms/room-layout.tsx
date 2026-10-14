@@ -57,6 +57,7 @@ export type RoomLayoutProps = {
   saved: boolean;
   toggleSave: () => void;
   onMember: (member: Member) => void;
+  onBrowseYoutube: () => void;
   onSheet: (sheet: "add" | "invite" | "report" | "close") => void;
   act: (method: string, ...args: unknown[]) => Promise<boolean>;
   children?: ReactNode;
@@ -128,7 +129,13 @@ export function RoomLayout(p: RoomLayoutProps) {
       >
         <View style={wide ? { flex: 1.7 } : undefined}>
           <View style={{ paddingHorizontal: 14, gap: 9 }}>
-            {p.room.media.kind === "radio" ? (
+            {!p.room.media.url ? (
+              <View style={{minHeight: 190, padding: 22, borderRadius: 20, backgroundColor: c.surface, alignItems: "center", justifyContent: "center", gap: 10}}>
+                <Ionicons name={p.room.media.kind === "youtube" ? "logo-youtube" : p.room.media.kind === "radio" ? "radio-outline" : "play-circle-outline"} size={44} color={c.primary} />
+                <Label style={{fontSize: 20, fontWeight: "800"}}>Tu sala está lista</Label>
+                <Muted style={{textAlign: "center"}}>{p.controller ? "Busca el contenido que quieres compartir." : "El anfitrión está eligiendo el contenido. Puedes proponer algo en la cola."}</Muted>
+              </View>
+            ) : p.room.media.kind === "radio" ? (
               <RadioStage media={p.room.media} status={p.radioStatus} />
             ) : (
               <MediaFrame
@@ -207,12 +214,12 @@ export function RoomLayout(p: RoomLayoutProps) {
                   </Muted>
                 </View>
               </View>
-              <IconButton
+              {!!p.room.media.url && <IconButton
                 icon={p.saved ? "bookmark" : "bookmark-outline"}
                 label="Guardar o quitar contenido"
                 onPress={p.toggleSave}
-              />
-              {p.room.media.kind !== "radio" && (
+              />}
+              {p.room.media.kind !== "radio" && !!p.room.media.url && (
                 <IconButton
                   icon={theater ? "contract-outline" : "expand-outline"}
                   label={theater ? "Salir del modo cine" : "Modo cine"}
@@ -220,7 +227,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                 />
               )}
             </View>
-            {p.room.media.kind !== "radio" && (
+            {p.room.media.kind !== "radio" && !!p.room.media.url && (
               <SeekBar
                 position={p.position}
                 duration={p.duration}
@@ -236,7 +243,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                 paddingVertical: 2,
               }}
             >
-              {p.controller && (
+              {p.controller && !!p.room.media.url && (
                 <>
                   <Pressable
                     accessibilityRole="button"
@@ -328,9 +335,9 @@ export function RoomLayout(p: RoomLayoutProps) {
                 {p.error}
               </Muted>
             )}
-            <Button title={p.room.media.kind === "youtube" ? "Buscar otro video" : "Elegir más contenido"}
+            <Button title={p.room.media.kind === "youtube" ? "YouTube" : p.room.media.kind === "radio" ? "Buscar emisoras" : "Elegir contenido"}
               secondary icon={p.room.media.kind === "youtube" ? "logo-youtube" : "add-outline"}
-              disabled={!p.connected || p.busy} onPress={() => p.onSheet("add")} />
+              disabled={!p.connected || p.busy} onPress={() => p.room.media.kind === "youtube" ? p.onBrowseYoutube() : p.onSheet("add")} />
           </View>
         </View>
         <View

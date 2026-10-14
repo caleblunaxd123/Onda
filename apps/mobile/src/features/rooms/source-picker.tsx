@@ -1,5 +1,5 @@
 import { useDeferredValue, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import { lookupStations, useStationFeed } from "../../catalog";
 import { useQuery } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
@@ -20,19 +20,31 @@ import type { Station } from "../../types";
 import type { MediaInput } from "./types";
 import { MediaPoster } from "./presentation";
 import { YoutubeBrowser } from "./youtube-browser";
+import { youtubeVideoUrl } from "./youtube-navigation";
 export function SourcePicker({
   value,
   onChange,
   initialStation,
+  openYoutubeInitially = false,
+  onChoose,
+  onBrowseClose,
 }: {
   value: MediaInput;
   onChange: (value: MediaInput) => void;
   initialStation?: Station | null;
+  openYoutubeInitially?: boolean;
+  onChoose?: (value: MediaInput) => void;
+  onBrowseClose?: () => void;
 }) {
   const c = useTheme();
   const country = useLibrary((s) => s.country);
   const bookmarks = useLibrary((s) => s.mediaFavorites);
   const [pasteError, setPasteError] = useState("");
+  const [youtubeOpen, setYoutubeOpen] = useState(openYoutubeInitially);
+  const [details, setDetails] = useState(false);
+  const youtubeSelected = value.kind === "youtube";
+  const youtubeUrl = value.url && youtubeVideoUrl(value.url);
+  const choose = (input: MediaInput) => { onChange(input); onChoose?.(input); };
   const paste = async () => {
     try {
       const text = (await Clipboard.getStringAsync()).trim();
@@ -76,25 +88,29 @@ export function SourcePicker({
         {(
           [
             { kind: "radio", label: "Radio", icon: "radio-outline" },
-            { kind: "video", label: "Video", icon: "videocam-outline" },
+            { kind: "youtube", label: "YouTube", icon: "logo-youtube" },
             { kind: "audio", label: "Música", icon: "musical-notes-outline" },
+            { kind: "video", label: "Enlace", icon: "link-outline" },
           ] as const
         ).map((item) => (
           <Chip
             key={item.kind}
             label={item.label}
             icon={item.icon}
-            selected={
-              value.kind === item.kind ||
-              (item.kind === "video" && value.kind === "youtube")
-            }
-            onPress={() =>
+            selected={value.kind === item.kind}
+            onPress={() => {
+              if (item.kind === "youtube") {
+                if (!youtubeSelected) onChange({ kind: "youtube" });
+                setYoutubeOpen(true);
+                return;
+              }
+              setYoutubeOpen(false);
               onChange(
                 item.kind === "radio" && selected
                   ? { kind: "radio", stationId: selected.id }
                   : { kind: item.kind },
-              )
-            }
+              );
+            }}
           />
         ))}
       </View>
@@ -147,7 +163,7 @@ export function SourcePicker({
                     accessibilityLabel={`Usar ${station.name}`}
                     onPress={() => {
                       setSelected(station);
-                      onChange({ kind: "radio", stationId: station.id });
+                      choose({ kind: "radio", stationId: station.id });
                     }}
                     style={({ pressed }) => ({
                       flexDirection: "row",
@@ -189,7 +205,16 @@ export function SourcePicker({
         </>
       ) : (
         <>
-          <YoutubeBrowser onSelect={(url) => onChange({ kind: value.kind === "audio" ? "audio" : "video", url })} />
+          {youtubeOpen && <YoutubeBrowser onClose={() => {setYoutubeOpen(false); onBrowseClose?.();}} onSelect={(url) => {
+            setYoutubeOpen(false);
+            choose({ kind: value.kind === "audio" ? "audio" : "youtube", url });
+          }} />}
+          {youtubeSelected && Platform.OS !== "web" && (
+            <View style={{ gap: 10 }}>
+              {youtubeUrl ? <MediaPoster media={{kind: "youtube", title: value.title || "Video seleccionado", url: youtubeUrl, videoId: new URL(youtubeUrl).searchParams.get("v"), station: null}} style={{ height: 135 }} /> : <Muted>Toca YouTube para elegir un video.</Muted>}
+              <Button title={details ? "Ocultar enlace" : "Usar un enlace"} secondary icon="link-outline" onPress={() => setDetails((x) => !x)} />
+            </View>
+          )}
           {bookmarks.some((x) =>
             value.kind === "audio"
               ? x.media.category === "music" || x.media.kind === "audio"
@@ -210,7 +235,7 @@ export function SourcePicker({
                     accessibilityRole="button"
                     accessibilityLabel={"Usar " + item.media.title}
                     onPress={() =>
-                      onChange({
+                      choose({
                         kind:
                           value.kind === "audio" ? "audio" : item.media.kind,
                         url: item.media.url ?? undefined,
@@ -244,6 +269,7 @@ export function SourcePicker({
                 ))}
             </View>
           )}
+          {(!youtubeSelected || details || Platform.OS === "web") && <>
           <FormField
             label={
               value.kind === "audio" ? "Enlace de música" : "Enlace de video"
@@ -277,6 +303,7 @@ export function SourcePicker({
               ? "YouTube y YouTube Music se reproducen con su video. También MP3, M4A, OGG, AAC o WAV en HTTPS."
               : "YouTube y archivos MP4/WebM públicos. Los videos que bloqueen la reproducción integrada mostrarán una explicación."}
           </Muted>
+          </>}
         </>
       )}
     </View>

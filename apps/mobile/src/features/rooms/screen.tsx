@@ -52,7 +52,11 @@ export default function RoomScreen() {
   const library = useLibrary();
   const nativePlayback = usePlayer();
   const focused = useIsFocused();
-  const params = useLocalSearchParams<{ id?: string; code?: string }>();
+  const params = useLocalSearchParams<{ id?: string; code?: string; choose?: string }>();
+  const initialProvider = ["youtube", "radio", "audio", "video"].includes(params.choose ?? "") ? params.choose as MediaInput["kind"] : undefined;
+  const [startupPicker, setStartupPicker] = useState(!!initialProvider);
+  const [openYoutube, setOpenYoutube] = useState(initialProvider === "youtube");
+  const [directSelection, setDirectSelection] = useState(!!initialProvider);
   const id = typeof params.id === "string" ? params.id : "";
   const code = typeof params.code === "string" ? params.code : "";
   const [name, setName] = useState("");
@@ -65,10 +69,10 @@ export default function RoomScreen() {
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<
     "add" | "invite" | "report" | "close" | null
-  >(null);
+  >(initialProvider ? "add" : null);
   const [member, setMember] = useState<Member | null>(null);
   const [copied, setCopied] = useState("");
-  const [input, setInput] = useState<MediaInput>({ kind: "video" });
+  const [input, setInput] = useState<MediaInput>({ kind: initialProvider ?? "video" });
   const [reason, setReason] = useState("");
   const [mediaFailure, setMediaFailure] = useState({ source: "", message: "" });
   const [tapSource, setTapSource] = useState("");
@@ -387,8 +391,18 @@ export default function RoomScreen() {
           : library.toggleMedia(room.media)
       }
       onMember={setMember}
+      onBrowseYoutube={() => {
+        setStartupPicker(false); setDirectSelection(true);
+        setInput({kind: "youtube"}); setOpenYoutube(true); setSheet("add");
+      }}
       onSheet={(sheet) => {
         if (sheet === "report") setMember(null);
+        if (sheet === "add") {
+          setStartupPicker(false);
+          setDirectSelection(!room.media.url);
+          setInput({kind: room.media.kind});
+          setOpenYoutube(room.media.kind === "youtube");
+        }
         setSheet(sheet);
       }}
       act={act}
@@ -460,9 +474,13 @@ export default function RoomScreen() {
           )}
         </Sheet>
       )}
-      {sheet === "add" && (
-        <Sheet title="Qué compartimos después" onClose={() => setSheet(null)}>
-          <SourcePicker value={input} onChange={setInput} />
+      {sheet === "add" && (!startupPicker || !room.media.url) && (
+        <Sheet title={room.media.url ? "Qué compartimos después" : "Elige qué mostrar"} onClose={() => setSheet(null)}>
+          <SourcePicker value={input} onChange={setInput} openYoutubeInitially={openYoutube} onBrowseClose={() => {if (directSelection) setSheet(null);}} onChoose={(media) => {
+            if (!directSelection || !host || !ready) return;
+            const latest = useRoom.getState().room;
+            if (latest) void act("ChangeMedia", latest.id, {media, version: latest.version}).then((ok) => {if (ok) setSheet(null);});
+          }} />
           {actionError && <Muted>{actionError}</Muted>}
           {host && <Button
             title={busy ? "Cambiando…" : "Reproducir para todos"}
