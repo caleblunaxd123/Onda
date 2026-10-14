@@ -239,6 +239,127 @@ public class CommunityTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
     }
     private sealed record RoomList(RoomSummary[] Items);
+    [SkippableFact] public async Task FiveParticipantsLateJoinConcurrentControlsAndReconnectKeepAuthoritativeState()
+    {
+        RequireSql(); var clock = new ManualClock(); await using var app = Factory(clock);
+        var clients = new List<HttpClient>(); var hubs = new List<HubConnection>();
+        try
+        {
+            for (var i = 0; i < 5; i++) clients.Add(await ClientAsync(app, "Sync QA " + i));
+            var created = await clients[0].PostAsJsonAsync("/api/v1/rooms/", new CreateRoom("Five client sync QA", true, new("video", "https://youtu.be/M7lc1UVf-VE", Title: "Sync QA")));
+            var room = (await created.Content.ReadFromJsonAsync<RoomView>())!;
+            for (var i = 0; i < 5; i++) {var hub = Hub(app, clients[i]); hubs.Add(hub); await hub.StartAsync();}
+            for (var i = 0; i < 4; i++) await hubs[i].InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+            await hubs[0].InvokeAsync("SetPlayback", room.Id, new PlaybackCommand(true, 120, room.Version));
+            clock.Advance(5);
+            var late = await hubs[4].InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+            Assert.Equal(5, late.Members.Length); Assert.Equal(120, late.PositionSeconds); Assert.True(late.IsPlaying);
+            Assert.Equal(5, (late.ServerNow - late.PlaybackUpdatedAt).TotalSeconds);
+            var cohost = late.Members.Single(x => x.Name == "Sync QA 1").Id;
+            await hubs[0].InvokeAsync("SetCohost", room.Id, cohost, true);
+            var before = await hubs[0].InvokeAsync<RoomView>("Snapshot", room.Id);
+            Assert.Contains(cohost, before.Cohosts);
+            async Task<bool> Control(HubConnection hub, double position)
+            {
+                try {await hub.InvokeAsync("SetPlayback", room.Id, new PlaybackCommand(false, position, before.Version)); return true;}
+                catch (HubException) {return false;}
+            }
+            var accepted = await Task.WhenAll(Control(hubs[0], 150), Control(hubs[1], 151));
+            Assert.Single(accepted.Where(x => x));
+            var canonical = await hubs[0].InvokeAsync<RoomView>("Snapshot", room.Id);
+            Assert.Equal(before.Version + 1, canonical.Version); Assert.False(canonical.IsPlaying);
+            for (var i = 1; i < 5; i++)
+            {
+                var state = await hubs[i].InvokeAsync<RoomView>("Snapshot", room.Id);
+                Assert.Equal(canonical.Version, state.Version); Assert.Equal(canonical.PositionSeconds, state.PositionSeconds); Assert.False(state.IsPlaying);
+            }
+            await Assert.ThrowsAsync<HubException>(() => hubs[4].InvokeAsync("SetPlayback", room.Id, new PlaybackCommand(true, 999, canonical.Version)));
+            await hubs[2].StopAsync(); await hubs[2].DisposeAsync(); hubs[2] = Hub(app, clients[2]); await hubs[2].StartAsync();
+            clock.Advance(7);
+            var rejoined = await hubs[2].InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+            Assert.Equal(canonical.Version, rejoined.Version); Assert.Equal(canonical.PositionSeconds, rejoined.PositionSeconds);
+            Assert.False(rejoined.IsPlaying); Assert.Equal(5, rejoined.Members.Length);
+        }
+        finally {foreach (var hub in hubs) await hub.DisposeAsync(); foreach (var client in clients) client.Dispose();}
+    }
+    [SkippableFact] public async Task GlobalBlocksArePersistentReversibleAndDenyBothOwnersRooms()
+    {
+        RequireSql(); await using var app = Factory();
+        using var ownerClient = await ClientAsync(app, "Owner safety"); using var peerClient = await ClientAsync(app, "Peer safety");
+        var ownerId = (await ownerClient.GetFromJsonAsync<AccountView>("/api/v1/auth/me"))!.Id;
+        var peerId = (await peerClient.GetFromJsonAsync<AccountView>("/api/v1/auth/me"))!.Id;
+        var ownerRoom = (await (await ownerClient.PostAsJsonAsync("/api/v1/rooms/", new CreateRoom("Owner public", false, new("youtube"), Provider: "youtube"))).Content.ReadFromJsonAsync<RoomView>())!;
+        var peerRoom = (await (await peerClient.PostAsJsonAsync("/api/v1/rooms/", new CreateRoom("Peer private", true, new("youtube"), Provider: "youtube"))).Content.ReadFromJsonAsync<RoomView>())!;
+        await using var peer = Hub(app, peerClient); await peer.StartAsync(); await peer.InvokeAsync<RoomView>("Join", ownerRoom.Id, ownerRoom.InviteCode);
+        var removed = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
+        peer.On<Guid, Guid>("AccessChanged", (room, account) => {if (account == peerId) removed.TrySetResult(room);});
+        Assert.Equal(HttpStatusCode.NoContent, (await ownerClient.PutAsJsonAsync("/api/v1/safety/blocks/" + peerId, new {})).StatusCode);
+        Assert.Equal(ownerRoom.Id, await removed.Task.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.Equal(HttpStatusCode.NoContent, (await ownerClient.PutAsJsonAsync("/api/v1/safety/blocks/" + peerId, new {})).StatusCode);
+        await using (var fresh = Db()) Assert.Single(await fresh.UserBlocks.ToArrayAsync());
+        Assert.Equal(HttpStatusCode.BadRequest, (await ownerClient.PutAsJsonAsync("/api/v1/safety/blocks/" + ownerId, new {})).StatusCode);
+        Assert.Empty((await peerClient.GetFromJsonAsync<RoomList>("/api/v1/rooms/"))!.Items);
+        Assert.Equal(HttpStatusCode.NotFound, (await ownerClient.GetAsync("/api/v1/rooms/invite/" + peerRoom.InviteCode)).StatusCode);
+        await using var returning = Hub(app, peerClient); await returning.StartAsync();
+        await Assert.ThrowsAsync<HubException>(() => returning.InvokeAsync<RoomView>("Join", ownerRoom.Id, ownerRoom.InviteCode));
+        Assert.Equal(HttpStatusCode.NoContent, (await ownerClient.DeleteAsync("/api/v1/safety/blocks/" + peerId)).StatusCode);
+        Assert.Equal(ownerRoom.Id, (await returning.InvokeAsync<RoomView>("Join", ownerRoom.Id, ownerRoom.InviteCode)).Id);
+        Assert.Equal(HttpStatusCode.NoContent, (await ownerClient.PutAsJsonAsync("/api/v1/safety/blocks/" + peerId, new {})).StatusCode);
+        using var deletion = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/auth/account") {Content = JsonContent.Create(new PasswordConfirmation(null))};
+        Assert.Equal(HttpStatusCode.NoContent, (await peerClient.SendAsync(deletion)).StatusCode);
+        await using var db = Db(); Assert.Empty(await db.UserBlocks.ToArrayAsync());
+    }
+    [SkippableFact] public async Task MessageReportsValidateRoomMembershipTargetAndKeepSubmittedEvidence()
+    {
+        RequireSql(); await using var app = Factory();
+        using var ownerClient = await ClientAsync(app, "Report owner"); using var peerClient = await ClientAsync(app, "Report peer");
+        using var outsider = await ClientAsync(app, "Outside room");
+        var created = await ownerClient.PostAsJsonAsync("/api/v1/rooms/", new CreateRoom("Private report", true, new("youtube"), Provider: "youtube"));
+        var room = (await created.Content.ReadFromJsonAsync<RoomView>())!;
+        await using var owner = Hub(app, ownerClient); await using var peer = Hub(app, peerClient);
+        await owner.StartAsync(); await peer.StartAsync(); await owner.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode); await peer.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+        var message = await peer.InvokeAsync<RoomMessage>("SendChat", room.Id, new SendChatCommand("Contenido reportado", null, []));
+        var report = new RoomReportRequest(message.SenderId, "Lenguaje ofensivo", message.Id);
+        Assert.Equal(HttpStatusCode.NotFound, (await outsider.PostAsJsonAsync($"/api/v1/rooms/{room.Id}/reports", report)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ownerClient.PostAsJsonAsync($"/api/v1/rooms/{room.Id}/reports", report with {MessageId = Guid.NewGuid()})).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ownerClient.PostAsJsonAsync($"/api/v1/rooms/{room.Id}/reports", report with {AccountId = room.OwnerId})).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await ownerClient.PostAsJsonAsync($"/api/v1/rooms/{room.Id}/reports", report with {Reason = "  "})).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ownerClient.PostAsJsonAsync($"/api/v1/rooms/{room.Id}/reports", report)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ownerClient.PostAsJsonAsync($"/api/v1/rooms/{room.Id}/reports", report)).StatusCode);
+        await peer.InvokeAsync<RoomMessage>("EditChat", room.Id, new EditChatCommand(message.Id, "Texto editado"));
+        await using var db = Db(); var evidence = Assert.Single(await db.CommunityReports.ToArrayAsync());
+        Assert.Equal(message.Id, evidence.MessageId); Assert.Equal("Contenido reportado", evidence.MessageSnapshot); Assert.Equal("received", evidence.Status);
+    }
+    [SkippableFact] public async Task ModerationRequiresServerAllowlistAndRecordsItsRealAction()
+    {
+        RequireSql(); await using var app = Factory();
+        using var ownerClient = await ClientAsync(app, "Owner moderation"); using var peerClient = await ClientAsync(app, "Peer moderation");
+        using var moderator = app.CreateClient();
+        var registration = await moderator.PostAsJsonAsync("/api/v1/auth/register", new RegisterAccount("Reviewer", "reviewer@example.test", "moderator-test-password"));
+        registration.EnsureSuccessStatusCode(); var session = (await registration.Content.ReadFromJsonAsync<AccountSession>())!;
+        moderator.DefaultRequestHeaders.Authorization = new("Bearer", session.Token);
+        Assert.Equal(HttpStatusCode.Forbidden, (await moderator.GetAsync("/api/v1/moderation/reports")).StatusCode);
+        app.Services.GetRequiredService<IConfiguration>()["Moderation:AccountIds:0"] = session.User.Id.ToString();
+        Assert.Equal(HttpStatusCode.Forbidden, (await peerClient.GetAsync("/api/v1/moderation/reports")).StatusCode);
+        var room = (await (await ownerClient.PostAsJsonAsync("/api/v1/rooms/", new CreateRoom("Moderated QA", true, new("youtube"), Provider: "youtube"))).Content.ReadFromJsonAsync<RoomView>())!;
+        await using var owner = Hub(app, ownerClient); await using var peer = Hub(app, peerClient);
+        await owner.StartAsync(); await peer.StartAsync(); await owner.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode); await peer.InvokeAsync<RoomView>("Join", room.Id, room.InviteCode);
+        var message = await peer.InvokeAsync<RoomMessage>("SendChat", room.Id, new SendChatCommand("Texto revisado"));
+        Assert.Equal(HttpStatusCode.OK, (await ownerClient.PostAsJsonAsync($"/api/v1/rooms/{room.Id}/reports", new RoomReportRequest(message.SenderId, "Incumple convivencia", message.Id))).StatusCode);
+        await using var db = Db(); var report = await db.CommunityReports.AsNoTracking().SingleAsync();
+        Assert.Equal(HttpStatusCode.Forbidden, (await ownerClient.PostAsJsonAsync($"/api/v1/moderation/reports/{report.Id}/review", new ReviewReport("delete-message", "Manipulado"))).StatusCode);
+        var update = new TaskCompletionSource<RoomMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        owner.On<RoomMessage>("MessageUpdated", value => {if (value.Id == message.Id && value.Deleted) update.TrySetResult(value);});
+        Assert.Equal(HttpStatusCode.OK, (await moderator.PostAsJsonAsync($"/api/v1/moderation/reports/{report.Id}/review", new ReviewReport("delete-message", "Contenido abusivo verificado"))).StatusCode);
+        Assert.True((await update.Task.WaitAsync(TimeSpan.FromSeconds(10))).Deleted);
+        var reviewed = await db.CommunityReports.AsNoTracking().SingleAsync();
+        Assert.Equal("delete-message", reviewed.Status); Assert.Equal(session.User.Id, reviewed.ReviewedBy); Assert.NotNull(reviewed.ReviewedAt); Assert.Equal("Texto revisado", reviewed.MessageSnapshot);
+        Assert.Equal(HttpStatusCode.Conflict, (await moderator.PostAsJsonAsync($"/api/v1/moderation/reports/{report.Id}/review", new ReviewReport("dismiss", "Cambiar sin permiso"))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ownerClient.PostAsJsonAsync($"/api/v1/rooms/{room.Id}/reports", new RoomReportRequest(null, "Sala incumple convivencia"))).StatusCode);
+        var roomReport = await db.CommunityReports.AsNoTracking().SingleAsync(x => x.MessageId == null);
+        Assert.Equal(HttpStatusCode.OK, (await moderator.PostAsJsonAsync($"/api/v1/moderation/reports/{roomReport.Id}/review", new ReviewReport("close-room", "Cierre por contenido abusivo"))).StatusCode);
+        Assert.True((await db.ListeningRooms.AsNoTracking().SingleAsync()).Closed);
+    }
     private sealed class ManualClock : TimeProvider
     {
         private readonly object gate = new(); private DateTimeOffset now = DateTimeOffset.UtcNow;

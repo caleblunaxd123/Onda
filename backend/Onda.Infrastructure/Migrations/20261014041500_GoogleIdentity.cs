@@ -5,7 +5,7 @@ namespace Onda.Infrastructure.Migrations;
 
 [DbContext(typeof(OndaDbContext))]
 [Migration("20261014041500_GoogleIdentity")]
-public class GoogleIdentity : Migration
+public partial class GoogleIdentity : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {

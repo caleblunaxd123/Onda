@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {addTyping, canDelete, canEdit, clearTyping, continuesGroup, dayLabel, describeMessage, isJumboEmoji, linkParts, formatBytes, formatDuration, mergeMessages, myReaction, oldestPersisted,
-  pruneTyping, quoteOf, stickerOf, stickerText, summarizeReactions, typingLabel, upsertMessage} from './chat';
+  pruneTyping, quoteOf, stickerOf, stickerText, summarizeReactions, typingLabel, upsertMessage, visibleReply} from './chat';
 import type {ChatMessage} from './types';
 
 const at = (s: number) => new Date(Date.UTC(2026, 9, 13, 20, 0, s)).toISOString();
@@ -8,6 +8,12 @@ const msg = (id: string, s: number, extra: Partial<ChatMessage> = {}): ChatMessa
   ({id, senderId: 'ana', sender: 'Ana', text: 'Hola ' + id, kind: 'text', at: at(s), revision: 1, ...extra});
 
 describe('room chat state', () => {
+  it('hides quoted text from a blocked sender even when the original is outside the loaded history', () => {
+    const reply = {id: 'old-message', senderId: 'blocked', sender: 'Old sender', text: 'Private text', deleted: false};
+    expect(visibleReply(reply, ['blocked']).text).toBe('Mensaje oculto');
+    expect(visibleReply(reply, ['blocked']).sender).toBe('Persona bloqueada');
+    expect(visibleReply(reply, ['another-account'])).toBe(reply);
+  });
   it('renders only known bundled sticker identifiers and gives replies a readable description', () => {
     const value = msg('sticker', 1, {text: stickerText('temazo')});
     expect(stickerOf(value.text)?.label).toBe('¡Qué temazo!');
@@ -40,7 +46,7 @@ describe('room chat state', () => {
     list = upsertMessage(list, {...original, text: 'Cambié de idea', revision: 2});
     expect(list[1].reply?.text).toBe('Cambié de idea');
     list = upsertMessage(list, {...original, text: 'Mensaje eliminado', deleted: true, revision: 3});
-    expect(list[1].reply).toEqual({id: 'a', sender: 'Ana', text: 'Mensaje eliminado', deleted: true});
+    expect(list[1].reply).toEqual({id: 'a', sender: 'Ana', senderId: 'ana', text: 'Mensaje eliminado', deleted: true});
   });
   it('merges history pages and reconnection snapshots by revision', () => {
     const current = [msg('b', 2, {text: 'nuevo', revision: 4}), msg('c', 3)];

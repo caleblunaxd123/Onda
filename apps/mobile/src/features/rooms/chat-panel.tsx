@@ -3,9 +3,11 @@ import {AccessibilityInfo, ActivityIndicator, FlatList, Platform, Pressable, Scr
 import * as Clipboard from 'expo-clipboard';
 import {gradientStyle, useTheme} from '../../theme';
 import {Ionicons} from '../../icons';
-import {ActionRow, Chip, Label, Muted, Sheet, type IconName} from '../../ui';
+import {ActionRow, Button, Chip, Label, Muted, Sheet, type IconName} from '../../ui';
+import {FormField} from '../../components/forms';
+import {accountRequest} from '../account/session';
 import {Avatar} from './presentation';
-import {canDelete, canEdit, chatLimits, continuesGroup, describeMessage, emojiPanel, isJumboEmoji, myReaction, pruneTyping, sameDay, stickerOf, stickers, typingLabel} from './chat';
+import {canDelete, canEdit, chatLimits, continuesGroup, describeMessage, emojiPanel, isJumboEmoji, myReaction, pruneTyping, sameDay, stickerOf, stickers, typingLabel, visibleReply} from './chat';
 import {ensureDraftRoom, replyTo, sendDraft, sendSticker, setComposing, setDraftText, startEditing, stopEditing, useChatDraft} from './chat-draft';
 import {saveAttachment} from './chat-files';
 import {ChatImage, DaySeparator, FileCard, ImageViewer, LinkedText, OutgoingBubble, Quote, Reactions, StickerBubble, SwipeToReply, VoiceNote} from './chat-parts';
@@ -28,6 +30,9 @@ export function RoomChat(p: RoomLayoutProps) {
   const follow = useRef(true);
   const [away, setAway] = useState(false);
   const [selected, setSelected] = useState<ChatMessage | null>(null);
+  const [reporting, setReporting] = useState<ChatMessage | null>(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
   const [viewer, setViewer] = useState<{source: ImageSourcePropType; item: ChatAttachment} | null>(null);
   const [notice, setNotice] = useState('');
   const [now, setNow] = useState(() => Date.now());
@@ -65,7 +70,7 @@ export function RoomChat(p: RoomLayoutProps) {
               <Ionicons name="trash-outline" size={14} color={c.muted}/>
               <Muted style={{fontStyle: 'italic', fontSize: 13}}>Mensaje eliminado</Muted>
             </View> : <>
-              {item.reply && <Quote reply={item.reply} onPress={() => jumpTo(item.reply!.id)}/>}
+              {item.reply && <Quote reply={visibleReply(item.reply, p.mutedMembers)} onPress={() => jumpTo(item.reply!.id)}/>}
               {(item.attachments ?? []).map(attachment => attachment.kind === 'image'
                 ? <ChatImage key={attachment.id} room={room} item={attachment} onOpen={source => setViewer({source, item: attachment})} onLongPress={() => setSelected(item)}/>
                 : attachment.kind === 'audio' ? <VoiceNote key={attachment.id} room={room} item={attachment} mine={mine} onLongPress={() => setSelected(item)}/>
@@ -83,13 +88,13 @@ export function RoomChat(p: RoomLayoutProps) {
               <Ionicons name="chevron-down" size={12} color={c.muted}/>
             </Pressable>
           </View>
-          {!item.deleted && <Reactions message={item} me={p.userId} onToggle={emoji => react(item, emoji)}/>}
+          {!item.deleted && <Reactions message={{...item, reactions: item.reactions?.filter(x => !p.mutedMembers.includes(x.accountId))}} me={p.userId} onToggle={emoji => react(item, emoji)}/>}
         </View>
       </View>
     </SwipeToReply></>;
   };
   return <>
-    {pinned && !hidden.includes(pinned.id) && <Pressable accessibilityRole="button" accessibilityLabel={'Mensaje fijado de ' + pinned.sender + ': ' + describeMessage(pinned)}
+    {pinned && !hidden.includes(pinned.id) && !p.mutedMembers.includes(pinned.senderId) && <Pressable accessibilityRole="button" accessibilityLabel={'Mensaje fijado de ' + pinned.sender + ': ' + describeMessage(pinned)}
       onPress={() => setSelected(pinned)} style={{marginHorizontal: 14, marginTop: 8, padding: 10, borderRadius: 14, backgroundColor: c.surface, flexDirection: 'row', gap: 10, alignItems: 'center'}}>
       <Ionicons name="pin" size={18} color={c.primaryText}/><View style={{flex: 1}}>
         <Label style={{fontSize: 11, fontWeight: '800', color: c.primaryText}}>Fijado · {pinned.sender}</Label>
@@ -129,13 +134,26 @@ export function RoomChat(p: RoomLayoutProps) {
     </Pressable>}
     <Composer {...p} onError={fail}/>
     {selected && <MessageActions message={selected} me={p.userId} owner={owner} controller={p.controller} onClose={() => setSelected(null)} onError={fail}
+      onReport={() => {setReporting(selected); setSelected(null); setReportReason(''); setNotice('');}}
       onMember={() => {setSelected(null); p.onMember({id: selected.senderId, name: selected.sender});}}/>}
+    {reporting && <Sheet title="Reportar mensaje" onClose={() => {if (!reportBusy) setReporting(null);}}>
+      <Muted>El equipo de moderación recibirá el motivo y una copia del texto de este mensaje. El reporte no se muestra a la sala.</Muted>
+      <FormField label="Qué ocurrió" value={reportReason} onChange={setReportReason} multiline maxLength={500}/>
+      {!!notice && <Label accessibilityRole="alert">{notice}</Label>}
+      <Button title={reportBusy ? 'Enviando…' : 'Enviar reporte'} disabled={reportBusy || reportReason.trim().length < 3} onPress={() => {
+        setReportBusy(true);
+        void accountRequest('/api/v1/rooms/' + room + '/reports', {method: 'POST', body: {messageId: reporting.id, accountId: reporting.senderId, reason: reportReason}})
+          .then(() => {setReporting(null); fail('Reporte recibido. Gracias por cuidar la sala.');})
+          .catch(e => fail(e instanceof Error ? e.message : 'No se pudo enviar el reporte.'))
+          .finally(() => setReportBusy(false));
+      }}/>
+    </Sheet>}
     {viewer && <ImageViewer source={viewer.source} onClose={() => setViewer(null)}
       onSave={() => void saveAttachment(room, viewer.item).catch((e: Error) => fail(e.message))}/>}
   </>;
 }
 
-function MessageActions({message, me, owner, controller, onClose, onError, onMember}: {message: ChatMessage; me?: string; owner: boolean; controller: boolean; onClose: () => void; onError: (m: string) => void; onMember: () => void}) {
+function MessageActions({message, me, owner, controller, onClose, onError, onMember, onReport}: {message: ChatMessage; me?: string; owner: boolean; controller: boolean; onClose: () => void; onError: (m: string) => void; onMember: () => void; onReport: () => void}) {
   const c = useTheme();
   const mine = message.senderId === me;
   const current = myReaction(message, me);
@@ -159,6 +177,7 @@ function MessageActions({message, me, owner, controller, onClose, onError, onMem
       onPress={() => run(() => deleteChat(message.id))}/>}
     <ActionRow icon="eye-off-outline" label="Eliminar para mí" detail="Solo en este dispositivo" onPress={() => {useHiddenMessages.getState().hide(message.id); onClose();}}/>
     {!mine && <ActionRow icon="person-outline" label={`Opciones de ${message.sender}`} onPress={onMember}/>}
+    {!mine && !message.deleted && <ActionRow icon="flag-outline" label="Reportar este mensaje" onPress={onReport}/>}
   </Sheet>;
 }
 

@@ -5,9 +5,10 @@ import {isActive, player} from '../../player';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import {useAuth} from '../account/session';
+import {blockedAccountIds} from '../account/safety';
 import {addTyping, chatLimits, clearTyping, mergeMessages, oldestPersisted, upsertMessage, type TypingMap} from './chat';
 import {estimateClock, type ClockSample} from './sync-engine';
-import type {ChatMessage, Room} from './types';
+import {acceptsRoomState, type ChatMessage, type Room} from './types';
 
 type RoomState = {room: Room | null; messages: ChatMessage[]; status: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed'; error: string; reaction: string; clockOffset: number; muted: string[]; audioMuted: boolean; votes: string[];
   /** Typing signals from others; each expires on its own after a few seconds. */
@@ -15,9 +16,9 @@ type RoomState = {room: Room | null; messages: ChatMessage[]; status: 'idle' | '
   /** Recording or listening to a voice note pauses only this device's room audio; nothing is published to the room. */
   chatAudio: boolean;
   /** Last measured round trip to the server (ms), shown when sync quality matters. */
-  latencyMs: number | null};
+  latencyMs: number | null; reactionRevision: number};
 export const useRoom = create<RoomState>(() => ({room: null, messages: [], status: 'idle', error: '', reaction: '', clockOffset: 0, muted: [], audioMuted: false, votes: [],
-  typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false, latencyMs: null, pinned: null}));
+  typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false, latencyMs: null, pinned: null, reactionRevision: 0}));
 /** "Delete for me" is local to this device: the message stays for everyone else. */
 export const useHiddenMessages = create<{ids: string[]; hide: (id: string) => void}>()(persist(set => ({
   ids: [], hide: id => set(s => ({ids: [...s.ids.filter(x => x !== id), id].slice(-1000)})),
@@ -28,7 +29,7 @@ let joinedCode: string | null = null;
 let lastRadio: string | undefined;
 const pauseAudio = () => {if (isActive(player.getSnapshot().state)) player.toggle();};
 function applyRoom(room: Room) {
-  if (useRoom.getState().room && useRoom.getState().room?.id !== room.id) return;
+  if (!acceptsRoomState(useRoom.getState().room, room)) return;
   const old = useRoom.getState().room?.media;
   useRoom.setState(state => ({room, votes: state.votes.filter(id => room.queue.some(x => x.id === id))}));
   if (room.media.kind === 'radio' && room.media.station) {
@@ -100,22 +101,25 @@ export async function enterRoom(id: string, code?: string | null) {
   hub.on('MessageUpdated', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: upsertMessage(s.messages, message),
     pinned: message.pinned && !message.deleted ? message : s.pinned?.id === message.id ? null : s.pinned}));});
   hub.on('Typing', (event: {senderId: string; sender: string}) => {
-    if (!valid() || useRoom.getState().muted.includes(event.senderId)) return;
+    if (!valid() || useRoom.getState().muted.includes(event.senderId) || blockedAccountIds().includes(event.senderId)) return;
     useRoom.setState(s => ({typing: addTyping(s.typing, event)}));
   });
   hub.on('Reaction', (event: {senderId: string; emoji: string}) => {
-    if (!valid() || useRoom.getState().muted.includes(event.senderId)) return;
-    useRoom.setState({reaction: event.emoji}); setTimeout(() => {if (valid()) useRoom.setState({reaction: ''});}, 2000);
+    if (!valid() || useRoom.getState().muted.includes(event.senderId) || blockedAccountIds().includes(event.senderId)) return;
+    const revision = useRoom.getState().reactionRevision + 1;
+    useRoom.setState({reaction: event.emoji, reactionRevision: revision});
+    setTimeout(() => {if (valid() && useRoom.getState().reactionRevision === revision) useRoom.setState({reaction: ''});}, 2000);
   });
   const closed = (roomId: string) => {
     if (!valid() || roomId !== id) return;
     pauseAudio(); useRoom.setState({status: 'closed', error: 'La sala se cerró o tu acceso fue retirado.'});
   };
   hub.on('Closed', closed); hub.on('Kicked', closed);
+  hub.on('AccessChanged', (roomId: string, accountId: string) => {if (accountId === session.user.id) closed(roomId);});
   hub.on('Refresh', () => {if (valid()) void refreshRoom().catch(() => {});});
   hub.onreconnecting(() => {if (valid()) {pauseAudio(); useRoom.setState({status: 'reconnecting', error: ''});}});
   hub.onreconnected(() => {if (valid()) void join().catch(() => useRoom.setState({status: 'closed', error: 'No se pudo volver a entrar. Comprueba la invitación.'}));});
-  hub.onclose(() => {if (valid()) {pauseAudio(); useRoom.setState(s => ({status: 'closed', error: s.error || 'Se perdió la conexión. Puedes volver a entrar.'}));}});
+  hub.onclose(() => {clearInterval(resample); if (valid()) {pauseAudio(); useRoom.setState(s => ({status: 'closed', error: s.error || 'Se perdió la conexión. Puedes volver a entrar.'}));}});
   try {await hub.start(); if (!valid()) {await hub.stop(); return;} await join();}
   catch {if (valid()) {await hub.stop().catch(() => {}); useRoom.setState({status: 'closed', error: 'No se pudo entrar. Comprueba la conexión y la invitación.'});}}
 }

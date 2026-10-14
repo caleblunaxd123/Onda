@@ -57,6 +57,13 @@ namespace Onda.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<Guid?>("MessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MessageSnapshot")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -65,12 +72,32 @@ namespace Onda.Infrastructure.Migrations
                     b.Property<Guid>("ReporterId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(16)")
+                        .HasDefaultValue("received");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("CommunityReports");
                 });
@@ -614,6 +641,24 @@ namespace Onda.Infrastructure.Migrations
                     b.ToTable("SyncRuns");
                 });
 
+            modelBuilder.Entity("Onda.Domain.UserBlock", b =>
+                {
+                    b.Property<Guid>("BlockerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BlockedId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("BlockerId", "BlockedId");
+
+                    b.HasIndex("BlockedId");
+
+                    b.ToTable("UserBlocks");
+                });
+
             modelBuilder.Entity("Onda.Domain.CloudLibrary", b =>
                 {
                     b.HasOne("Onda.Domain.ListenerAccount", null)
@@ -674,6 +719,21 @@ namespace Onda.Infrastructure.Migrations
                         .WithMany("Tags")
                         .HasForeignKey("StationId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Onda.Domain.UserBlock", b =>
+                {
+                    b.HasOne("Onda.Domain.ListenerAccount", null)
+                        .WithMany()
+                        .HasForeignKey("BlockedId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("Onda.Domain.ListenerAccount", null)
+                        .WithMany()
+                        .HasForeignKey("BlockerId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });
 

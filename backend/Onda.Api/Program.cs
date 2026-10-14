@@ -138,6 +138,7 @@ api.MapPost("/stations/{id:guid}/reports", async (Guid id, ReportRequest body, I
 }).RequireRateLimiting("reports");
 api.MapGet("/moods", () => Recommendations.Moods);
 app.MapCommunityEndpoints();
+app.MapModerationEndpoints();
 app.MapRoomUploads();
 api.MapPost("/assistant/discover", async (AssistantRequest input, DiscoveryAssistant assistant, CancellationToken ct) =>
     input.Text is not {Length: >= 2 and <= 500} || input.Tags?.Length > 8 || input.Tags?.Any(x => x is null || x.Length > 40) == true

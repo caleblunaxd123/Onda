@@ -162,8 +162,10 @@ public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswo
             removedFiles = [..ownedUploads, ..await RoomChatService.ForgetAccountsAsync(db, [id], ct)];
             await db.ListeningRooms.Where(x => x.OwnerId == id).ExecuteDeleteAsync(ct);
             await db.RoomBans.Where(x => x.AccountId == id).ExecuteDeleteAsync(ct);
+            await db.UserBlocks.Where(x => x.BlockerId == id || x.BlockedId == id).ExecuteDeleteAsync(ct);
             await db.CommunityReports.Where(x => x.ReporterId == id).ExecuteDeleteAsync(ct);
             await db.CommunityReports.Where(x => x.AccountId == id).ExecuteUpdateAsync(s => s.SetProperty(x => x.AccountId, (Guid?)null), ct);
+            await db.CommunityReports.Where(x => x.ReviewedBy == id).ExecuteUpdateAsync(s => s.SetProperty(x => x.ReviewedBy, (Guid?)null), ct);
             await db.ListenerAccounts.Where(x => x.Id == id).ExecuteDeleteAsync(ct);
             db.Entry(user).State = EntityState.Detached;
             await transaction.CommitAsync(ct); return true;

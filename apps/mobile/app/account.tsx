@@ -11,10 +11,12 @@ import {accountRequest, signOut, useAuth, type Listener, type SessionResponse} f
 import {syncLibrary, useCloudSync} from '../src/features/account/cloud-sync';
 import {GoogleLoginButton} from '../src/features/account/google';
 import {OndaAmbientBackground, OndaMotionCard} from '../src/components/experience';
+import {useModerationAccess} from '../src/features/account/moderation';
 
 export default function AccountScreen() {
   const c = useTheme(); const auth = useAuth(); const library = useLibrary(); const cloud = useCloudSync();
   const user = auth.session?.user;
+  const moderation = useModerationAccess();
   const [mode, setMode] = useState<'login' | 'register' | 'recover'>('login');
   const [name, setName] = useState(user?.displayName ?? ''); const [email, setEmail] = useState('');
   const [password, setPassword] = useState(''); const [code, setCode] = useState('');
@@ -84,6 +86,8 @@ export default function AccountScreen() {
         <Button title="Eliminar mi cuenta" secondary icon="trash-outline" onPress={() => {setDeleting(true); setPassword(''); setError('');}}/>
       </>}
       <Button title="Leer privacidad y convivencia" secondary icon="shield-checkmark-outline" onPress={() => router.push('/privacy')}/>
+      {user && <Button title="Personas bloqueadas" secondary icon="ban-outline" onPress={() => router.push('/safety')}/>}
+      {moderation.data?.allowed && <Button title="Revisar reportes" secondary icon="shield-outline" onPress={() => router.push('/moderation')}/>}
       {user?.guest && <Button title="Cerrar mi sesión de invitado" secondary disabled={busy} onPress={() => void logout()}/>}
     </Page>
     {editingName && <Sheet title="Tu nombre en ONDA" onClose={() => setEditingName(false)}><FormField label="Nombre público" value={name} onChange={setName} maxLength={40}/>{error && <Muted accessibilityRole="alert">{error}</Muted>}<Button title={busy ? 'Guardando…' : 'Guardar nombre'} disabled={busy || name.trim().length < 2} onPress={() => void rename()}/></Sheet>}

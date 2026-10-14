@@ -7,10 +7,15 @@ export type QueueItem = {id: string; media: RoomMedia; proposedBy: string; votes
 export type Room = {id: string; name: string; isPrivate: boolean; ownerId: string; inviteCode: string | null; media: RoomMedia; isPlaying: boolean;
   positionSeconds: number; playbackUpdatedAt: string; version: number; members: Member[]; queue: QueueItem[]; serverNow: string;
   cohosts?: string[]; autoRecovery?: boolean; hostAbsentSince?: string | null};
+/** Membership can change at the same playback revision; only an older revision or another room is stale. */
+export function acceptsRoomState(current: Pick<Room, 'id' | 'version'> | null, incoming: Pick<Room, 'id' | 'version'>) {
+  return Number.isSafeInteger(incoming.version) && incoming.version >= 0 &&
+    (!current || current.id === incoming.id && incoming.version >= current.version);
+}
 export type RoomSummary = Pick<Room, 'id' | 'name' | 'isPrivate' | 'ownerId' | 'media'> & {listeners: number};
 export type ChatReaction = {accountId: string; name: string; emoji: string};
 export type ChatAttachment = {id: string; name: string; mime: string; kind: 'image' | 'audio' | 'file'; length: number; durationMs?: number | null};
-export type ChatReply = {id: string; sender: string; text: string; deleted: boolean};
+export type ChatReply = {id: string; sender: string; text: string; deleted: boolean; senderId?: string | null};
 export type ChatMessage = {id: string; senderId: string; sender: string; text: string; kind: string; at: string;
   replyToId?: string | null; reply?: ChatReply | null; editedAt?: string | null; deleted?: boolean;
   reactions?: ChatReaction[] | null; attachments?: ChatAttachment[] | null; revision?: number; pinned?: boolean};

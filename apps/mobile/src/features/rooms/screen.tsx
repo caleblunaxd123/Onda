@@ -24,6 +24,7 @@ import {
 } from "../../ui";
 import { FormField } from "../../components/forms";
 import { accountRequest, ensureListener, useAuth } from "../account/session";
+import {useBlocks} from '../account/safety';
 import {
   enterRoom,
   leaveRoom,
@@ -62,6 +63,7 @@ function youtubeErrorMessage(code: number | undefined, host: boolean) {
 export default function RoomScreen() {
   const c = useTheme();
   const auth = useAuth();
+  const blocks = useBlocks();
   const state = useRoom();
   const library = useLibrary();
   const nativePlayback = usePlayer();
@@ -115,6 +117,9 @@ export default function RoomScreen() {
   const ready = state.status === "connected";
   const sessionId = auth.session?.user.id;
   const sessionToken = auth.session?.token;
+  const safetyReady = !blocks.isPending && !blocks.isError;
+  const hiddenPeople = [...new Set([...state.muted, ...blocks.items.map(x => x.id), ...(!safetyReady
+    ? [...(room?.members.map(x => x.id) ?? []), ...state.messages.map(x => x.senderId), state.pinned?.senderId ?? ''].filter(x => x !== sessionId) : [])])];
   useFocusEffect(
     useCallback(() => {
       if (!auth.ready || !sessionToken) return;
@@ -385,9 +390,9 @@ export default function RoomScreen() {
       tab={tab}
       onTab={setTab}
       busy={busy}
-      messages={state.messages.filter((x) => !state.muted.includes(x.senderId))}
+      messages={state.messages.filter(x => !hiddenPeople.includes(x.senderId) && (!blocks.isPending && !blocks.isError || x.senderId === sessionId))}
       votes={state.votes}
-      mutedMembers={state.muted}
+      mutedMembers={hiddenPeople}
       audioMuted={state.audioMuted}
       ducked={state.chatAudio}
       radioStatus={radioStatus}
@@ -398,11 +403,12 @@ export default function RoomScreen() {
       mediaError={mediaError}
       tapRequired={tapRequired}
       reaction={state.reaction}
-      error={state.error || actionError}
+      reactionRevision={state.reactionRevision}
+      error={state.error || actionError || (blocks.isError ? 'No se pudieron cargar tus bloqueos. Los mensajes de otras personas se ocultan hasta reintentar la sincronización.' : '')}
       onEvent={mediaEvent}
       onPlayback={(playing, position) => void playback(playing, position)}
       toggleAudio={toggleRoomAudio}
-      resync={() => void refreshRoom().catch((e) => setActionError(e.message))}
+      resync={() => {void blocks.refetch(); void refreshRoom().catch(e => setActionError(e.message));}}
       saved={saved}
       toggleSave={() =>
         room.media.station
@@ -551,6 +557,15 @@ export default function RoomScreen() {
         <Sheet title={member.name} onClose={() => setMember(null)}>
           {member.id !== sessionId && (
             <>
+              <ActionRow icon="ban-outline" label={blocks.items.some(x => x.id === member.id) ? 'Desbloquear en ONDA' : 'Bloquear en ONDA'}
+                detail="Oculta sus mensajes y restringe las salas del otro"
+                onPress={() => {
+                  setBusy(true);
+                  void blocks.setBlocked(member, !blocks.items.some(x => x.id === member.id))
+                    .then(() => {setMember(null); setActionError('Tu lista de bloqueados se actualizó.');})
+                    .catch(e => setActionError(e instanceof Error ? e.message : 'No se pudo guardar el bloqueo.'))
+                    .finally(() => setBusy(false));
+                }}/>
               <ActionRow
                 icon="volume-mute-outline"
                 label={

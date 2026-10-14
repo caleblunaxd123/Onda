@@ -3,7 +3,7 @@ namespace Onda.Api;
 
 public sealed record RoomMember(Guid Id, string Name);
 public sealed record MessageEmoji(Guid AccountId, string Name, string Emoji);
-public sealed record MessageReply(Guid Id, string Sender, string Text, bool Deleted);
+public sealed record MessageReply(Guid Id, string Sender, string Text, bool Deleted, Guid? SenderId = null);
 public sealed record ChatAttachment(Guid Id, string Name, string Mime, string Kind, long Length, int? DurationMs = null);
 public sealed record RoomMessage(Guid Id, Guid SenderId, string Sender, string Text, string Kind, DateTimeOffset At,
     Guid? ReplyToId = null, MessageReply? Reply = null, DateTimeOffset? EditedAt = null, bool Deleted = false,

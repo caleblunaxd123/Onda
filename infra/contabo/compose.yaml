@@ -28,6 +28,8 @@ services:
       ConnectionStringFile: /run/secrets/connection
       ReverseProxy__KnownProxies__0: 10.77.0.10
       Catalog__Mode: auto
+      # Public OAuth identifier; Google ID tokens are verified by the API.
+      Google__WebClientId: ${GOOGLE_WEB_CLIENT_ID:-}
       Assistant__OllamaUrl: http://ollama:11434
       Assistant__Model: qwen2.5:1.5b
       # Private chat attachments: outside public assets, only served by the authenticated endpoint.

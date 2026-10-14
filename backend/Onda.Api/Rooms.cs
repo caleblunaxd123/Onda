@@ -17,7 +17,7 @@ public sealed record RoomSummary(Guid Id, string Name, bool IsPrivate, Guid Owne
 public sealed record CreateRoom(string? Name, bool IsPrivate, MediaInput Media, bool AutoRecovery = false, string? Provider = null);
 public sealed record PlaybackCommand(bool Playing, double PositionSeconds, long Version);
 public sealed record ChangeMediaCommand(MediaInput Media, long Version, bool Playing = true, double PositionSeconds = 0);
-public sealed record RoomReportRequest(Guid? AccountId, string? Reason);
+public sealed record RoomReportRequest(Guid? AccountId, string? Reason, Guid? MessageId = null);
 
 public sealed class RoomService(OndaDbContext db, MediaResolver resolver, RoomPresence presence, TimeProvider clock)
 {
@@ -34,6 +34,8 @@ public sealed class RoomService(OndaDbContext db, MediaResolver resolver, RoomPr
         var active = presence.ActiveRooms();
         var query = db.ListeningRooms.AsNoTracking().Where(x => !x.Closed);
         query = mine ? query.Where(x => x.OwnerId == user) : query.Where(x => !x.IsPrivate && (x.UpdatedAt > cutoff || active.Contains(x.Id)));
+        if (user is { } account) query = query.Where(room => !db.UserBlocks.Any(b =>
+            (b.BlockerId == account && b.BlockedId == room.OwnerId) || (b.BlockerId == room.OwnerId && b.BlockedId == account)));
         var rows = await query.OrderByDescending(x => x.UpdatedAt).Take(50).ToListAsync(ct);
         return rows.Select(x => new RoomSummary(x.Id, x.Name, x.IsPrivate, x.OwnerId, Media(x), presence.Count(x.Id))).OrderByDescending(x => x.Listeners).ToArray();
     }
@@ -64,7 +66,9 @@ public sealed class RoomService(OndaDbContext db, MediaResolver resolver, RoomPr
     public Task<ListeningRoom?> FindAsync(Guid id, CancellationToken ct) => db.ListeningRooms.SingleOrDefaultAsync(x => x.Id == id && !x.Closed, ct);
     public async Task<bool> CanJoinAsync(ListeningRoom room, Guid account, string? code, CancellationToken ct) =>
         (!room.IsPrivate || room.OwnerId == account || string.Equals(room.InviteCode, code, StringComparison.OrdinalIgnoreCase)) &&
-        !await db.RoomBans.AnyAsync(x => x.RoomId == room.Id && x.AccountId == account, ct);
+        !await db.RoomBans.AnyAsync(x => x.RoomId == room.Id && x.AccountId == account, ct) && await CanInteractAsync(room, account, ct);
+    public async Task<bool> CanInteractAsync(ListeningRoom room, Guid account, CancellationToken ct) => !await db.UserBlocks.AnyAsync(x =>
+        (x.BlockerId == account && x.BlockedId == room.OwnerId) || (x.BlockerId == room.OwnerId && x.BlockedId == account), ct);
     public async Task<RoomView?> ByCodeAsync(string code, Guid account, CancellationToken ct)
     {
         if (code.Length != 12) return null;
@@ -116,6 +120,7 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
     {
         if (!presence.InRoom(Context.ConnectionId, id)) throw new HubException("Entra a la sala primero.");
         var room = await rooms.FindAsync(id, Ct) ?? throw new HubException("La sala está cerrada.");
+        if (!await rooms.CanInteractAsync(room, Account, Ct)) throw new HubException("El acceso a esta sala está restringido.");
         if (host && room.OwnerId != Account) throw new HubException("Solo el anfitrión puede usar este control.");
         if (controller && room.OwnerId != Account && !RoomService.Cohosts(room).Contains(Account)) throw new HubException("Solo el anfitrión o un coanfitrión puede controlar la reproducción.");
         return room;
@@ -129,10 +134,13 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
     {
         Limit("join", 8, 30);
         var room = await rooms.FindAsync(id, Ct) ?? throw new HubException("No se encontró la sala.");
-        if (!await rooms.CanJoinAsync(room, Account, code, Ct)) throw new HubException("Invitación inválida o acceso restringido.");
         var semaphore = presence.RoomLock(id); await semaphore.WaitAsync(Ct);
         try
         {
+            // A close/transfer may have completed while Join waited for the room lock.
+            await db.Entry(room).ReloadAsync(Ct);
+            if (db.Entry(room).State == EntityState.Detached || room.Closed) throw new HubException("La sala está cerrada.");
+            if (!await rooms.CanJoinAsync(room, Account, code, Ct)) throw new HubException("Invitación inválida o acceso restringido.");
             if (presence.Count(id) >= 50 && !presence.Members(id).Any(x => x.Id == Account)) throw new HubException("La sala está llena (50 personas).");
             var old = presence.Enter(Context.ConnectionId, id);
             if (old is { } previous && previous != id) {await Groups.RemoveFromGroupAsync(Context.ConnectionId, previous.ToString()); await BroadcastAsync(previous);}

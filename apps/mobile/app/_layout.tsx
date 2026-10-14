@@ -15,6 +15,7 @@ import { deviceCountry } from '../src/region';
 import { Label, MiniPlayer } from '../src/ui';
 import {initializeSession} from '../src/features/account/session';
 import {useLibraryCloudSync} from '../src/features/account/cloud-sync';
+import {SafetySync} from '../src/features/account/safety';
 const queryClient = new QueryClient();
 const REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;
 
@@ -60,6 +61,7 @@ function RootShell({wide}: {wide: boolean}) {
     <View style={[{flex: 1}, Platform.OS === 'web' && {width: '100%', maxWidth: wide ? 1080 : 480, alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: c.border}]}>
       <OndaAmbientBackground/>
       <SafeAreaProvider><QueryClientProvider client={queryClient}><SafeAreaView edges={['top']} style={{flex: 1}}>
+        <SafetySync/>
         <StatusBar style={c.isDark ? 'light' : 'dark'}/>
         {error ? <View style={{padding: 16}}><Label>{error}</Label></View> : null}
         <Stack screenOptions={{headerShown: false, contentStyle: {backgroundColor: 'transparent'}, animation: 'slide_from_right'}}>

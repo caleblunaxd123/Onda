@@ -32,7 +32,7 @@ export const providerCapabilities: Record<MediaKind, ProviderCapabilities> = {
 };
 
 /** Command understood by the isolated player page (player-html: YouTube IFrame API or HTML5 media). */
-export type FrameCommand = {playing: boolean; position: number; muted: boolean};
+export type FrameCommand = {playing: boolean; position: number; muted: boolean; revision?: number};
 export type FrameEvent = {kind: string; position?: number; duration?: number; playing?: boolean};
 
 /**
@@ -61,18 +61,19 @@ export class FramePlaybackAdapter implements PlaybackAdapter {
     if (this.reported.state !== 'loading') return Promise.resolve();
     return new Promise<void>((resolve, reject) => this.waiting.push({resolve, reject}));
   }
-  async play() {this.require('play', 'reproducir'); this.desired = {...this.desired, playing: true}; this.push();}
-  async pause() {this.require('play', 'pausar'); this.desired = {...this.desired, playing: false}; this.push();}
+  async play() {this.require('play', 'reproducir'); this.desired = {...this.desired, playing: true}; this.pushManual();}
+  async pause() {this.require('play', 'pausar'); this.desired = {...this.desired, playing: false}; this.pushManual();}
   async seekTo(seconds: number) {
     this.require('seek', 'saltar a un momento');
     if (!Number.isFinite(seconds) || seconds < 0) throw new RangeError('Posición inválida.');
-    this.desired = {...this.desired, position: seconds}; this.push();
+    this.desired = {...this.desired, position: seconds}; this.pushManual();
   }
   async getCurrentTime() {return this.reported.position;}
   async getDuration() {return this.reported.duration;}
   async getState() {return this.reported.state;}
   async dispose() {this.disposed = true; this.flushWaiters(new Error('Reproductor cerrado.'));}
   private push() {if (!this.disposed) this.send(this.desired);}
+  private pushManual() {if (!this.disposed) {const {revision: _revision, ...command} = this.desired; this.send(command);}}
   private require(capability: 'play' | 'seek', operation: string) {if (!this.capabilities[capability]) throw new UnsupportedOperation(this.provider, operation);}
   private flushWaiters(error?: Error) {const list = this.waiting; this.waiting = []; for (const w of list) if (error) w.reject(error); else w.resolve();}
 }

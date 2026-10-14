@@ -107,8 +107,11 @@ try {
   ok('history persists order and tombstones', history.some(m => m.id === withFiles.id && m.deleted) && history.every((m, i) => !i || Date.parse(m.at) >= Date.parse(history[i - 1].at)));
 
   const providers = await http('GET', '/api/v1/auth/providers', null);
-  ok('Google remains disabled until OAuth configured', providers.status === 200 && providers.json.google.enabled === false);
-  ok('Google challenge not issued without OAuth config', (await http('POST', '/api/v1/auth/google/challenge', null, {})).status === 503);
+  const googleEnabled = providers.json?.google?.enabled === true;
+  ok('Google availability matches its public configuration', providers.status === 200 && (googleEnabled
+    ? /\.apps\.googleusercontent\.com$/.test(providers.json.google.webClientId ?? '') : !providers.json.google.webClientId));
+  const challenge = await http('POST', '/api/v1/auth/google/challenge', null, {});
+  ok('Google challenge follows configured availability', googleEnabled ? challenge.status === 200 && /^[A-F0-9]{64}$/.test(challenge.json.nonce ?? '') : challenge.status === 503);
   const kicked = waitFor(b, 'Kicked');
   await a.invoke('Kick', room.id, leo.user.id);
   await kicked;

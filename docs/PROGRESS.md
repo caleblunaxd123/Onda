@@ -1,9 +1,37 @@
-# Progreso — beta 0.6 (2026-10-14 UTC)
+# Progreso — candidata 0.6.1 (2026-10-14, Lima)
+
+Actualización: OAuth creado en `onda-511605` con autorización, cliente web/Android, audiencia externa en
+Prueba. API Google activa y acceso real Android confirmado. Web muestra botón oficial; login web completo
+pendiente. `docs/GOOGLE_SIGN_IN.md` contiene IDs públicos y límites.
+
+La candidata local añade UserBlocks persistente, lista de bloqueados, restricción bidireccional de salas
+del otro, ocultación de mensajes/citas/reacciones, reportes de mensajes por ID y bandeja privada de revisión.
+Moderadores solo mediante allowlist del servidor (vacía por defecto); acciones reales: descartar, borrar
+mensaje denunciado y cerrar sala; motivo, revisor y fecha persistidos. Evidencia textual limitada a 2.000
+caracteres, retención de reportes 90 días. Se mantiene la prohibición de adjuntos nuevos.
+
+144 pruebas backend SQL reales, 94 móviles, TypeScript/ESLint limpios y smoke público 32/32 con Google
+activado. La nueva migración de seguridad todavía NO se aplicó en Contabo. Se añadió target model a la
+migración Google existente para que EF pueda generar/revertir snapshots correctamente; no cambia su SQL.
+QA visual local no completada: procesos interrumpidos y reinicio en segundo plano rechazado por política.
+Sus dos cuentas/base propia fueron eliminadas verificando que no contuviera cuentas ni estaciones ajenas.
+
+Solicitud nueva: investigar REA y priorizar reproductores/sincronización; conservar auditorías/evidencias
+previas y no repetir una reescritura. Toda publicación nueva exige aprobación del propietario.
+
+REA 6.5.0 instalado localmente con Node 24 de Codex; registro MCP autorizado y respaldado, seis herramientas
+estáticas habilitadas. Doctor/self-test local pasó; esta conversación usa CLI porque el catálogo aún no lo
+cargó. Inspección real del DLL propio y métodos RoomsHub documentada en `rea-investigation.md`.
+
+P0/P1: rechazo de snapshots viejos, limpieza del temporizador de reloj, prueba SQL con cinco conexiones,
+seek YouTube en pausa, deduplicación/revisiones del puente, cue oficial al entrar pausado y orden de pausa
+antes de seek para no cancelar buffering. Estado de pausa visible y botones compartidos ±10 segundos.
+La candidata se probó temporalmente en el emulador; producción conserva la API anterior de moderación.
 
 Decisiones actuales del propietario: producto multimedia social; inicio sencillo como lista de salas;
 identidad ONDA Experience neón (claro/suave alternativos); Crear sala → fuente/privacidad → entrar → buscar dentro. El chat NO permite subir fotos,
 archivos ni grabaciones. Solo texto, respuestas, reacciones, stickers incluidos, edición/borrado y mensajes fijados.
-Voz en vivo pendiente, sin grabar audio. Google se deja preparado, sin activarlo hasta disponer de OAuth.
+Voz en vivo pendiente, sin grabar audio. Google ya tiene OAuth y acceso Android real; ver límites arriba.
 
 ## Base 0.5 publicada y conservada
 - Inicio: salas, invitaciones, búsqueda y «Crear sala». Radio pasa a pestaña propia; catálogo, Mundo, Radar,

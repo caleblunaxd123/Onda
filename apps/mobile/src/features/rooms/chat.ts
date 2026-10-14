@@ -22,8 +22,11 @@ export function attachmentLabel(items?: ChatAttachment[] | null) {
 }
 /** Mirrors the server quote so live edits/deletes refresh replies without reloading history. */
 export function quoteOf(message: ChatMessage): ChatReply {
-  if (message.deleted) return {id: message.id, sender: message.sender, text: deletedText, deleted: true};
-  return {id: message.id, sender: message.sender, text: stickerOf(message.text) ? 'Sticker: ' + stickerOf(message.text)!.label : message.text ? message.text.slice(0, 160) : attachmentLabel(message.attachments), deleted: false};
+  if (message.deleted) return {id: message.id, sender: message.sender, senderId: message.senderId, text: deletedText, deleted: true};
+  return {id: message.id, sender: message.sender, senderId: message.senderId, text: stickerOf(message.text) ? 'Sticker: ' + stickerOf(message.text)!.label : message.text ? message.text.slice(0, 160) : attachmentLabel(message.attachments), deleted: false};
+}
+export function visibleReply(reply: ChatReply, hiddenPeople: string[]): ChatReply {
+  return reply.senderId && hiddenPeople.includes(reply.senderId) ? {...reply, sender: 'Persona bloqueada', text: 'Mensaje oculto', deleted: true} : reply;
 }
 function refreshQuotes(list: ChatMessage[], changed: ChatMessage) {
   return list.map(x => x.replyToId === changed.id && !x.deleted ? {...x, reply: quoteOf(changed)} : x);

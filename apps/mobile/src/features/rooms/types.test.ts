@@ -1,7 +1,16 @@
 import {describe, expect, it} from 'vitest';
-import {formatClock, orderedQueue, parseClock, playbackPosition, projectedPosition, streamServiceOf} from './types';
+import {acceptsRoomState, formatClock, orderedQueue, parseClock, playbackPosition, projectedPosition, streamServiceOf} from './types';
 import {roomPlayerHtml} from './player-html';
 describe('shared media timeline', () => {
+  it('never rolls playback back to an older snapshot, while admitting membership updates at the current revision', () => {
+    const current = {id: 'room-a', version: 20};
+    expect(acceptsRoomState(current, {id: 'room-a', version: 19})).toBe(false);
+    expect(acceptsRoomState(current, {id: 'room-a', version: 20})).toBe(true);
+    expect(acceptsRoomState(current, {id: 'room-a', version: 21})).toBe(true);
+    expect(acceptsRoomState(current, {id: 'room-b', version: 100})).toBe(false);
+    expect(acceptsRoomState(null, {id: 'room-b', version: 1})).toBe(true);
+    expect(acceptsRoomState(current, {id: 'room-a', version: NaN})).toBe(false);
+  });
   it('keeps transport anchors current when a local control is applied later', () => {
     expect(projectedPosition(20, true, 1000, 6000)).toBe(25);
     expect(projectedPosition(20, false, 1000, 6000)).toBe(20);

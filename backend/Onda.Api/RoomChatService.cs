@@ -34,8 +34,8 @@ public sealed class RoomChatService(OndaDbContext db, TimeProvider clock, RoomPr
     private static RoomMessage Read(RoomChatEntry row) => JsonSerializer.Deserialize<RoomMessage>(row.Payload)! with {Revision = row.Version};
     private static string Store(RoomMessage message) => JsonSerializer.Serialize(message with {Reply = null, Revision = 0});
     public static MessageReply Quote(RoomMessage m) => m.Deleted
-        ? new(m.Id, m.Sender, DeletedText, true)
-        : new(m.Id, m.Sender, StickerLabel(m.Text) ?? (m.Text.Length > 0 ? m.Text[..Math.Min(160, m.Text.Length)] : AttachmentLabel(m.Attachments)), false);
+        ? new(m.Id, m.Sender, DeletedText, true, m.SenderId)
+        : new(m.Id, m.Sender, StickerLabel(m.Text) ?? (m.Text.Length > 0 ? m.Text[..Math.Min(160, m.Text.Length)] : AttachmentLabel(m.Attachments)), false, m.SenderId);
     public static string? StickerLabel(string text) => text switch
     {
         "[[onda:sticker:temazo]]" => "Sticker: ¡Qué temazo!", "[[onda:sticker:fiesta]]" => "Sticker: ¡Vamos!",

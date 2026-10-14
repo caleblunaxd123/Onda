@@ -55,6 +55,7 @@ export type RoomLayoutProps = {
   mediaError: string;
   tapRequired: boolean;
   reaction: string;
+  reactionRevision?: number;
   error: string;
   onEvent: (event: MediaEvent) => void;
   onPlayback: (playing: boolean, position: number) => void;
@@ -142,7 +143,7 @@ export function RoomLayout(p: RoomLayoutProps) {
         {/* While writing in the chat on a phone the stage collapses (still mounted, so playback continues). */}
         <View style={wide ? { flex: 1.7 } : typing ? { height: 0, overflow: "hidden" } : undefined}>
           <StageContainer {...(wide ? {contentContainerStyle: {paddingHorizontal: 12, gap: 8}} : {style: {paddingHorizontal: 12, gap: 8}})}>
-            <OndaReactionOverlay emoji={p.reaction}/>
+            <OndaReactionOverlay key={p.reactionRevision} emoji={p.reaction}/>
             {p.room.media.kind === "stream" ? (
               <StreamRoomStage media={p.room.media} playing={p.connected && p.room.isPlaying} position={p.desiredPosition} positionAt={p.positionAt}
                 controller={p.controller} connected={p.connected} onPlayback={p.onPlayback} />
@@ -162,6 +163,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                 playing={p.connected && p.room.isPlaying}
                 position={p.desiredPosition}
                 positionAt={p.positionAt}
+                revision={p.room.version}
                 muted={p.audioMuted || !!p.ducked}
                 onEvent={p.onEvent}
                 theater={theater}
@@ -196,7 +198,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                 </Pressable>
               )}
               <View style={{ flex: 1 }}>
-                {!!p.room.media.url && <Muted style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1 }}>REPRODUCIENDO</Muted>}
+                {!!p.room.media.url && <Muted style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1 }}>{p.connected ? p.room.isPlaying ? 'REPRODUCIENDO' : 'EN PAUSA' : 'SIN CONEXIÓN'}</Muted>}
                 <Label numberOfLines={2} style={{ fontWeight: "800", fontSize: 14, lineHeight: 19 }}>{p.room.media.title}</Label>
               </View>
               {!!p.room.media.url && <IconButton icon={p.saved ? "heart" : "heart-outline"} tint={p.saved ? c.live : undefined} plain
@@ -209,6 +211,13 @@ export function RoomLayout(p: RoomLayoutProps) {
                 <IconButton icon={theater ? "contract-outline" : "expand-outline"} plain label={theater ? "Salir del modo cine" : "Modo cine"} onPress={() => setTheater((x) => !x)} />
               )}
             </View>
+            {p.controller && p.room.media.kind === 'youtube' && p.room.media.url && Number.isFinite(p.duration) && p.duration > 0 && <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
+              <IconButton icon="play-back-outline" plain label="Retroceder 10 segundos para todos" disabled={!p.connected || p.busy}
+                onPress={() => p.onPlayback(p.room.isPlaying, Math.max(0, current() - 10))}/>
+              <Muted style={{fontSize: 12, flex: 1, textAlign: 'center'}}>Control compartido · {Math.floor(current() / 60)}:{Math.floor(current() % 60).toString().padStart(2, '0')}</Muted>
+              <IconButton icon="play-forward-outline" plain label="Avanzar 10 segundos para todos" disabled={!p.connected || p.busy}
+                onPress={() => p.onPlayback(p.room.isPlaying, Math.min(p.duration, current() + 10))}/>
+            </View>}
             {!!p.error && (
               <Muted accessibilityRole="alert" style={{ fontSize: 12, color: c.live }}>{p.error}</Muted>
             )}

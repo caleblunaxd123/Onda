@@ -15,6 +15,7 @@ public sealed class OndaDbContext(DbContextOptions<OndaDbContext> options) : DbC
     public DbSet<ListeningRoom> ListeningRooms => Set<ListeningRoom>();
     public DbSet<RoomBan> RoomBans => Set<RoomBan>();
     public DbSet<CommunityReport> CommunityReports => Set<CommunityReport>();
+    public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
     public DbSet<RoomChatEntry> RoomChatEntries => Set<RoomChatEntry>();
     public DbSet<RoomUpload> RoomUploads => Set<RoomUpload>();
 
@@ -74,7 +75,19 @@ public sealed class OndaDbContext(DbContextOptions<OndaDbContext> options) : DbC
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.MessageSnapshot).HasMaxLength(2000);
+            e.Property(x => x.Status).HasMaxLength(16).IsUnicode(false).HasDefaultValue("received");
+            e.Property(x => x.ReviewNote).HasMaxLength(500);
             e.HasIndex(x => x.CreatedAt);
+            e.HasIndex(x => new {x.Status, x.CreatedAt});
+        });
+        model.Entity<UserBlock>(e =>
+        {
+            e.HasKey(x => new {x.BlockerId, x.BlockedId});
+            e.HasIndex(x => x.BlockedId);
+            // Account deletion/guest expiry removes both sides explicitly; no multiple cascade paths.
+            e.HasOne<ListenerAccount>().WithMany().HasForeignKey(x => x.BlockerId).OnDelete(DeleteBehavior.NoAction);
+            e.HasOne<ListenerAccount>().WithMany().HasForeignKey(x => x.BlockedId).OnDelete(DeleteBehavior.NoAction);
         });
         model.Entity<StationEntity>(e =>
         {

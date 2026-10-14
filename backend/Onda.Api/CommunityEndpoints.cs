@@ -76,6 +76,43 @@ public static class CommunityEndpoints
             var saved = await sync.SaveAsync(user.ListenerId(), request, ct);
             return saved is null ? Results.Problem("Tu biblioteca cambió en otro dispositivo. Vuelve a sincronizar para combinarla.", statusCode: 409) : Results.Ok(saved);
         }).WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(1000000));
+        var blocks = app.MapGroup("/api/v1/safety/blocks").RequireAuthorization().CacheOutput(p => p.NoCache());
+        blocks.MapGet("/", async (ClaimsPrincipal user, OndaDbContext db, CancellationToken ct) => Results.Ok(new {
+            items = await db.UserBlocks.Where(x => x.BlockerId == user.ListenerId()).OrderByDescending(x => x.CreatedAt)
+                .Join(db.ListenerAccounts, b => b.BlockedId, a => a.Id, (b, a) => new {id = a.Id, name = a.DisplayName, at = b.CreatedAt}).Take(500).ToArrayAsync(ct)
+        }));
+        blocks.MapPut("/{account:guid}", async (Guid account, ClaimsPrincipal user, OndaDbContext db, RoomPresence presence,
+            IHubContext<RoomsHub> hub, TimeProvider clock, CancellationToken ct) =>
+        {
+            var me = user.ListenerId();
+            if (account == me || !await db.ListenerAccounts.AnyAsync(x => x.Id == account, ct)) return Results.Problem("Elige otra persona para bloquear.", statusCode: 400);
+            var gate = presence.RoomLock(me); await gate.WaitAsync(ct);
+            try
+            {
+                if (!await db.UserBlocks.AnyAsync(x => x.BlockerId == me && x.BlockedId == account, ct))
+                {
+                    if (await db.UserBlocks.CountAsync(x => x.BlockerId == me, ct) >= 500) return Results.Problem("Revisa tu lista de bloqueados antes de añadir otra persona.", statusCode: 400);
+                    db.UserBlocks.Add(new() {BlockerId = me, BlockedId = account, CreatedAt = clock.GetUtcNow()});
+                    await db.SaveChangesAsync(ct);
+                }
+            }
+            finally {gate.Release();}
+            var active = presence.ActiveRooms();
+            var owned = await db.ListeningRooms.AsNoTracking().Where(x => active.Contains(x.Id) && (x.OwnerId == me || x.OwnerId == account)).ToArrayAsync(ct);
+            foreach (var room in owned)
+            {
+                var removed = room.OwnerId == me ? account : me;
+                await hub.Clients.Group(room.Id.ToString()).SendAsync("AccessChanged", room.Id, removed, ct);
+                presence.RevokeRoom(removed, room.Id);
+                await hub.Clients.Group(room.Id.ToString()).SendAsync("Refresh", ct);
+            }
+            return Results.NoContent();
+        }).RequireRateLimiting("account");
+        blocks.MapDelete("/{account:guid}", async (Guid account, ClaimsPrincipal user, OndaDbContext db, CancellationToken ct) =>
+        {
+            await db.UserBlocks.Where(x => x.BlockerId == user.ListenerId() && x.BlockedId == account).ExecuteDeleteAsync(ct);
+            return Results.NoContent();
+        }).RequireRateLimiting("account");
         var roomApi = app.MapGroup("/api/v1/rooms").CacheOutput(p => p.NoCache());
         roomApi.MapGet("/", async (bool? mine, ClaimsPrincipal user, RoomService rooms, CancellationToken ct) =>
             Results.Ok(new {items = await rooms.ListAsync(user.Identity?.IsAuthenticated == true ? user.ListenerId() : null, mine == true, ct)}));
@@ -83,10 +120,29 @@ public static class CommunityEndpoints
             await rooms.CreateAsync(user.ListenerId(), request, ct) is { } created ? Results.Created($"/api/v1/rooms/{created.Id}", created) : Results.Problem("Elige un nombre y contenido compatible. Puedes mantener hasta 3 salas abiertas.", statusCode: 400)).RequireAuthorization().RequireRateLimiting("create-room");
         roomApi.MapGet("/invite/{code}", async (string code, ClaimsPrincipal user, RoomService rooms, CancellationToken ct) =>
             await rooms.ByCodeAsync(code, user.ListenerId(), ct) is { } room ? Results.Ok(room) : Results.Problem("Invitación inválida, sala cerrada o acceso restringido.", statusCode: 404)).RequireAuthorization();
-        roomApi.MapPost("/{id:guid}/reports", async (Guid id, RoomReportRequest request, ClaimsPrincipal user, OndaDbContext db, CancellationToken ct) =>
+        roomApi.MapPost("/{id:guid}/reports", async (Guid id, RoomReportRequest request, ClaimsPrincipal user, OndaDbContext db,
+            RoomPresence presence, TimeProvider clock, CancellationToken ct) =>
         {
-            if (request.Reason is not {Length: >= 3 and <= 500} || !await db.ListeningRooms.AnyAsync(x => x.Id == id, ct)) return Results.Problem("Indica el motivo del reporte.", statusCode: 400);
-            db.CommunityReports.Add(new() {RoomId = id, ReporterId = user.ListenerId(), AccountId = request.AccountId, Reason = Onda.Application.Text.CleanName(request.Reason, 500), CreatedAt = DateTimeOffset.UtcNow});
+            var me = user.ListenerId();
+            var room = await db.ListeningRooms.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
+            if (room is null || room.OwnerId != me && !presence.Members(id).Any(x => x.Id == me)) return Results.NotFound();
+            var reason = Onda.Application.Text.CleanName(request.Reason ?? "", 500).Trim();
+            if (request.Reason is not {Length: >= 3 and <= 500} || reason.Length < 3) return Results.Problem("Indica el motivo del reporte.", statusCode: 400);
+            Onda.Domain.RoomChatEntry? message = null;
+            if (request.MessageId is { } messageId)
+            {
+                message = await db.RoomChatEntries.AsNoTracking().SingleOrDefaultAsync(x => x.Id == messageId && x.RoomId == id, ct);
+                if (message is null || request.AccountId is { } target && target != message.SenderId) return Results.NotFound();
+            }
+            else if (request.AccountId is { } target && target != room.OwnerId && !presence.Members(id).Any(x => x.Id == target) &&
+                !await db.RoomChatEntries.AnyAsync(x => x.RoomId == id && x.SenderId == target, ct)) return Results.NotFound();
+            var now = clock.GetUtcNow();
+            var targetId = message?.SenderId ?? request.AccountId;
+            if (await db.CommunityReports.AnyAsync(x => x.RoomId == id && x.ReporterId == me && x.MessageId == request.MessageId && x.AccountId == targetId && x.CreatedAt > now.AddMinutes(-5), ct))
+                return Results.Ok(new {status = "received"});
+            var snapshot = message is null ? null : System.Text.Json.JsonSerializer.Deserialize<RoomMessage>(message.Payload)?.Text;
+            db.CommunityReports.Add(new() {RoomId = id, ReporterId = me, AccountId = targetId, MessageId = request.MessageId,
+                MessageSnapshot = snapshot is null ? null : snapshot[..Math.Min(2000, snapshot.Length)], Reason = reason, CreatedAt = now});
             await db.SaveChangesAsync(ct); return Results.Ok(new {status = "received"});
         }).RequireAuthorization().RequireRateLimiting("reports");
         app.MapPost("/api/v1/media/resolve", async (MediaInput input, MediaResolver resolver, CancellationToken ct) =>

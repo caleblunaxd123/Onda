@@ -7,7 +7,7 @@ import {useAuth, type SessionResponse} from './session';
 import type {GoogleProvider} from './google';
 
 type GoogleApi = {accounts: {id: {
-  initialize: (config: {client_id: string; nonce: string; callback: (value: {credential: string}) => void}) => void;
+  initialize: (config: {client_id: string; nonce: string; use_fedcm_for_button: boolean; button_auto_select: boolean; callback: (value: {credential: string}) => void}) => void;
   renderButton: (element: HTMLElement, options: {type: 'standard'; theme: 'outline'; size: 'large'; text: 'continue_with'; locale: 'es'; width: number}) => void;
 }}};
 declare global {interface Window {google?: GoogleApi}}
@@ -24,6 +24,7 @@ export function GoogleLoginButton({onSession, onError}: {onSession: (session: Se
   const provider = useQuery({queryKey: ['auth-providers'], queryFn: () => request<GoogleProvider>('/api/v1/auth/providers'), retry: 1});
   const [open, setOpen] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [refresh, setRefresh] = useState(0);
   const container = useRef<HTMLDivElement>(null);
   const enabled = !!provider.data?.google.enabled && !!provider.data.google.webClientId;
   const current = useRef({onSession, onError});
@@ -31,9 +32,11 @@ export function GoogleLoginButton({onSession, onError}: {onSession: (session: Se
   useEffect(() => {
     if (!open || !enabled) return;
     let active = true;
+    // The server nonce expires after five minutes. Renew it while this login screen remains open.
+    const timer = setTimeout(() => setRefresh(value => value + 1), 240000);
     void Promise.all([googleApi(), request<{nonce: string}>('/api/v1/auth/google/challenge', {method: 'POST'})]).then(([google, {nonce}]) => {
       if (!active || !container.current) return;
-      google.accounts.id.initialize({client_id: provider.data!.google.webClientId!, nonce, callback: ({credential}) => {
+      google.accounts.id.initialize({client_id: provider.data!.google.webClientId!, nonce, use_fedcm_for_button: true, button_auto_select: false, callback: ({credential}) => {
         if (!active) return; setBusy(true);
         void request<SessionResponse>('/api/v1/auth/google', {method: 'POST', token: useAuth.getState().session?.token, body: {idToken: credential, nonce}})
           .then(async session => {if (!active) return; await useAuth.getState().setSession(session); current.current.onSession(session);})
@@ -42,8 +45,8 @@ export function GoogleLoginButton({onSession, onError}: {onSession: (session: Se
       }});
       google.accounts.id.renderButton(container.current, {type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', locale: 'es', width: 300});
     }).catch(error => {if (active) {current.current.onError(error.message); setOpen(false);}});
-    return () => {active = false;};
-  }, [open, enabled, provider.data]);
+    return () => {active = false; clearTimeout(timer);};
+  }, [open, enabled, provider.data, refresh]);
   return <View style={{gap: 6}}>
     {open && enabled ? <div ref={container} style={{minHeight: 44, display: 'flex', justifyContent: 'center', pointerEvents: busy ? 'none' : 'auto'}}/>
       : <Button title="Continuar con Google" secondary icon="logo-google" disabled={!enabled} onPress={() => setOpen(true)}/>}

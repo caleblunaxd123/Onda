@@ -55,7 +55,19 @@ public sealed class CommunityReport
     public Guid RoomId { get; set; }
     public Guid ReporterId { get; set; }
     public Guid? AccountId { get; set; }
+    public Guid? MessageId { get; set; }
+    public string? MessageSnapshot { get; set; }
+    public string Status { get; set; } = "received";
+    public DateTimeOffset? ReviewedAt { get; set; }
+    public Guid? ReviewedBy { get; set; }
+    public string? ReviewNote { get; set; }
     public string Reason { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+}
+public sealed class UserBlock
+{
+    public Guid BlockerId { get; set; }
+    public Guid BlockedId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
 public sealed class RoomChatEntry

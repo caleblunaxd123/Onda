@@ -19,6 +19,7 @@ public sealed class CommunityMaintenance(IServiceScopeFactory scopes, TimeProvid
                 files.Delete(await RoomChatService.ForgetAccountsAsync(db, guests, stoppingToken));
                 await db.ListeningRooms.Where(x => guests.Contains(x.OwnerId)).ExecuteDeleteAsync(stoppingToken);
                 await db.RoomBans.Where(x => guests.Contains(x.AccountId)).ExecuteDeleteAsync(stoppingToken);
+                await db.UserBlocks.Where(x => guests.Contains(x.BlockerId) || guests.Contains(x.BlockedId)).ExecuteDeleteAsync(stoppingToken);
                 await db.CommunityReports.Where(x => guests.Contains(x.ReporterId)).ExecuteUpdateAsync(x => x.SetProperty(r => r.ReporterId, Guid.Empty), stoppingToken);
                 await db.CommunityReports.Where(x => x.AccountId != null && guests.Contains(x.AccountId.Value)).ExecuteUpdateAsync(x => x.SetProperty(r => r.AccountId, (Guid?)null), stoppingToken);
                 await db.ListenerAccounts.Where(x => guests.Contains(x.Id)).ExecuteDeleteAsync(stoppingToken);
@@ -27,6 +28,8 @@ public sealed class CommunityMaintenance(IServiceScopeFactory scopes, TimeProvid
                 // Chat retention (30 days), unsent uploads (1 h) and files whose rows were removed by cascades.
                 files.Delete(await RoomChatService.PruneExpiredAsync(db, now, stoppingToken));
                 await files.PruneAsync(db, stoppingToken);
+                // Reports contain private text only when explicitly submitted. Bound review evidence retention.
+                await db.CommunityReports.Where(x => x.CreatedAt < now.AddDays(-90)).ExecuteDeleteAsync(stoppingToken);
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested) {logger.LogWarning("Community maintenance could not finish ({Type}).", ex.GetType().Name);}
         }

@@ -3,11 +3,11 @@
 
 Aplicación social de radio, música y video con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: **beta 0.6 en revisión local**. API/web 0.6 iniciales desplegadas; corrección final compacta/vertical y APK pendientes de publicación. APK público aún 0.5.0. Faltan pruebas físicas.
+Estado: **candidata 0.6.1 en revisión local**. API/web 0.6 iniciales desplegadas; Google activado y probado en Android. Bloqueos/reportes/moderación nuevos pendientes de publicación aprobada. APK público aún 0.5.0. Faltan pruebas físicas y controles adicionales de lanzamiento.
 
 Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.5.0&build=7.1).
 El APK incluye JavaScript, funciona sin Metro y usa HTTPS. Firma de depuración para beta interna; no es una publicación en tiendas.
-Continuación actual: [prompt completo de salas, diseño y chat para Claude Code](docs/CLAUDE_NEXT_LEVEL_PROMPT.md).
+Estado de lanzamiento: [verificación y pendientes reales](docs/LAUNCH_READINESS.md). El desarrollo continúa directamente en este proyecto.
 
 ## Qué incluye
 - Catálogo de ~68.000 emisoras de Radio Browser sincronizado en SQL Server (solo se reproducen streams HTTPS),

@@ -1,4 +1,15 @@
-# Validación actual — beta 0.6
+# Validación actual — candidata 0.6.1
+
+144/144 backend con SQL real, cero omitidas; 94/94 móvil, TypeScript/ESLint limpios. Cinco conexiones
+SignalR validan late join, controles concurrentes y reconexión; el puente generado cubre seek pausado,
+revisiones, cue inicial y buffering. Google Android real confirmado; login web completo pendiente.
+Smoke público 32/32 sobre API existente con Google habilitado, no sobre migración SafetyBlocks nueva.
+Build web/APK tres ABI y QA nativa se describen en [informe actual](testing-report.md).
+
+La nueva seguridad está implementada/probada localmente y pendiente de publicación. La UI de moderación
+no recibió E2E visual completo: reinicio en segundo plano rechazado por revisión automática de permisos.
+
+## Histórico: beta 0.5 y revisión inicial 0.6
 140 backend (SQL real, sin omitidas), 87 móvil + TypeScript/ESLint; export web y APK tres ABI.
 El script `node scripts/smoke-chat.mjs https://onda-api.lunalav.pe` pasó 32/32 en producción:
 adjuntos de imagen/archivo/audio rechazados, texto y stickers, respuestas, reacciones, edición, borrado,
