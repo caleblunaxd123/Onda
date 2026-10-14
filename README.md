@@ -5,9 +5,9 @@ Aplicación social de radio, música y video con Expo / React Native (SDK 57) y 
 Base de datos: **SQL Server**, por decisión del propietario.
 Estado: **beta 0.3 desplegada**; faltan pruebas físicas para aceptar el MVP.
 
-Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=3).
+Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=4).
 El APK incluye JavaScript, funciona sin Metro y usa HTTPS. Firma de depuración para beta interna; no es una publicación en tiendas.
-Continuación: [handoff para Claude Code](docs/CLAUDE_HANDOFF.md).
+Continuación actual: [prompt completo de salas, diseño y chat para Claude Code](docs/CLAUDE_ROOM_CHAT_PROMPT.md).
 
 ## Qué incluye
 - Catálogo de ~68.000 emisoras de Radio Browser sincronizado en SQL Server (solo se reproducen streams HTTPS),
@@ -18,7 +18,8 @@ Continuación: [handoff para Claude Code](docs/CLAUDE_HANDOFF.md).
 - Diseño según docs/design-reference.png, tema claro/oscuro/automático. Capturas: docs/screenshots.
 - Salas públicas/privadas con invitados, chat, reacciones, cola con votos, controles del anfitrión, transferencia de control,
   expulsión, reportes, reconexión y códigos renovables. Radio, YouTube/YouTube Music y archivos HTTPS de audio/video.
-- Explorador de YouTube integrado en Android: elegir otro video, reproducir para todos o proponerlo en la cola.
+- Crear sala -> elegir fuente -> entrar automáticamente -> buscar contenido en la sala.
+  YouTube abre directamente su navegador Android; la selección del anfitrión comparte el video con el grupo.
   En web, búsqueda de YouTube en otra pestaña y pegado del enlace; cambios del reproductor compartidos por el anfitrión.
 - Cuentas opcionales con recuperación por código privado y biblioteca sincronizada: radios, colecciones y multimedia;
   historial solo con consentimiento. Asistente de descubrimiento con IA local y respaldo por reglas; pasaporte basado en escuchas reales.
@@ -41,7 +42,7 @@ En emulador Android la API está en `http://10.0.2.2:5080`; en un dispositivo f�
 El tráfico HTTP solo se habilita en builds con APP_VARIANT=development. Preview/producción requieren API HTTPS.
 
 ## Probar en un teléfono Android real
-Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=3). No requiere PC ni Wi-Fi compartido.
+Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=4). No requiere PC ni Wi-Fi compartido.
 También se puede generar una variante para pruebas locales:
 1. PC y teléfono en la misma red Wi‑Fi/LAN. Iniciar la API para la red: `scripts/start-api.ps1` (escucha en 0.0.0.0:5080).
 2. Permitir el puerto 5080 en el firewall de Windows (una vez, PowerShell como administrador):
@@ -77,3 +78,7 @@ OpenAPI: `/openapi/v1.json` en Development.
 
 Catálogo: [Radio Browser](https://www.radio-browser.info) (comunitario). Mapa de desarrollo: OpenFreeMap / OpenStreetMap.
 Consultar [estado](docs/PROGRESS.md), [pruebas](docs/TESTING.md), [arquitectura](docs/ARCHITECTURE.md) y [roadmap](docs/ROADMAP.md).
+
+## En progreso, no publicado
+Paleta global azul gris suave y base SQL/API de chat ampliado/adjuntos. El hub y UI todavía usan el chat básico.
+Ver el prompt de continuidad antes de desplegar: completar conexión de servicios, grabación y archivos privados.

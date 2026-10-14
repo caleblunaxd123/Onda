@@ -1,5 +1,13 @@
 # Progreso — actualizado 2026-10-13
 
+## Checkpoint de continuidad para Claude
+Flujo confirmado: Crear sala -> proveedor -> entrar automáticamente -> buscar/seleccionar en sala.
+API/web provider y APK build=4 publicados. 100 backend / 60 móvil; CI verde en 15cd8da.
+Paleta soft unificada preparada; backend RoomChatService, RoomUploadStore/Endpoints y tablas con
+migración RoomChatStorage en progreso, todavía sin hub/DI/UI y sin desplegar en Contabo.
+SDK document-picker/file-system/sharing añadidos, grabación nativa pendiente.
+Prompt completo: CLAUDE_ROOM_CHAT_PROMPT.md. No dar estas funciones WIP por terminadas.
+
 ## Beta 0.3: salas y diseño
 Incremento de navegación: explorador de YouTube dentro de Android, selección de video y opciones
 «Reproducir para todos»/«Añadir a la cola». Cambios de video del reproductor oficial compartidos por

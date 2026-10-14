@@ -50,7 +50,7 @@ export const collectionName = (name: string) => name.trim().replace(/\s+/g, ' ')
 type Library = {
   favorites: Station[]; history: Station[]; searches: string[]; collections: Collection[];
   mediaFavorites: MediaBookmark[]; toggleMedia: (media: RoomMedia) => void;
-  country: string; theme: 'dark' | 'light' | 'system';
+  country: string; theme: 'dark' | 'light' | 'system' | 'soft'; appearanceVersion: number;
   syncAccountId: string | null; syncHistory: boolean; configureSync: (accountId: string | null, history?: boolean) => void;
   librarySort: LibrarySort; setLibrarySort: (sort: LibrarySort) => void;
   /** auto: follows the country detected from the device time zone; manual: chosen in Settings. */
@@ -70,7 +70,7 @@ type Library = {
   removeFromCollection: (id: string, stationId: string) => void;
 };
 export const useLibrary = create<Library>()(persist((set) => ({
-  favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'system', countryMode: 'auto',
+  favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'soft', appearanceVersion: 1, countryMode: 'auto',
   mediaFavorites: [], toggleMedia: media => set(x => ({mediaFavorites: x.mediaFavorites.some(item => item.media.url === media.url)
     ? x.mediaFavorites.filter(item => item.media.url !== media.url)
     : [{id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12), media}, ...x.mediaFavorites].slice(0, 100)})),
@@ -112,7 +112,7 @@ export const useLibrary = create<Library>()(persist((set) => ({
   merge: (persisted, current) => {
     const saved = (persisted ?? {}) as Partial<Library>;
     const existing = !!saved.favorites?.length || !!saved.history?.length || !!saved.collections?.length;
-    return {...current, ...saved, onboarded: saved.onboarded ?? existing};
+    return {...current, ...saved, ...(saved.appearanceVersion === 1 ? {} : {theme: 'soft' as const, appearanceVersion: 1}), onboarded: saved.onboarded ?? existing};
   },
 }));
 

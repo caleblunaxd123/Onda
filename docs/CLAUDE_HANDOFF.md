@@ -1,3 +1,6 @@
+> **Prioridad actual:** usar [CLAUDE_ROOM_CHAT_PROMPT.md](CLAUDE_ROOM_CHAT_PROMPT.md).
+> Contiene las últimas decisiones del propietario y distingue producción de chat/diseño en progreso.
+
 # Continuación para Claude Code — ONDA 0.3
 
 ## Prompt listo para usar
@@ -14,7 +17,7 @@ README.md y docs/{PROGRESS,ARCHITECTURE,ROADMAP,TESTING,DEPLOYMENT,DEPENDENCIES,
 Verifica la implementación: no vuelvas a crear módulos que ya funcionan ni uses datos sociales falsos.
 
 Web https://onda.lunalav.pe; API https://onda-api.lunalav.pe; APK beta público en
-https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=3. Contabo, Cloudflare, Caddy, SQL Server Express,
+https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=4. Contabo, Cloudflare, Caddy, SQL Server Express,
 Ollama local. .NET 10, Expo SDK 57, React Native 0.86.3. SQL Server es decisión del propietario;
 no lo sustituyas por PostgreSQL.
 

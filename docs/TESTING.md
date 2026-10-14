@@ -1,7 +1,7 @@
 # Pruebas
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
-  con `ONDA_TEST_SQL` definido). 96 pruebas; ninguna omitida en la validación Windows con SQL Server real.
+  con `ONDA_TEST_SQL` definido). 100 pruebas; ninguna omitida en la validación Windows con SQL Server real.
 - Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 60 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
@@ -94,3 +94,7 @@ Dos WebSockets HTTPS públicos reciben ChangeMedia y metadatos. En emulador: bus
 tocar resultado, reproducir para todos; buscar Sintel y añadir a la cola sin cambiar el video actual.
 Segunda conexión recibe ambas acciones. Datos y sala anterior del emulador conservados.
 CI verde; no se afirma búsqueda web integrada sin YouTube Data API.
+
+Checkpoint WIP: backend compila y las 100 pruebas anteriores pasan con migración RoomChatStorage
+en bases de prueba. Móvil: tipos/lint y 60 pruebas pasan. Esto NO prueba el chat nuevo de extremo
+a extremo: no está conectado; agregar pruebas de comandos/archivos/voz y QA visual antes de publicar.

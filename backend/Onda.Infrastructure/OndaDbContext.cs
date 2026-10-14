@@ -15,9 +15,22 @@ public sealed class OndaDbContext(DbContextOptions<OndaDbContext> options) : DbC
     public DbSet<ListeningRoom> ListeningRooms => Set<ListeningRoom>();
     public DbSet<RoomBan> RoomBans => Set<RoomBan>();
     public DbSet<CommunityReport> CommunityReports => Set<CommunityReport>();
+    public DbSet<RoomChatEntry> RoomChatEntries => Set<RoomChatEntry>();
+    public DbSet<RoomUpload> RoomUploads => Set<RoomUpload>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
+        model.Entity<RoomChatEntry>(e => {
+            e.HasKey(x => x.Id); e.Property(x => x.Payload).HasMaxLength(32000);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new {x.RoomId, x.At}); e.HasIndex(x => x.SenderId);
+            e.HasOne<ListeningRoom>().WithMany().HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<RoomUpload>(e => {
+            e.HasKey(x => x.Id); e.Property(x => x.Name).HasMaxLength(120); e.Property(x => x.Mime).HasMaxLength(100); e.Property(x => x.Kind).HasMaxLength(10);
+            e.HasIndex(x => new {x.RoomId, x.At}); e.HasIndex(x => x.UploaderId);
+            e.HasOne<ListeningRoom>().WithMany().HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Cascade);
+        });
         model.Entity<ListenerAccount>(e =>
         {
             e.HasKey(x => x.Id);

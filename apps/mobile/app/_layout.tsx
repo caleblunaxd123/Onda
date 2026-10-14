@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react
 import { player, prepareAudio, usePlayer } from '../src/player';
 import { lookupStations } from '../src/catalog';
 import { libraryIds, useLibrary } from '../src/library';
-import {cinemaPalette, ThemeScope, useTheme} from '../src/theme';
+import {useTheme} from '../src/theme';
 import { deviceCountry } from '../src/region';
 import { Label, MiniPlayer } from '../src/ui';
 import {initializeSession} from '../src/features/account/session';
@@ -40,7 +40,7 @@ function syncCountry() {
 
 export default function RootLayout() {
   const segments = useSegments();
-  return <ThemeScope palette={['room', 'create-room', 'watch'].includes(segments[0] ?? '') ? cinemaPalette : undefined}><RootShell wide={['room', 'watch'].includes(segments[0] ?? '')}/></ThemeScope>;
+  return <RootShell wide={['room', 'watch'].includes(segments[0] ?? '')}/>;
 }
 function RootShell({wide}: {wide: boolean}) {
   const c = useTheme(); const [error, setError] = useState('');

@@ -57,3 +57,24 @@ public sealed class CommunityReport
     public string Reason { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 }
+public sealed class RoomChatEntry
+{
+    public Guid Id { get; set; }
+    public Guid RoomId { get; set; }
+    public Guid SenderId { get; set; }
+    public string Payload { get; set; } = "{}";
+    public DateTimeOffset At { get; set; }
+    public long Version { get; set; }
+}
+public sealed class RoomUpload
+{
+    public Guid Id { get; set; }
+    public Guid RoomId { get; set; }
+    public Guid UploaderId { get; set; }
+    public Guid? MessageId { get; set; }
+    public string Name { get; set; } = "";
+    public string Mime { get; set; } = "";
+    public string Kind { get; set; } = "file";
+    public long Length { get; set; }
+    public DateTimeOffset At { get; set; }
+}

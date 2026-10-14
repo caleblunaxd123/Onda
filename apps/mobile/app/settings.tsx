@@ -11,7 +11,7 @@ import { deviceCountry } from '../src/region';
 import { Ionicons } from '../src/icons';
 import { Button, Card, Chip, Label, Muted, OptionPicker, Page, ScreenHeader, Sheet, cardStyle, flag, formatCount } from '../src/ui';
 
-const themes = {system: 'Automático', light: 'Claro', dark: 'Oscuro'} as const;
+const themes = {soft: 'Azul gris suave', system: 'Automático', light: 'Claro', dark: 'Oscuro'} as const;
 
 export default function Settings() {
   const c = useTheme(); const library = useLibrary();

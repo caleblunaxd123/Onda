@@ -2,7 +2,12 @@ using System.Collections.Concurrent;
 namespace Onda.Api;
 
 public sealed record RoomMember(Guid Id, string Name);
-public sealed record RoomMessage(Guid Id, Guid SenderId, string Sender, string Text, string Kind, DateTimeOffset At);
+public sealed record MessageEmoji(Guid AccountId, string Name, string Emoji);
+public sealed record MessageReply(Guid Id, string Sender, string Text, bool Deleted);
+public sealed record ChatAttachment(Guid Id, string Name, string Mime, string Kind, long Length);
+public sealed record RoomMessage(Guid Id, Guid SenderId, string Sender, string Text, string Kind, DateTimeOffset At,
+    Guid? ReplyToId = null, MessageReply? Reply = null, DateTimeOffset? EditedAt = null, bool Deleted = false,
+    MessageEmoji[]? Reactions = null, ChatAttachment[]? Attachments = null, long Revision = 0);
 public sealed record RoomReaction(Guid SenderId, string Emoji);
 public sealed class RoomPresence(TimeProvider clock)
 {

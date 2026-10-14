@@ -38,8 +38,14 @@ const dark: Palette = {
 export function useTheme(): Palette {
   const setting = useLibrary(s => s.theme); const system = useColorScheme();
   const scoped = useContext(ThemeContext);
-  return scoped ?? ((setting === 'system' ? system : setting) === 'dark' ? dark : light);
+  return scoped ?? (setting === 'soft' ? soft : ((setting === 'system' ? system : setting) === 'dark' ? dark : light));
 }
+
+export const soft: Palette = {...dark, bg: '#25344A', surface: '#304159', surfaceAlt: '#3A4D68',
+  text: '#F5F8FC', muted: '#BDCADC', border: '#465B77', accentSoft: '#424164',
+  primary: '#42D2E5', primaryText: '#83E5EF', onPrimary: '#102A39',
+  shadow: '0px 8px 24px rgba(12, 23, 39, 0.14)',
+  headerGlow: 'linear-gradient(180deg, #324F70 0%, #2B405B 55%, #25344A 100%)'};
 
 export const cinemaPalette: Palette = {...dark, bg: '#080A10', surface: '#141720', surfaceAlt: '#1D212D',
   text: '#F8FAFF', muted: '#A8ADBD', border: '#272B38', accentSoft: '#27203F',

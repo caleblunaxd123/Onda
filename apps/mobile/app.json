@@ -41,6 +41,7 @@
       "@maplibre/maplibre-react-native",
       "expo-font",
       "expo-asset",
+      "expo-sharing",
       "expo-build-properties",
       [
         "expo-splash-screen",
@@ -48,10 +49,10 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 240,
           "resizeMode": "contain",
-          "backgroundColor": "#F5F7FB",
+          "backgroundColor": "#25344A",
           "dark": {
             "image": "./assets/splash-icon.png",
-            "backgroundColor": "#0B1326"
+            "backgroundColor": "#25344A"
           }
         }
       ]

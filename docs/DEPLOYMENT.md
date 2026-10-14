@@ -2,8 +2,8 @@
 
 - Web: https://onda.lunalav.pe
 - API: https://onda-api.lunalav.pe (`/health/live`, `/health/ready`).
-- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=3
-- APK: 118.053.592 bytes, SHA256 `94d52849b5ae1b090734ddc7675f08775bc70a33c44e40cf4ad2579d08c52c5e`.
+- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=4
+- APK: 118.055.700 bytes, SHA256 `95658ffe31325da80d4e7d3fbb69913f7cbf35524728fa96d4dc4573285b9058`.
   arm64-v8a, armeabi-v7a y x86_64. JavaScript incluido, HTTPS, firma de depuración para beta interna.
 
 ## Contabo y Cloudflare
@@ -14,7 +14,7 @@ ASP.NET confía únicamente en el proxy configurado 10.77.0.10. SQL no tiene pue
 No se modificaron rutas ni datos de otras aplicaciones del VPS.
 
 `infra/contabo/compose.yaml`: API, migrador y Ollama; redes existentes `stack_data` (interna) y `stack_web`,
-más red privada `onda_ai`. Imagen activa API `onda-api:20261013-navigation`.
+más red privada `onda_ai`. Imagen activa API `onda-api:20261013-provider`.
 Ollama fijado a digest `sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c`;
 modelo `qwen2.5:1.5b` descargado. Límite API 768 MB/1,5 CPU; Ollama 2 GB/2 CPU.
 IA verificada con `engine=local-ai`, filtros reales y 8 estaciones; respaldo por reglas en indisponibilidad.
@@ -67,3 +67,10 @@ Incremento de navegación: APK build=3 instalado sin borrar datos, explorador Yo
 con búsqueda/selección reales y otra conexión pública recibiendo cambio de video y cola. El emulador
 volvió a su sala anterior con la pausa/posición conservadas. QA sintético propio eliminado.
 Web exportada; búsqueda YouTube web externa hasta configurar Data API (decisión del propietario).
+
+## Checkpoint para Claude: estado publicado frente a WIP
+API/web provider y APK build=4 corresponden al flujo Crear sala -> proveedor -> entrar -> elegir contenido.
+100 backend / 60 móvil; CI verde para 15cd8da. Falta QA específica del nuevo recorrido en emulador.
+La paleta soft y la base de chat/adjuntos están versionadas como WIP y NO desplegadas.
+RoomChatStorage NO aplicada en Contabo. No desplegar WIP sin terminar hub/DI/UI, permisos nativos,
+almacenamiento persistente de adjuntos, limpieza, pruebas y respaldo/migración explícita.
