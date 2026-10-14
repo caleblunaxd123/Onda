@@ -86,3 +86,11 @@ CI: corregida la comprobación nullable de map-style.ts observada en Linux.
 
 CI final backend/móvil verde en Linux. Degradados: adaptador explícito entre CSS web y experimental_backgroundImage
 de RN 0.86; Inicio y Juntos verificados en Android con el APK corregido.
+
+## Navegador YouTube Android
+96 backend / 60 móvil; TypeScript/ESLint, export web y APK de tres ABI. Pruebas de URLs oficiales,
+cambios de video IFrame, restauración de invitados y comandos con SQL real/roles/versiones/cola.
+Dos WebSockets HTTPS públicos reciben ChangeMedia y metadatos. En emulador: buscar Big Buck Bunny,
+tocar resultado, reproducir para todos; buscar Sintel y añadir a la cola sin cambiar el video actual.
+Segunda conexión recibe ambas acciones. Datos y sala anterior del emulador conservados.
+CI verde; no se afirma búsqueda web integrada sin YouTube Data API.

@@ -121,6 +121,10 @@ Sin pruebas físicas de audio, Bluetooth, llamadas, batería o background prolon
 - UI organizada en `components` y `features/{library,account,rooms,home}`; SDK 57 exige hooks de navegación de `expo-router`.
 - UI de sala separada en coordinador, layout adaptable, paneles y presentación. Paleta de cine contextual;
   reloj transportado como ancla para aplicar controles locales sin retroceder, desmontaje por fuente y autoplay bloqueado visible.
+- Android: explorador YouTube separado/incógnito, selección de URLs de videos públicos por navegación WebView,
+  sin tokens ONDA ni scraping. Web abre búsqueda externa sin afirmar incrustación del sitio completo.
+  `ChangeMedia` comprueba rol/versión después de metadatos y limpia solo la propuesta elegida.
+  IFrame API `getVideoUrl` detecta cambios del reproductor: anfitrión los comparte, invitado restaura la fuente de sala.
 
 ## Referencias técnicas consultadas
 - https://docs.expo.dev/versions/v57.0.0/sdk/audio/

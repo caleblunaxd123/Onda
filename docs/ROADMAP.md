@@ -14,6 +14,8 @@
 - Dos coanfitriones para reproducción/cola; moderación reservada al anfitrión. Continuidad optativa tras 60 s,
   gracia para reconectar, prioridad a coanfitrión conectado. Cola fijada y estado de votos propio al reconectar.
 
+- Navegador YouTube integrado Android y cambio de contenido para el grupo; búsqueda web externa y enlaces.
+
 ## Próximo trabajo, en orden
 1. Cerrar beta física: audio audible, 30 min bloqueado, Bluetooth/llamadas, reconexión y TalkBack/texto grande;
    sincronía multimedia entre dos teléfonos en redes diferentes; medir errores y tiempos reales.

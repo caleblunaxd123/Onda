@@ -2,8 +2,8 @@
 
 - Web: https://onda.lunalav.pe
 - API: https://onda-api.lunalav.pe (`/health/live`, `/health/ready`).
-- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=2
-- APK: 118.045.708 bytes, SHA256 `641d5f18f407a90849d59a69824adf3d3a7508766d213f53711b317670e7164e`.
+- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=3
+- APK: 118.053.592 bytes, SHA256 `94d52849b5ae1b090734ddc7675f08775bc70a33c44e40cf4ad2579d08c52c5e`.
   arm64-v8a, armeabi-v7a y x86_64. JavaScript incluido, HTTPS, firma de depuración para beta interna.
 
 ## Contabo y Cloudflare
@@ -14,7 +14,7 @@ ASP.NET confía únicamente en el proxy configurado 10.77.0.10. SQL no tiene pue
 No se modificaron rutas ni datos de otras aplicaciones del VPS.
 
 `infra/contabo/compose.yaml`: API, migrador y Ollama; redes existentes `stack_data` (interna) y `stack_web`,
-más red privada `onda_ai`. Imagen activa API `onda-api:20261013-cinema2`.
+más red privada `onda_ai`. Imagen activa API `onda-api:20261013-navigation`.
 Ollama fijado a digest `sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c`;
 modelo `qwen2.5:1.5b` descargado. Límite API 768 MB/1,5 CPU; Ollama 2 GB/2 CPU.
 IA verificada con `engine=local-ai`, filtros reales y 8 estaciones; respaldo por reglas en indisponibilidad.
@@ -62,3 +62,8 @@ Para Metro con adb reverse usar `--lan` (localhost puede enlazar solo IPv6).
 Firma privada, pruebas físicas, auditoría de dependencias de herramientas, correo verificado/recuperación por correo,
 moderación operativa y procedimiento para atender reportes, monitoreo/alertas y backup externo automático.
 No hay voz RTC, casting, PiP ni integraciones Netflix/Spotify/Disney+.
+
+Incremento de navegación: APK build=3 instalado sin borrar datos, explorador YouTube Android probado
+con búsqueda/selección reales y otra conexión pública recibiendo cambio de video y cola. El emulador
+volvió a su sala anterior con la pausa/posición conservadas. QA sintético propio eliminado.
+Web exportada; búsqueda YouTube web externa hasta configurar Data API (decisión del propietario).

@@ -11,7 +11,7 @@ Modo cine, disposición web en dos columnas, seek por teclado/gestos, chat con s
 Copiar invitación, pegar enlace, elegir desde biblioteca; portadas en multimedia guardada.
 Coanfitriones (reproducción/cola), continuidad optativa tras 60 s, gracia de reconexión y moderación del dueño.
 Cola fijada/votos propios, anclas de tiempo sin salto por mute/roles, protección de eventos de reproductores retirados.
-Desplegada API cinema2, web y APK 0.3.0 con datos locales conservados. 95 backend y 56 móvil, sin errores de tipos/lint.
+Desplegada API navigation, web y APK 0.3.0 build=3 con datos locales conservados. 96 backend y 60 móvil, sin errores de tipos/lint.
 Prueba pública real de takeover y Android/web con control desde coanfitrión.
 Correo pospuesto por el propietario hasta disponer de proveedor; voz/PiP/casting y pruebas físicas siguen pendientes.
 
@@ -239,3 +239,7 @@ docs/design-reference.png y ejecutar matriz física de docs/TESTING.md. Después
 colecciones, recomendaciones y auditoría antes de declarar MVP listo o comenzar Social/IA.
 
 Para SSMS: (localdb)\OndaDev, autenticación Windows, base Onda. Ver docs/SQL_SERVER.md.
+
+Navegación Android verificada: búsqueda pública de Big Buck Bunny, selección sin copiar URL,
+reproducción compartida con segunda conexión y propuesta de Sintel en cola sin interrumpir el video.
+CI backend/móvil verde. Capturas android-youtube-{browser,shared-video,queue}.png.

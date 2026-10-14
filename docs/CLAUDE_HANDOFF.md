@@ -14,7 +14,7 @@ README.md y docs/{PROGRESS,ARCHITECTURE,ROADMAP,TESTING,DEPLOYMENT,DEPENDENCIES,
 Verifica la implementación: no vuelvas a crear módulos que ya funcionan ni uses datos sociales falsos.
 
 Web https://onda.lunalav.pe; API https://onda-api.lunalav.pe; APK beta público en
-https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=2. Contabo, Cloudflare, Caddy, SQL Server Express,
+https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=3. Contabo, Cloudflare, Caddy, SQL Server Express,
 Ollama local. .NET 10, Expo SDK 57, React Native 0.86.3. SQL Server es decisión del propietario;
 no lo sustituyas por PostgreSQL.
 
@@ -31,7 +31,7 @@ Mejora el recorrido: elegir contenido -> crear sala -> invitar -> entrar -> prop
 -> escuchar/ver -> guardar -> volver. Evita formularios innecesarios, controles ambiguos,
 audio duplicado y acciones del anfitrión que un invitado pueda ejecutar. Privacidad predeterminada.
 
-Ejecuta npm run check:mobile y scripts/test-api.ps1; referencia 56 móvil y 95 backend
+Ejecuta npm run check:mobile y scripts/test-api.ps1; referencia 60 móvil y 96 backend
 (SQL real, cuentas y dos clientes SignalR). Usa scripts/sql-config.ps1 para SDK .NET local.
 SDK 57 usa hooks de navegación de expo-router, no @react-navigation/native.
 Instala paquetes nativos con Expo; no edites android/ios generados a mano.
@@ -74,5 +74,15 @@ pegado de enlaces y contenido guardado. Hasta dos coanfitriones con permisos de 
 moderación solo del anfitrión. Continuidad optativa: 60 s de gracia, prioridad a coanfitrión conectado;
 reconectar antes conserva al anfitrión. Salas anteriores mantienen continuidad desactivada.
 Cola con prioridad fijada y votos personales recuperados al reconectar. Sincronización con anclas de tiempo
-para evitar saltos al silenciar/cambiar roles. 95 pruebas backend y 56 móvil.
+para evitar saltos al silenciar/cambiar roles. 96 pruebas backend y 60 móvil.
 El propietario indicó continuar primero con salas/diseño; todavía no tiene proveedor de correo transaccional.
+
+## Navegación de contenido
+Explorador YouTube en Android con WebView aislada/incógnita, búsqueda pública y captura de navegación
+HTTPS a videos exactos. Seleccionar rellena el selector: el anfitrión/coanfitrión decide reproducir
+para todos y cualquier integrante puede añadir a la cola. ChangeMedia verifica roles y versión
+tras resolver metadatos; conserva otras propuestas y limpia votos del contenido elegido.
+El reproductor IFrame oficial detecta cambios mediante getVideoUrl y comunica el nuevo video;
+los invitados vuelven al contenido compartido. Pruebas del protocolo de navegación y SQL/WebSockets.
+El propietario no tiene Google Cloud/YouTube Data API y pidió priorizar navegador Android.
+La web abre búsqueda en otra pestaña y acepta enlaces; no afirmar búsqueda web integrada.
