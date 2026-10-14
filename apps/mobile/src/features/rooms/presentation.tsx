@@ -128,91 +128,25 @@ export function MediaPoster({
     </View>
   );
 }
-export function RoomTile({
-  room,
-  onPress,
-}: {
-  room: RoomSummary;
-  onPress: () => void;
-}) {
+/** Rave-style list row: what is playing (thumbnail + title), the room and how many people are in it. */
+export function RoomRow({room, onPress}: {room: RoomSummary; onPress: () => void}) {
   const c = useTheme();
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Entrar a ${room.name}, ${room.listeners} personas`}
+    <Pressable accessibilityRole="button" accessibilityLabel={`Entrar a ${room.name}: ${room.media.title}, ${room.listeners} ${room.listeners === 1 ? "persona" : "personas"}`}
       onPress={onPress}
-      style={({ pressed }) => ({
-        borderRadius: 20,
-        overflow: "hidden",
-        backgroundColor: c.surface,
-        borderWidth: 1,
-        borderColor: c.border,
-        opacity: pressed ? 0.8 : 1,
-      })}
-    >
-      <MediaPoster media={room.media} style={{ borderRadius: 0, height: 174 }}>
-        <View
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            right: 12,
-            flexDirection: "row",
-            justifyContent: "space-between",
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "#080A10BF",
-              borderRadius: 99,
-              paddingHorizontal: 9,
-              paddingVertical: 5,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-            <Ionicons
-              name={room.isPrivate ? "lock-closed" : "people"}
-              size={12}
-              color="#FFFFFF"
-            />
-            <Label
-              style={{ fontSize: 11, color: "#FFFFFF", fontWeight: "700" }}
-            >
-              {room.isPrivate ? "Privada" : room.listeners + " en la sala"}
-            </Label>
-          </View>
-          <Ionicons name="play-circle" size={34} color="#FFFFFF" />
+      style={({ pressed }) => ({ flexDirection: "row", gap: 12, padding: 8, borderRadius: 18, backgroundColor: c.surface, alignItems: "center", opacity: pressed ? 0.8 : 1 })}>
+      <MediaPoster media={room.media} style={{ width: 128, height: 76, borderRadius: 12 }} />
+      <View style={{ flex: 1, gap: 4 }}>
+        <Label numberOfLines={2} style={{ fontSize: 14, fontWeight: "800", lineHeight: 18 }}>{room.media.title}</Label>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <Ionicons name={room.isPrivate ? "lock-closed" : "earth"} size={11} color={c.muted} />
+          <Muted numberOfLines={1} style={{ fontSize: 11, flex: 1 }}>{room.name}</Muted>
         </View>
-        <View style={{ position: "absolute", bottom: 14, left: 14, right: 14 }}>
-          <Label
-            numberOfLines={2}
-            style={{ fontSize: 20, fontWeight: "900", color: "#FFFFFF" }}
-          >
-            {room.name}
-          </Label>
-        </View>
-      </MediaPoster>
-      <View style={{ padding: 14, gap: 6 }}>
-        <Muted numberOfLines={1}>{room.media.title}</Muted>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Label
-            style={{ fontSize: 11, color: c.primaryText, fontWeight: "800" }}
-          >
-            {room.media.kind === "radio"
-              ? "RADIO EN VIVO"
-              : room.media.category === "music" || room.media.kind === "audio"
-                ? "MÚSICA"
-                : "VER JUNTOS"}
-          </Label>
-          <Ionicons name="arrow-forward" size={18} color={c.text} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Ionicons name="people" size={13} color={room.listeners ? c.primaryText : c.muted} />
+          <Muted style={{ fontSize: 11, color: room.listeners ? c.primaryText : c.muted }}>
+            {room.listeners ? `${room.listeners} ${room.listeners === 1 ? "persona" : "personas"} ahora` : "Nadie conectado"}
+          </Muted>
         </View>
       </View>
     </Pressable>
