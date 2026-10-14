@@ -1,5 +1,6 @@
-> **Prioridad actual:** usar [CLAUDE_ROOM_CHAT_PROMPT.md](CLAUDE_ROOM_CHAT_PROMPT.md).
-> Contiene las últimas decisiones del propietario y distingue producción de chat/diseño en progreso.
+> **Estado 2026-10-14:** beta 0.4 desplegada (chat persistente, sincronización medida, UI estilo Rave,
+> proveedores honestos). Ver PROGRESS.md y provider-compatibility.md. Responder al propietario en español.
+> Siguiente: voz en vivo (WebRTC + TURN en Contabo), expo-video para HLS, pruebas físicas.
 
 # Continuación para Claude Code — ONDA 0.3
 

@@ -95,6 +95,25 @@ tocar resultado, reproducir para todos; buscar Sintel y añadir a la cola sin ca
 Segunda conexión recibe ambas acciones. Datos y sala anterior del emulador conservados.
 CI verde; no se afirma búsqueda web integrada sin YouTube Data API.
 
-Checkpoint WIP: backend compila y las 100 pruebas anteriores pasan con migración RoomChatStorage
-en bases de prueba. Móvil: tipos/lint y 60 pruebas pasan. Esto NO prueba el chat nuevo de extremo
-a extremo: no está conectado; agregar pruebas de comandos/archivos/voz y QA visual antes de publicar.
+## Beta 0.4 (2026-10-14)
+Automatizadas: **134 backend** (SQL Server Express real) y **86 móvil** (Vitest) + TypeScript/ESLint.
+- Chat: persistencia y orden, respuestas/citas, edición, borrado autor/dueño/coanfitrión, reacciones, adjuntos
+  privados, firma, límites, revocación, borrado de cuenta y mantenimiento; solo notas de voz por defecto.
+- Sincronización: `sync-engine.test.ts` (proyección, tolerancia, velocidad, saltos, proveedores sin control, reloj
+  NTP), `playback-adapters.test.ts` (contrato, errores, operaciones no soportadas), script del reproductor válido.
+- Proveedores: enlaces oficiales de títulos y rechazos (StreamMediaTests, types.test.ts).
+- `node scripts/smoke-chat.mjs <api>`: dos clientes SignalR reales; 29/29 en local y **29/29 en producción**
+  (latencia mínima medida 203 ms desde Lima). Crea y elimina su propia QA.
+
+En emulador Android (build de desarrollo `app.onda.radio.dev`, API local) + web (navegador integrado):
+- Crear sala YouTube → explorador → Big Buck Bunny → reproduce para todos; web entra tarde y queda a 1–2 s;
+  pausa del anfitrión detiene la web; +15 s y reanudar: ambos en 2:15 en el mismo segundo.
+- Video con incrustación bloqueada: mensaje real (código 150) y «Elegir otro video».
+- Chat Android↔web: mensaje, respuesta deslizando, 🔥, edición, borrado (cita actualizada), «escribiendo»,
+  nota de voz grabada (permiso solo al tocar), pre-escucha y reproducción en web; teclado ya no tapa el chat.
+- Doble toque en crear sala: una sola sala. Sala pendiente sin reproductor vacío.
+
+No verificado (pendiente en dispositivo físico): red móvil real entre dos teléfonos, buffering prolongado,
+segundo plano largo, salida del anfitrión con continuidad en red real, video de varias horas, TalkBack completo.
+Una prueba temprana creó por error una sala QA en producción (Oyente 4079): se cerró y su sesión se revocó; el
+invitado caduca por mantenimiento. El script de APK ahora verifica la URL de API incluida.

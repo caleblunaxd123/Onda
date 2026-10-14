@@ -19,8 +19,7 @@ Pendientes:
 
 No usar `npm audit fix --force`: propone degradaciones incompatibles con SDK 57. Revisar compatibilidad y
 recompilar antes de una actualización mayor. SignalR 10.0.11/WebView 13.16.1 instalados para la beta.
-0.4 añade con `npx expo install`: expo-image-picker ~57.0.20 (fotos; permiso de cámara bloqueado) y
-expo-image-manipulator ~57.0.21 (re-codificación local). Ya estaban expo-audio (grabación), expo-document-picker,
-expo-file-system (subida/descarga con progreso) y expo-sharing. Cambian permisos nativos: RECORD_AUDIO se declara
+0.4: expo-image-picker/manipulator se probaron y se retiraron al quitar fotos/archivos del chat. Se usan
+expo-audio (grabación), expo-file-system (subida con progreso) y expo-sharing. Permisos: RECORD_AUDIO se declara
 y solo se solicita al tocar grabar; CAMERA y WRITE_EXTERNAL_STORAGE siguen bloqueados.
 No afirmar que la auditoría está limpia.

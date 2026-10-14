@@ -1,9 +1,11 @@
-# Despliegue verificado — beta 0.3, 2026-10-13
+# Despliegue verificado — beta 0.4, 2026-10-14
 
 - Web: https://onda.lunalav.pe
 - API: https://onda-api.lunalav.pe (`/health/live`, `/health/ready`).
-- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=4
-- APK: 118.055.700 bytes, SHA256 `95658ffe31325da80d4e7d3fbb69913f7cbf35524728fa96d4dc4573285b9058`.
+- Android: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.4.0&build=5.1
+- APK 0.4.0 (versionCode 5): 118.249.380 bytes, SHA256 `d633d7f82fdd3975c04c8444b29245067e776e945172d77af1bc33d8ac2e2d78`.
+  El enlace `build=5` quedó en caché de Cloudflare con el APK anterior (se consultó antes de copiar): usar `build=5.1`.
+  Copia del APK 0.3 conservada en `/opt/onda/releases/ONDA-beta-0.3.0-build4.apk`.
   arm64-v8a, armeabi-v7a y x86_64. JavaScript incluido, HTTPS, firma de depuración para beta interna.
 
 ## Contabo y Cloudflare
@@ -14,7 +16,8 @@ ASP.NET confía únicamente en el proxy configurado 10.77.0.10. SQL no tiene pue
 No se modificaron rutas ni datos de otras aplicaciones del VPS.
 
 `infra/contabo/compose.yaml`: API, migrador y Ollama; redes existentes `stack_data` (interna) y `stack_web`,
-más red privada `onda_ai`. Imagen activa API `onda-api:20261013-provider`.
+más red privada `onda_ai`. Imagen activa API `onda-api:20261014-sync` (chat persistente, ServerTime, solo notas
+de voz). Adjuntos privados en `/opt/onda/uploads` → `/data/chat-uploads` (UID 1654, 0700), fuera de `public`.
 Ollama fijado a digest `sha256:292ee7945dfc3d5840a181f3ab86fedb1e66703e02c8af98b50f4da56b7e278c`;
 modelo `qwen2.5:1.5b` descargado. Límite API 768 MB/1,5 CPU; Ollama 2 GB/2 CPU.
 IA verificada con `engine=local-ai`, filtros reales y 8 estaciones; respaldo por reglas en indisponibilidad.
@@ -46,6 +49,8 @@ sudo docker compose --env-file compose.env up -d api
 Timer diario `onda-backup.timer` 03:40 UTC, persistente, retraso aleatorio ≤10 min. Backup SQL COPY_ONLY CHECKSUM,
 VERIFYONLY, cifrado AES-256-CBC/PBKDF2 200.000, SHA256; retención 14 días conservando los dos más recientes.
 Archivos: `/opt/stack/backups/sql/onda`; clave privada `/opt/onda/secrets/backup.key`.
+Desde 0.4 también `OndaUploads-<fecha>.tar.enc` (adjuntos, misma clave y retención); `--restore-check` lo descifra
+y lista. Respaldo previo verificado: `Onda-20261014T025158Z.bak.enc` y `OndaUploads-20261014T025158Z.tar.enc`.
 `--restore-check` descifra/restaura en `OndaBackupCheck`, valida catálogo y elimina su propia DB de comprobación.
 Última restauración verificada: `Onda-20261013T232735Z.bak.enc`, ya con esquema de comunidad y continuidad.
 Copia externa manual comprobada en `.tools/backups` del PC del propietario (ignorada por Git); clave protegida

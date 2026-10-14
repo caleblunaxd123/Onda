@@ -3,9 +3,9 @@
 
 Aplicación social de radio, música y video con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: **beta 0.3 desplegada**; faltan pruebas físicas para aceptar el MVP.
+Estado: **beta 0.4 desplegada**; faltan pruebas físicas para aceptar el MVP.
 
-Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=4).
+Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.4.0&build=5.1).
 El APK incluye JavaScript, funciona sin Metro y usa HTTPS. Firma de depuración para beta interna; no es una publicación en tiendas.
 Continuación actual: [prompt completo de salas, diseño y chat para Claude Code](docs/CLAUDE_ROOM_CHAT_PROMPT.md).
 
@@ -42,7 +42,7 @@ En emulador Android la API está en `http://10.0.2.2:5080`; en un dispositivo f�
 El tráfico HTTP solo se habilita en builds con APP_VARIANT=development. Preview/producción requieren API HTTPS.
 
 ## Probar en un teléfono Android real
-Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.3.0&build=4). No requiere PC ni Wi-Fi compartido.
+Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.4.0&build=5.1). No requiere PC ni Wi-Fi compartido.
 También se puede generar una variante para pruebas locales:
 1. PC y teléfono en la misma red Wi‑Fi/LAN. Iniciar la API para la red: `scripts/start-api.ps1` (escucha en 0.0.0.0:5080).
 2. Permitir el puerto 5080 en el firewall de Windows (una vez, PowerShell como administrador):
@@ -79,6 +79,14 @@ OpenAPI: `/openapi/v1.json` en Development.
 Catálogo: [Radio Browser](https://www.radio-browser.info) (comunitario). Mapa de desarrollo: OpenFreeMap / OpenStreetMap.
 Consultar [estado](docs/PROGRESS.md), [pruebas](docs/TESTING.md), [arquitectura](docs/ARCHITECTURE.md) y [roadmap](docs/ROADMAP.md).
 
-## En progreso, no publicado
-Paleta global azul gris suave y base SQL/API de chat ampliado/adjuntos. El hub y UI todavía usan el chat básico.
-Ver el prompt de continuidad antes de desplegar: completar conexión de servicios, grabación y archivos privados.
+## Beta 0.4 (publicada)
+- Salas al estilo Rave: lista simple con botón + flotante, cuadrícula de fuentes, cabecera con buscar/cambiar,
+  personas e invitar; buscador de YouTube siempre visible bajo el video (anfitrión cambia, invitado propone).
+- Sincronización: estado canónico en el servidor con versión, reloj medido por muestras (`ServerTime`),
+  corrección continua (velocidad en HTML5, salto en YouTube) con umbrales configurables. Ver
+  [compatibilidad de proveedores](docs/provider-compatibility.md).
+- Netflix, Prime Video, Disney+, Max y otros: se abren en su app oficial con reloj de referencia compartido;
+  ONDA no los incrusta ni controla (sin integración autorizada).
+- Chat persistente estilo WhatsApp/Rave: respuestas, reacciones, edición, borrado, emojis/stickers, notas de voz
+  privadas, «escribiendo», estados reales de envío. Sin fotos ni archivos por decisión del propietario.
+- Pendiente: voz en vivo (WebRTC + TURN), video nativo HLS (expo-video), pruebas físicas.

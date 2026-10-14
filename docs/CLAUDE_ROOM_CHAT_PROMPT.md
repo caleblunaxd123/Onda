@@ -1,3 +1,7 @@
+> **Estado 2026-10-14:** este alcance se completó en la beta 0.4 con dos cambios del propietario: el chat ya no
+> admite fotos ni archivos (solo texto, emojis/stickers y notas de voz) y la experiencia sigue a Rave en simplicidad.
+> Netflix/Disney+/Prime quedan en modo externo honesto. Detalle verificado en PROGRESS.md y TESTING.md.
+
 # Prompt completo para Claude Code — salas, diseño y chat de ONDA
 
 Copia el siguiente prompt en Claude Code abierto en el repositorio.

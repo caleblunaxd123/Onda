@@ -119,12 +119,15 @@ Sin pruebas físicas de audio, Bluetooth, llamadas, batería o background prolon
   (PNG/JPEG ≤4096 px; audio M4A/WebM/MP3/OGG/WAV; el resto se guarda opaco y solo se sirve como descarga).
   10 MB por archivo, 100 MB por persona y día, 200 MB por sala, límite de tasa propio. Archivos sin enviar: solo los ve
   quien subió, pueden retirarse y se purgan a la hora. Respuestas `nosniff`, CSP sandbox y sin tokens en URLs.
-- Móvil (0.4): `chat.ts` (estado puro y probado: fusión por revisión sin reordenar, citas vivas, escritura con caducidad),
-  `chat-draft.ts` (borrador que sobrevive a cambios de pestaña y errores; libera subidas y temporales al salir),
-  `chat-files(.web).ts` (selector de fotos con re-codificación JPEG ≤2048 px sin EXIF, documentos, subida con progreso
-  y cancelación, imágenes/audio con cabecera Authorization u object URL en web, guardar/compartir) y `voice.ts`
+- Móvil (0.4): `chat.ts` (estado puro y probado: fusión por revisión sin reordenar, citas vivas, escritura con caducidad,
+  stickers de emoji), `chat-draft.ts` (borrador y bandeja de salida con estados reales; libera subidas al salir),
+  `chat-files(.web).ts` (subida con progreso/cancelación, audio con Authorization u object URL en web) y `voice.ts`
   (permiso de micrófono solo al tocar grabar, máximo 3 min, pre-escucha, un solo reproductor). Grabar o escuchar una nota
   pausa/silencia únicamente el audio local de la sala; nunca envía SetPlayback. «Eliminar para mí» es local.
+  Fotos y archivos retirados por decisión del propietario; el servidor solo acepta `Chat:AllowedKinds` (por defecto audio).
+- Sincronización (0.4): `sync-engine.ts` (umbrales configurables, corrección por velocidad o salto, reloj NTP con el hub
+  `ServerTime`), `playback-adapters.ts` (contrato PlaybackAdapter y capacidades por proveedor; FramePlaybackAdapter
+  sobre el reproductor aislado YouTube IFrame/HTML5; ExternalProviderAdapter para servicios sin integración).
   TLS protege el transporte; no hay cifrado de extremo a extremo.
 - `RoomContinuity.cs`: continuidad optativa, 60 s de margen y selección de coanfitrión/participante conectado.
   Coanfitriones controlan reproducción/cola; solo anfitrión modera. `AutoRecovery` y `Cohosts` persistidos en SQL.

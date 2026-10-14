@@ -1,12 +1,25 @@
 # Progreso — actualizado 2026-10-13
 
-## Checkpoint de continuidad para Claude
-Flujo confirmado: Crear sala -> proveedor -> entrar automáticamente -> buscar/seleccionar en sala.
-API/web provider y APK build=4 publicados. 100 backend / 60 móvil; CI verde en 15cd8da.
-Paleta soft unificada preparada; backend RoomChatService, RoomUploadStore/Endpoints y tablas con
-migración RoomChatStorage en progreso, todavía sin hub/DI/UI y sin desplegar en Contabo.
-SDK document-picker/file-system/sharing añadidos, grabación nativa pendiente.
-Prompt completo: CLAUDE_ROOM_CHAT_PROMPT.md. No dar estas funciones WIP por terminadas.
+## Beta 0.4 — 2026-10-14 (desplegada)
+**Terminado y verificado**
+- Chat persistente (RoomChatEntries/RoomUploads, migración RoomChatStorage aplicada en Contabo): respuestas con cita
+  viva, reacciones (una por persona), edición 15 min con «Editado», borrar para todos (autor/dueño) y para mí (local),
+  notas de voz privadas (permiso al tocar grabar, pre-escucha, máx. 3 min, audio de sala solo local), «escribiendo»,
+  bandeja de salida con «Enviando/✓/No se envió», separadores de día, agrupación, deslizar para responder,
+  enlaces https, páginas anteriores, emojis/stickers grandes. Fotos y archivos retirados (servidor: solo audio por
+  defecto, `Chat:AllowedKinds`). Clientes anteriores siguen con SendMessage/Message.
+- Sincronización: motor puro (`sync-engine.ts`) con tolerancia 0,5 s, salto >3 s, corrección por velocidad ±5 %
+  en HTML5, salto solo >3 s en YouTube; reloj NTP con `ServerTime` (menor RTT). Contrato `PlaybackAdapter` con
+  capacidades por proveedor (`playback-adapters.ts`).
+- Proveedores: YouTube IFrame oficial con errores explicados (101/150/100/2) y «Elegir otro video»; títulos de
+  suscripción en modo externo honesto. Documento docs/provider-compatibility.md.
+- UI estilo Rave: lobby en lista + FAB, cuadrícula de fuentes, cabecera de sala simple, buscador YouTube visible.
+- Contabo: imagen onda-api:20261014-sync, volumen privado /opt/onda/uploads (UID 1654, 0700), backup cifrado de
+  adjuntos con restore-check.
+
+**Pendiente (no hecho)**: voz en vivo WebRTC/TURN, expo-video para HLS, Twitch/Drive, pruebas físicas, firma de tienda.
+Un prototipo de navegador con control inyectado para Netflix/Disney+ se probó solo en build local y se retiró
+por política (sin integración autorizada); no se publicó.
 
 ## Beta 0.3: salas y diseño
 Incremento de navegación: explorador de YouTube dentro de Android, selección de video y opciones
