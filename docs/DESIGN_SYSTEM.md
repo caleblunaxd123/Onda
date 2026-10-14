@@ -1,3 +1,14 @@
+# ONDA Experience — identidad actual 0.6
+
+Referencias actuales: docs/design-references. Logo oficial conservado, azul noche #080E29,
+texto blanco/#B8C5E9, cyan, azul y violeta; superficies translúcidas. Gradiente de acción
+#087FAD → #245CDD → #783BFF con texto blanco. Claro y azul gris siguen disponibles.
+AmbientBackground, GlassSurface, GradientButton, CategoryTile, MotionCard, Skeleton y ReactionOverlay
+centralizan la composición sin blur/bucles continuos ni recursos nuevos pesados.
+Tarjetas de salas horizontales compactas: portada112dp, padding6, radios20, datos reales.
+Navegación vertical; CTA reserva espacio, no superpone texto. Preferencia de movimiento reducido respetada.
+El estado detallado está en UI_UX_REDESIGN_PROGRESS; las secciones siguientes son la referencia inicial histórica.
+
 # Sistema de diseño
 Basado en la referencia del propietario (docs/design-reference.png). Tema claro como presentación principal,
 oscuro equivalente y automático (sistema) por defecto.

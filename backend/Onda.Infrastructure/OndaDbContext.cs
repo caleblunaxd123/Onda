@@ -9,9 +9,86 @@ public sealed class OndaDbContext(DbContextOptions<OndaDbContext> options) : DbC
     public DbSet<StationLanguage> StationLanguages => Set<StationLanguage>();
     public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
     public DbSet<StationReport> StationReports => Set<StationReport>();
+    public DbSet<ListenerAccount> ListenerAccounts => Set<ListenerAccount>();
+    public DbSet<ListenerSession> ListenerSessions => Set<ListenerSession>();
+    public DbSet<CloudLibrary> CloudLibraries => Set<CloudLibrary>();
+    public DbSet<ListeningRoom> ListeningRooms => Set<ListeningRoom>();
+    public DbSet<RoomBan> RoomBans => Set<RoomBan>();
+    public DbSet<CommunityReport> CommunityReports => Set<CommunityReport>();
+    public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
+    public DbSet<RoomChatEntry> RoomChatEntries => Set<RoomChatEntry>();
+    public DbSet<RoomUpload> RoomUploads => Set<RoomUpload>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
+        model.Entity<RoomChatEntry>(e => {
+            e.HasKey(x => x.Id); e.Property(x => x.Payload).HasMaxLength(32000);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new {x.RoomId, x.At}); e.HasIndex(x => x.SenderId);
+            e.HasOne<ListeningRoom>().WithMany().HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<RoomUpload>(e => {
+            e.HasKey(x => x.Id); e.Property(x => x.Name).HasMaxLength(120); e.Property(x => x.Mime).HasMaxLength(100); e.Property(x => x.Kind).HasMaxLength(10);
+            e.HasIndex(x => new {x.RoomId, x.At}); e.HasIndex(x => x.UploaderId); e.HasIndex(x => x.MessageId);
+            e.HasOne<ListeningRoom>().WithMany().HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<ListenerAccount>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Email).HasMaxLength(254);
+            e.Property(x => x.GoogleSubject).HasMaxLength(255).UseCollation(BinaryCollation);
+            e.HasIndex(x => x.GoogleSubject).IsUnique().HasFilter("[GoogleSubject] IS NOT NULL");
+            e.HasIndex(x => x.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
+            e.Property(x => x.DisplayName).HasMaxLength(40);
+            e.Property(x => x.PasswordHash).HasMaxLength(500);
+            e.Property(x => x.RecoveryHash).HasMaxLength(64).IsUnicode(false).IsConcurrencyToken();
+        });
+        model.Entity<ListenerSession>(e =>
+        {
+            e.HasKey(x => x.TokenHash);
+            e.Property(x => x.TokenHash).HasMaxLength(64).IsUnicode(false);
+            e.HasOne<ListenerAccount>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.ExpiresAt);
+        });
+        model.Entity<CloudLibrary>(e =>
+        {
+            e.HasKey(x => x.AccountId);
+            e.HasOne<ListenerAccount>().WithOne().HasForeignKey<CloudLibrary>(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(x => x.Version).IsConcurrencyToken();
+        });
+        model.Entity<ListeningRoom>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(70);
+            e.Property(x => x.InviteCode).HasMaxLength(12).IsUnicode(false);
+            e.Property(x => x.Cohosts).HasMaxLength(500).HasDefaultValue("[]");
+            e.HasIndex(x => x.InviteCode).IsUnique();
+            e.HasIndex(x => new {x.IsPrivate, x.Closed, x.UpdatedAt});
+            e.Property(x => x.Version).IsConcurrencyToken();
+        });
+        model.Entity<RoomBan>(e =>
+        {
+            e.HasKey(x => new {x.RoomId, x.AccountId});
+            e.HasOne<ListeningRoom>().WithMany().HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<CommunityReport>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.MessageSnapshot).HasMaxLength(2000);
+            e.Property(x => x.Status).HasMaxLength(16).IsUnicode(false).HasDefaultValue("received");
+            e.Property(x => x.ReviewNote).HasMaxLength(500);
+            e.HasIndex(x => x.CreatedAt);
+            e.HasIndex(x => new {x.Status, x.CreatedAt});
+        });
+        model.Entity<UserBlock>(e =>
+        {
+            e.HasKey(x => new {x.BlockerId, x.BlockedId});
+            e.HasIndex(x => x.BlockedId);
+            // Account deletion/guest expiry removes both sides explicitly; no multiple cascade paths.
+            e.HasOne<ListenerAccount>().WithMany().HasForeignKey(x => x.BlockerId).OnDelete(DeleteBehavior.NoAction);
+            e.HasOne<ListenerAccount>().WithMany().HasForeignKey(x => x.BlockedId).OnDelete(DeleteBehavior.NoAction);
+        });
         model.Entity<StationEntity>(e =>
         {
             e.ToTable("Stations");

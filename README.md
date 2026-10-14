@@ -1,18 +1,34 @@
 # ONDA
 **El mundo suena aquí.**
 
-Aplicación móvil de radios con Expo / React Native (SDK 57) y API ASP.NET Core 10.
+Aplicación social de radio, música y video con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: implementación funcional en desarrollo; **MVP todavía no aceptado** (faltan pruebas físicas).
+Estado: **beta 0.6.1 publicada con autorización**. API/web/APK actualizados; Google Android verificado y bloques/reportes activos. La bandeja requiere moderadores configurados. Faltan pruebas físicas y controles adicionales de lanzamiento.
+
+Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta Android 0.6.1](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.6.1&build=9.1).
+El APK incluye JavaScript, funciona sin Metro y usa HTTPS. Firma de depuración para beta interna; no es una publicación en tiendas.
+Estado de lanzamiento: [verificación y pendientes reales](docs/LAUNCH_READINESS.md). El desarrollo continúa directamente en este proyecto.
 
 ## Qué incluye
 - Catálogo de ~68.000 emisoras de Radio Browser sincronizado en SQL Server (solo se reproducen streams HTTPS),
   con paginación por cursor, recuentos reales, variantes y fuentes alternativas, y disponibilidad sin falsas «caídas».
-- Inicio personalizado por el país detectado (zona horaria del dispositivo, sin GPS), búsqueda con filtros
+- Inicio centrado en salas: descubrir, entrar por invitación o crear. Radio tiene su propia pestaña.
+- Radio personalizada por el país detectado (zona horaria del dispositivo, sin GPS), búsqueda con filtros
   (país, ciudad, idioma, género), mapa por área visible con clusters, Radio Radar con carga progresiva,
   reproductor global con reintentos y fuentes alternativas, reportes de problemas, biblioteca local con colecciones.
-- Diseño según docs/design-reference.png, tema claro/oscuro/automático. Capturas: docs/screenshots.
-- Sin cuentas, sincronización de biblioteca, salas ni IA todavía.
+- ONDA Experience según docs/design-references: neón contextual, claro/inmersivo/suave/automático.
+  Inicio horizontal compacto y navegación vertical. Capturas: docs/screenshots.
+- Salas públicas/privadas con invitados, chat, reacciones, cola con votos, controles del anfitrión, transferencia de control,
+  expulsión, reportes, reconexión y códigos renovables. Radio, YouTube/YouTube Music y archivos HTTPS de audio/video.
+- Crear sala -> fuente y privacidad -> Crear y entrar -> buscar contenido dentro de la sala.
+  YouTube abre directamente su navegador Android; la selección del anfitrión comparte el video con el grupo.
+  En web, búsqueda de YouTube en otra pestaña y pegado del enlace; cambios del reproductor compartidos por el anfitrión.
+- Chat ligero: respuestas, reacciones, edición, borrado, mensajes fijados y seis stickers incluidos.
+  Sin subida de fotos, archivos ni grabaciones; los stickers viajan como identificadores pequeños.
+- Google activo y probado en Android, con verificación en servidor y nonce de un solo uso.
+  OAuth en Testing; web completo/iOS pendientes: [estado y límites](docs/GOOGLE_SIGN_IN.md).
+- Cuentas opcionales con recuperación por código privado y biblioteca sincronizada: radios, colecciones y multimedia;
+  historial solo con consentimiento. Asistente de descubrimiento con IA local y respaldo por reglas; pasaporte basado en escuchas reales.
 
 ## Inicio en Windows
 Requisitos: Node 22+, .NET SDK 10 (se usa `.tools/dotnet` si existe), SQL Server (por defecto `.\SQLEXPRESS`,
@@ -31,7 +47,9 @@ Otra instancia: `$env:ONDA_SQL_SERVER='(localdb)\OndaDev'` o `$env:ConnectionStr
 En emulador Android la API está en `http://10.0.2.2:5080`; en un dispositivo físico, la IP LAN del PC.
 El tráfico HTTP solo se habilita en builds con APP_VARIANT=development. Preview/producción requieren API HTTPS.
 
-## Probar en un teléfono Android real (APK de prueba en la red local)
+## Probar en un teléfono Android real
+Descargar el [APK público](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.5.0&build=7.1). No requiere PC ni Wi-Fi compartido.
+También se puede generar una variante para pruebas locales:
 1. PC y teléfono en la misma red Wi‑Fi/LAN. Iniciar la API para la red: `scripts/start-api.ps1` (escucha en 0.0.0.0:5080).
 2. Permitir el puerto 5080 en el firewall de Windows (una vez, PowerShell como administrador):
    `New-NetFirewallRule -DisplayName "ONDA API 5080 (LAN)" -Direction Inbound -Protocol TCP -LocalPort 5080 -RemoteAddress LocalSubnet -Action Allow`
@@ -51,8 +69,8 @@ Servidor `.\SQLEXPRESS`, autenticación Windows, base `Onda`. Tablas y consultas
 Las migraciones se aplican explícitamente, nunca al iniciar la API.
 
 ## Verificación
-- `npm run check:mobile` — TypeScript, ESLint y 37 pruebas.
-- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 62 pruebas, incluidas 10 con SQL Server real.
+- `npm run check:mobile` — TypeScript, ESLint y 87 pruebas.
+- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 140 pruebas, incluidas integraciones con SQL real y WebSockets.
 - `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1` — catálogo real de extremo a extremo.
 - `curl http://localhost:5080/api/v1/catalog/status`
 
@@ -66,3 +84,15 @@ OpenAPI: `/openapi/v1.json` en Development.
 
 Catálogo: [Radio Browser](https://www.radio-browser.info) (comunitario). Mapa de desarrollo: OpenFreeMap / OpenStreetMap.
 Consultar [estado](docs/PROGRESS.md), [pruebas](docs/TESTING.md), [arquitectura](docs/ARCHITECTURE.md) y [roadmap](docs/ROADMAP.md).
+
+## Beta 0.5 (actual)
+- Salas al estilo Rave: lista simple con botón + flotante, cuadrícula de fuentes, cabecera con buscar/cambiar,
+  personas e invitar; buscador de YouTube siempre visible bajo el video (anfitrión cambia, invitado propone).
+- Sincronización: estado canónico en el servidor con versión, reloj medido por muestras (`ServerTime`),
+  corrección continua (velocidad en HTML5, salto en YouTube) con umbrales configurables. Ver
+  [compatibilidad de proveedores](docs/provider-compatibility.md).
+- Netflix, Prime Video, Disney+, Max y otros: se abren en su app oficial con reloj de referencia compartido;
+  ONDA no los incrusta ni controla (sin integración autorizada).
+- Chat persistente: respuestas, reacciones, edición, borrado, mensajes fijados, emojis/stickers incluidos,
+  «escribiendo» y estados reales de envío. Sin subir fotos, archivos ni grabaciones, por decisión del propietario.
+- Pendiente: voz en vivo (WebRTC + TURN), video nativo HLS (expo-video), pruebas físicas.

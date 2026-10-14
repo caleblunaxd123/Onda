@@ -100,3 +100,18 @@ it('treats catalog duplicates of the same broadcast as one entry in history',()=
  expect(useLibrary.getState().history.map(s=>s.id)).toEqual(['other','dup-name','dup-stream']);
  expect(uniqueBroadcasts([station,{...station,id:'copy'},{...station,id:'b',name:'B',streamUrl:'https://b'}]).map(s=>s.id)).toEqual(['a','b']);
 });
+it('keeps equally named regional stations and distinct query-based channels',()=>{
+ const items = [station, {...station,id:'regional',region:'Arequipa',streamUrl:'https://other.example/live'},
+  {...station,id:'channel-a',streamUrl:'https://channels.example/live?id=1'},
+  {...station,id:'channel-b',streamUrl:'https://channels.example/live?id=2'},
+  {...station,id:'case-a',streamUrl:'https://case.example/Live'},
+  {...station,id:'case-b',streamUrl:'https://case.example/live'}];
+ items.forEach(item=>useLibrary.getState().remember(item));
+ expect(useLibrary.getState().history).toHaveLength(6);
+ expect(uniqueBroadcasts(items)).toHaveLength(6);
+});
+it('recognizes a verified alternate stream as the same broadcast',()=>{
+ const main = {...station,streams:[station.streamUrl,'https://alternate.example/live']};
+ const variant = {...station,id:'variant',streamUrl:'https://alternate.example/live'};
+ expect(uniqueBroadcasts([main,variant])).toEqual([main]);
+});

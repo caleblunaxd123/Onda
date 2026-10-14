@@ -47,7 +47,7 @@ public sealed class CatalogQueryService(OndaDbContext db, IRadioBrowserClient so
     {
         var q = db.Stations.AsNoTracking().Where(s => s.IsActive && s.HasHttpsStream && s.Availability != Availability.Down);
         if (collapseVariants) q = q.Where(s => s.IsPrimaryVariant);
-        if (Text.Fold(f.Text) is { Length: > 0 } text) q = q.Where(s => s.SearchName.Contains(text) || s.SearchRegion.Contains(text));
+        q = CatalogSearch.Apply(q, f.Text);
         if (!string.IsNullOrEmpty(f.Country)) q = q.Where(s => s.CountryCode == f.Country);
         if (Text.NormalizeTag(f.Tag) is { Length: > 0 } tag) q = q.Where(s => s.Tags.Any(t => t.Tag == tag));
         if (!string.IsNullOrEmpty(f.Language)) q = q.Where(s => s.Languages.Any(l => l.Code == f.Language));
@@ -69,8 +69,7 @@ public sealed class CatalogQueryService(OndaDbContext db, IRadioBrowserClient so
         var q = Filtered(f, collapseVariants: string.IsNullOrWhiteSpace(f.Text));
         if (f.Exclude.Count > 0) q = q.Where(s => !f.Exclude.Contains(s.Id));
         int? total = offset == 0 ? await q.CountAsync(ct) : null;
-        var rows = await q.OrderBy(s => s.Availability == Availability.Unstable ? 1 : 0).ThenByDescending(s => s.ClickCount)
-            .ThenByDescending(s => s.Votes).ThenBy(s => s.Id).Skip(offset).Take(limit + 1)
+        var rows = await CatalogSearch.Order(q, f.Text).Skip(offset).Take(limit + 1)
             .Include(s => s.Tags).Include(s => s.Languages).AsSplitQuery().ToListAsync(ct);
         var hasMore = rows.Count > limit;
         var items = await WithStreamsAsync(rows.Take(limit).ToList(), ct);

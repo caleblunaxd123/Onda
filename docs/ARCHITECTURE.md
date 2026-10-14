@@ -74,7 +74,8 @@ SyncIntervalHours, SyncPageSize, SyncPageDelayMs, SyncMaxPagesPerRun, SyncStartu
 `GET /api/v1/stations` (q, country, tag, language, region, bbox, geo, order, seed, boostTags, boostCountries,
 exclude, cursor, limit) · `GET /api/v1/stations/lookup?ids=` · `GET /api/v1/map` · `GET /api/v1/facets/{countries|
 languages|tags|places}` · `GET /api/v1/catalog/status` · `POST /api/v1/stations/{id}/reports` · `GET /api/v1/moods`.
-Límites: 240 solicitudes/min por IP; reportes 10 cada 10 min por IP. CORS solo para la vista web local (GET/POST).
+Límites: 240 solicitudes/min por IP; reportes 10 cada 10 min por IP. CORS limitado a la vista local en desarrollo
+y los dominios ONDA configurados en producción. Ver DEPLOYMENT.md.
 
 ## Móvil
 Expo SDK 57, Expo Router, TanStack Query, Zustand, Expo Audio, MapLibre (RN en Android, GL JS en web).
@@ -93,11 +94,67 @@ Expo SDK 57, Expo Router, TanStack Query, Zustand, Expo Audio, MapLibre (RN en A
   El layout raíz la refresca una vez al día con `/stations/lookup`.
 
 ## Límites conocidos
-Sin cuentas ni sincronización de biblioteca; sin salas ni IA. Búsqueda por subcadena (LocalDB/Express sin
-Full-Text). Temporizador dependiente del runtime JS. Variantes solo por criterios exactos (no difusos).
+Búsqueda por palabras y ranking de nombres, sin índice SQL Full-Text. Temporizador dependiente del runtime JS.
+Variantes solo por criterios exactos (no difusos). Salas en una instancia: presencia y votos en memoria;
+chat, adjuntos, cola/contenido/roles en SQL. No escalar a múltiples réplicas sin coordinar la presencia.
 Sin pruebas físicas de audio, Bluetooth, llamadas, batería o background prolongado.
 
+## Comunidad, multimedia y cuentas (0.2)
+- `Accounts.cs`: PBKDF2, tokens opacos almacenados como hashes, invitados 7 días, cuentas 30 días,
+  recuperación por código de un solo uso, bloqueo de intentos y borrado. No hay correo verificado/SMTP todavía.
+  Registro de invitado y recuperación usan transacciones compatibles con el retry de SQL y revocan sesiones anteriores.
+- `LibrarySync.cs`: payload JSON por cuenta con versión optimista. El móvil combina tres versiones y conserva
+  cambios locales durante solicitudes; favoritos, colecciones y multimedia; historial optativo. Cuotas explícitas.
+- `Rooms.cs` + `RoomPresence.cs`: SignalR autenticado, validación por acción, permisos de anfitrión, invitación privada,
+  votos por cuenta, bans por sala, transferencia de control y rotación de invitación.
+- `RoomChatService.cs` (0.4): chat persistente por sala en `RoomChatEntries` (payload JSON + `Version` como token de
+  concurrencia; cada cambio incrementa la revisión). Comandos con DTO propios: `SendChat`, `EditChat` (autor, 15 min,
+  marca editado), `DeleteChat` (autor o dueño; los coanfitriones no moderan), `ReactChat` (una reacción por persona:
+  mismo emoji quita, otro reemplaza), `ChatHistory` (páginas de 50 anteriores) y `Typing` (efímero, limitado, nunca guardado).
+  Eventos `Message` y `MessageUpdated`; los clientes anteriores siguen usando `SendMessage`/`Message` (300 caracteres)
+  y reciben un texto de lápida legible al borrar. La cita de respuesta no se guarda: se hidrata al leer, así refleja
+  ediciones y borrados. Retención 30 días; borrado de cuenta y mantenimiento eliminan mensajes, reacciones y archivos.
+- `RoomUploadStore.cs` + `RoomUploadEndpoints.cs`: adjuntos privados fuera de los assets públicos (`Chat:UploadsPath`).
+  Subida multipart con sesión válida y presencia real en esa sala, revalidada bajo el lock de la sala; tipo por firma
+  (PNG/JPEG ≤4096 px; audio M4A/WebM/MP3/OGG/WAV; el resto se guarda opaco y solo se sirve como descarga).
+  10 MB por archivo, 100 MB por persona y día, 200 MB por sala, límite de tasa propio. Archivos sin enviar: solo los ve
+  quien subió, pueden retirarse y se purgan a la hora. Respuestas `nosniff`, CSP sandbox y sin tokens en URLs.
+- Móvil (0.4): `chat.ts` (estado puro y probado: fusión por revisión sin reordenar, citas vivas, escritura con caducidad,
+  stickers de emoji), `chat-draft.ts` (borrador y bandeja de salida con estados reales; libera subidas al salir),
+  `chat-files(.web).ts` (subida con progreso/cancelación, audio con Authorization u object URL en web) y `voice.ts`
+  (permiso de micrófono solo al tocar grabar, máximo 3 min, pre-escucha, un solo reproductor). Grabar o escuchar una nota
+  pausa/silencia únicamente el audio local de la sala; nunca envía SetPlayback. «Eliminar para mí» es local.
+  Fotos y archivos retirados por decisión del propietario; el servidor solo acepta `Chat:AllowedKinds` (por defecto audio).
+- Sincronización (0.4): `sync-engine.ts` (umbrales configurables, corrección por velocidad o salto, reloj NTP con el hub
+  `ServerTime`), `playback-adapters.ts` (contrato PlaybackAdapter y capacidades por proveedor; FramePlaybackAdapter
+  sobre el reproductor aislado YouTube IFrame/HTML5; ExternalProviderAdapter para servicios sin integración).
+  TLS protege el transporte; no hay cifrado de extremo a extremo.
+- `RoomContinuity.cs`: continuidad optativa, 60 s de margen y selección de coanfitrión/participante conectado.
+  Coanfitriones controlan reproducción/cola; solo anfitrión modera. `AutoRecovery` y `Cohosts` persistidos en SQL.
+  Migración conserva continuidad desactivada en salas anteriores. Cola JSON con prioridad fijada; votos consultables por usuario.
+- `RoomMedia.cs`: resuelve radios reales, IDs de YouTube en hosts oficiales y URLs HTTPS públicas de archivos compatibles.
+  El servidor no descarga URLs arbitrarias. YouTube se reproduce con el iframe oficial, incluyendo video en música.
+- Native: WebView + reproductor de radio global. Web: iframe aislado. Reloj corregido con hora del servidor,
+  posición compartida y resync; radio en vivo tiene buffers independientes y no promete sincronía por muestra.
+- `DiscoveryAssistant.cs`: Qwen2.5 1.5B local vía Ollama; salida estructurada validada contra catálogo real,
+  fallback por reglas si ocupado/error/timeout. No transmite conversaciones a un servicio externo de IA.
+- SecureStore en móvil; sesión web en sessionStorage por pestaña (sin localStorage), sobrevive recargas.
+  Endpoints personales/comunidad/IA con `Cache-Control: no-store`.
+- UI organizada en `components` y `features/{library,account,rooms,home}`; SDK 57 exige hooks de navegación de `expo-router`.
+- UI de sala separada en coordinador, layout adaptable, paneles y presentación. Paleta de cine contextual;
+  reloj transportado como ancla para aplicar controles locales sin retroceder, desmontaje por fuente y autoplay bloqueado visible.
+- Android: explorador YouTube separado/incógnito, selección de URLs de videos públicos por navegación WebView,
+  sin tokens ONDA ni scraping. Web abre búsqueda externa sin afirmar incrustación del sitio completo.
+  `ChangeMedia` comprueba rol/versión después de metadatos y limpia solo la propuesta elegida.
+  IFrame API `getVideoUrl` detecta cambios del reproductor: anfitrión los comparte, invitado restaura la fuente de sala.
+
 ## Referencias técnicas consultadas
+Beta 0.5: índice de salas en Inicio, radio en ruta propia y `/rooms` como alias. `GoogleIdentity.cs` verifica
+ID tokens y desafíos de un solo uso; `GoogleSubject` identifica al usuario sin unir por correo ajeno.
+Cliente Android Credential Manager (Nitro) y web GIS, desactivados sin IDs. Chat fija un mensaje mediante
+bandera en su payload SQL, con lectura independiente de la página de historia. Stickers son IDs de un catálogo
+incluido. Multipart se rechaza antes de leer/escribir cuando AllowedKinds está vacío (valor predeterminado).
+Los adjuntos antiguos conservan acceso autenticado; la voz en vivo no está implementada.
 - https://docs.expo.dev/versions/v57.0.0/sdk/audio/
 - https://maplibre.org/maplibre-react-native/docs/setup/getting-started/ (tipos 11.5 instalados)
 - https://docs.radio-browser.info/

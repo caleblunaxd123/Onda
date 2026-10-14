@@ -11,6 +11,44 @@ describe('Global audio lifecycle', () => {
     const engine = new PlayerEngine((s, url, emit) => {const h = {url, station: s.id, play: vi.fn(), pause: vi.fn(), dispose: vi.fn(), emit}; handles.push(h); return h;}, () => Date.now());
     return {engine, handles};
   };
+  it('navigates a queue without overlapping audio or wrapping at its ends', () => {
+    const {engine, handles} = setup();
+    const second = {...station, id: 'two', name: 'Two', streamUrl: 'https://example.com/two'};
+    const third = {...station, id: 'three', name: 'Three', streamUrl: 'https://example.com/three'};
+    engine.select(second, {stations: [station, second, third], title: 'Favoritos'});
+    engine.next();
+    expect(engine.snapshot).toMatchObject({station: third, queueIndex: 2, queueTitle: 'Favoritos'});
+    expect(handles[0].dispose).toHaveBeenCalledOnce();
+    handles[0].emit(playing);
+    expect(engine.snapshot.state).toBe('connecting');
+    engine.next(); expect(handles).toHaveLength(2);
+    engine.previous(); engine.previous(); engine.previous();
+    expect(engine.snapshot.station?.id).toBe('one'); expect(handles).toHaveLength(4);
+    expect(handles.slice(0, -1).every(handle => handle.dispose.mock.calls.length === 1)).toBe(true);
+    engine.dispose();
+  });
+  it('keeps the queue through pause, retry and sleep expiration', () => {
+    const {engine, handles} = setup();
+    const second = {...station, id: 'two'};
+    engine.select(station, {stations: [station, second], title: 'Mi colección'});
+    handles[0].emit(playing); engine.toggle(); engine.toggle(); engine.retryNow();
+    expect(engine.snapshot.queue.map(item => item.id)).toEqual(['one', 'two']);
+    expect(engine.snapshot.queueTitle).toBe('Mi colección');
+    engine.setSleep(1); vi.advanceTimersByTime(60000);
+    expect(engine.snapshot.state).toBe('paused');
+    expect(engine.snapshot.queue).toHaveLength(2);
+    engine.dispose();
+  });
+  it('deduplicates queue ids without changing the caller array and bounds memory', () => {
+    const {engine} = setup();
+    const list = [station, station, ...Array.from({length: 650}, (_, index) => ({...station, id: String(index)}))];
+    engine.select(list.at(-1)!, {stations: list, title: 'Resultados'});
+    expect(engine.snapshot.queue).toHaveLength(600);
+    expect(new Set(engine.snapshot.queue.map(item => item.id)).size).toBe(600);
+    expect(engine.snapshot.queue[0].id).toBe('649');
+    expect(list).toHaveLength(652);
+    engine.dispose();
+  });
   it('disposes the previous stream and ignores its late callbacks', () => {
     const {engine, handles} = setup(); engine.select(station); engine.select({...station, id: 'two'});
     expect(handles[0].dispose).toHaveBeenCalledOnce();

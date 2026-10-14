@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, View } from 'react-native';
 import Constants from 'expo-constants';
+import {router} from 'expo-router';
+import {useAuth} from '../src/features/account/session';
+import {useCloudSync} from '../src/features/account/cloud-sync';
 import { useCatalogStatus, useCountries, useTags } from '../src/catalog';
 import { useLibrary } from '../src/library';
 import { useTheme } from '../src/theme';
@@ -8,10 +11,11 @@ import { deviceCountry } from '../src/region';
 import { Ionicons } from '../src/icons';
 import { Button, Card, Chip, Label, Muted, OptionPicker, Page, ScreenHeader, Sheet, cardStyle, flag, formatCount } from '../src/ui';
 
-const themes = {system: 'Automático', light: 'Claro', dark: 'Oscuro'} as const;
+const themes = {dark: 'ONDA inmersivo', light: 'Claro', soft: 'Azul gris suave', system: 'Automático'} as const;
 
 export default function Settings() {
   const c = useTheme(); const library = useLibrary();
+  const user = useAuth(s => s.session?.user); const cloud = useCloudSync();
   const countries = useCountries(); const tags = useTags(); const status = useCatalogStatus();
   const [sheet, setSheet] = useState<'country' | 'theme' | 'genres' | null>(null);
   const countryName = countries.data?.find(x => x.code === library.country)?.name ?? library.country;
@@ -24,13 +28,15 @@ export default function Settings() {
     Alert.alert('Borrar datos locales', 'Esta acción elimina tus favoritos, historial, colecciones y búsquedas de este dispositivo.', [{text: 'Cancelar', style: 'cancel'}, {text: 'Borrar', style: 'destructive', onPress: run}]);
   };
   const synced = status.data?.lastCompletedSync ? new Date(status.data.lastCompletedSync).toLocaleString('es', {dateStyle: 'medium', timeStyle: 'short'}) : null;
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
+  return <View style={{flex: 1}}>
     <ScreenHeader title="Perfil y ajustes" back/>
     <Page>
       <Card style={{flexDirection: 'row', alignItems: 'center', gap: 14}}>
         <View style={{width: 54, height: 54, borderRadius: 27, backgroundColor: c.primary + '1C', alignItems: 'center', justifyContent: 'center'}}><Ionicons name="person" size={26} color={c.primaryText}/></View>
-        <View style={{flex: 1}}><Label style={{fontWeight: '800', fontSize: 17}}>Modo invitado</Label><Muted>Tu biblioteca vive solo en este dispositivo. Las cuentas y la sincronización aún no están disponibles.</Muted></View>
+        <View style={{flex: 1}}><Label style={{fontWeight: '800', fontSize: 17}}>{user?.displayName ?? 'Modo invitado'}</Label><Muted>{user?.email ?? 'Escucha y entra a salas sin registro. Crea una cuenta para sincronizar tu biblioteca.'}</Muted></View><Button title={user && !user.guest ? 'Mi cuenta' : 'Entrar'} secondary onPress={() => router.push('/account')}/>
       </Card>
+      {cloud.error && <Muted accessibilityRole="alert">{cloud.error}</Muted>}
+      <Button title="Tu pasaporte sonoro" icon="earth-outline" secondary onPress={() => router.push('/passport')}/>
       <View style={[cardStyle(c), {paddingHorizontal: 16, paddingVertical: 4}]}>
         <Row icon="flag-outline" label="País" value={`${flag(library.country)} ${countryName}${library.countryMode === 'auto' ? ' · auto' : ''}`} onPress={() => setSheet('country')}/>
         <Row icon="musical-notes-outline" label="Géneros favoritos" value={tagLabels.length ? tagLabels.slice(0, 2).join(', ') + (tagLabels.length > 2 ? '…' : '') : 'Sin elegir'} onPress={() => setSheet('genres')}/>
@@ -47,7 +53,7 @@ export default function Settings() {
       </View>
       <View style={[cardStyle(c), {padding: 16, gap: 8}]}>
         <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}><Ionicons name="shield-checkmark-outline" size={20} color={c.primaryText}/><Label style={{fontWeight: '800'}}>Privacidad</Label></View>
-        <Muted style={{fontSize: 14, lineHeight: 20}}>ONDA no solicita tu ubicación GPS ni graba transmisiones. Al escuchar, la emisora recibe tu conexión. Los reportes de problemas se guardan en el servidor de ONDA sin datos de cuenta.</Muted>
+        <Muted style={{fontSize: 14, lineHeight: 20}}>ONDA no solicita GPS ni graba transmisiones. Al reproducir, la emisora o proveedor recibe tu conexión. Las cuentas y salas usan tu identidad; puedes elegir qué biblioteca sincronizar.</Muted><Button title="Privacidad y convivencia" secondary onPress={() => router.push('/privacy')}/>
         <Button title="Borrar biblioteca local" icon="trash-outline" secondary onPress={clear}/>
       </View>
       <Muted style={{textAlign: 'center', fontSize: 12}}>ONDA · El mundo suena aquí · Versión {Constants.expoConfig?.version ?? 'dev'} (desarrollo)</Muted>
@@ -63,7 +69,7 @@ export default function Settings() {
       </Pressable>)}
     </Sheet>}
     {sheet === 'genres' && <Sheet title="Géneros favoritos" onClose={() => setSheet(null)}>
-      <Muted style={{paddingBottom: 8}}>Hasta 5. Solo se usan en este dispositivo para variar Inicio y Radar.</Muted>
+      <Muted style={{paddingBottom: 8}}>Hasta 5. Personalizan Inicio y Radar en este dispositivo.</Muted>
       <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8}}>{(tags.data ?? []).slice(0, 40).map(t => {
         const on = library.likedTags.includes(t.value);
         return <Chip key={t.value} label={t.label} selected={on} onPress={() => library.setLikedTags(on ? library.likedTags.filter(x => x !== t.value) : library.likedTags.length < 5 ? [...library.likedTags, t.value] : library.likedTags)}/>;
