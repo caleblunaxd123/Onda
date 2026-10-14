@@ -9,9 +9,14 @@ public static class CommunityEndpoints
     public static void MapCommunityEndpoints(this WebApplication app)
     {
         var auth = app.MapGroup("/api/v1/auth").CacheOutput(p => p.NoCache());
-        auth.MapGet("/providers", (IConfiguration config) => Results.Ok(new {google = new {
+        auth.MapGet("/providers", (IConfiguration config, EmailVerificationService verification) => Results.Ok(new {emailVerification = new {enabled = verification.Enabled}, google = new {
             enabled = !string.IsNullOrWhiteSpace(config["Google:WebClientId"]), webClientId = config["Google:WebClientId"], iosClientId = config["Google:IosClientId"],
         }}));
+        auth.MapPost("/email/request", async (ClaimsPrincipal user, EmailVerificationService verification, CancellationToken ct) =>
+            Results.Ok(await verification.RequestAsync(user.ListenerId(), ct))).RequireAuthorization().RequireRateLimiting("account");
+        // GET never consumes links: mail scanners and previews must not verify an account.
+        auth.MapPost("/email/confirm", async (VerifyEmailRequest input, EmailVerificationService verification, CancellationToken ct) =>
+            await verification.ConfirmAsync(input.Token, ct) ? Results.NoContent() : Results.Problem("Este enlace venció o ya se utilizó. Pide otro desde Tu cuenta.", statusCode: 400)).RequireRateLimiting("account");
         auth.MapPost("/google/challenge", (IConfiguration config, GoogleChallenges challenges) => string.IsNullOrWhiteSpace(config["Google:WebClientId"])
             ? Results.Problem("Google todavía no está disponible. Puedes entrar con correo o como invitado.", statusCode: 503)
             : Results.Ok(new {nonce = challenges.Create()})).RequireRateLimiting("account");
@@ -117,7 +122,13 @@ public static class CommunityEndpoints
         roomApi.MapGet("/", async (bool? mine, ClaimsPrincipal user, RoomService rooms, CancellationToken ct) =>
             Results.Ok(new {items = await rooms.ListAsync(user.Identity?.IsAuthenticated == true ? user.ListenerId() : null, mine == true, ct)}));
         roomApi.MapPost("/", async (CreateRoom request, ClaimsPrincipal user, RoomService rooms, CancellationToken ct) =>
-            await rooms.CreateAsync(user.ListenerId(), request, ct) is { } created ? Results.Created($"/api/v1/rooms/{created.Id}", created) : Results.Problem("Elige un nombre y contenido compatible. Puedes mantener hasta 3 salas abiertas.", statusCode: 400)).RequireAuthorization().RequireRateLimiting("create-room");
+        {
+            try {return await rooms.CreateAsync(user.ListenerId(), request, ct) is { } created ? Results.Created($"/api/v1/rooms/{created.Id}", created) : Results.Problem("Elige un nombre y contenido compatible.", statusCode: 400);}
+            catch (RoomAlreadyOpenException existing) {return Results.Problem("Ya tienes una sala. Vuelve a ella o ciérrala desde sus opciones antes de crear otra.", statusCode: 409,
+                extensions: new Dictionary<string, object?> {{"roomId", existing.RoomId}});}
+        }).RequireAuthorization().RequireRateLimiting("create-room");
+        roomApi.MapGet("/current", async (ClaimsPrincipal user, RoomService rooms, CancellationToken ct) =>
+            await rooms.CurrentAsync(user.ListenerId(), ct) is { } current ? Results.Ok(current) : Results.NoContent()).RequireAuthorization();
         roomApi.MapGet("/invite/{code}", async (string code, ClaimsPrincipal user, RoomService rooms, CancellationToken ct) =>
             await rooms.ByCodeAsync(code, user.ListenerId(), ct) is { } room ? Results.Ok(room) : Results.Problem("Invitación inválida, sala cerrada o acceso restringido.", statusCode: 404)).RequireAuthorization();
         roomApi.MapPost("/{id:guid}/reports", async (Guid id, RoomReportRequest request, ClaimsPrincipal user, OndaDbContext db,

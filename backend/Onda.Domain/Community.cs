@@ -5,6 +5,11 @@ public sealed class ListenerAccount
     public Guid Id { get; set; }
     public string? Email { get; set; }
     public string? GoogleSubject { get; set; }
+    public string? AvatarUrl { get; set; }
+    public DateTimeOffset? EmailVerifiedAt { get; set; }
+    public string? EmailVerificationHash { get; set; }
+    public DateTimeOffset? EmailVerificationExpiresAt { get; set; }
+    public DateTimeOffset? EmailVerificationRequestedAt { get; set; }
     public string DisplayName { get; set; } = "";
     public string PasswordHash { get; set; } = "";
     public string RecoveryHash { get; set; } = "";
@@ -43,6 +48,9 @@ public sealed class ListeningRoom
     public DateTimeOffset UpdatedAt { get; set; }
     public bool Closed { get; set; }
     public long Version { get; set; }
+    public Guid? LastPlaybackEventId { get; set; }
+    public string? LastPlaybackSessionHash { get; set; }
+    public string? LastPlaybackCommandHash { get; set; }
 }
 public sealed class RoomBan
 {

@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 namespace Onda.Api;
 
-public sealed record RoomMember(Guid Id, string Name);
+public sealed record RoomMember(Guid Id, string Name, string? AvatarUrl = null);
 public sealed record MessageEmoji(Guid AccountId, string Name, string Emoji);
 public sealed record MessageReply(Guid Id, string Sender, string Text, bool Deleted, Guid? SenderId = null);
 public sealed record ChatAttachment(Guid Id, string Name, string Mime, string Kind, long Length, int? DurationMs = null);
@@ -11,7 +11,7 @@ public sealed record RoomMessage(Guid Id, Guid SenderId, string Sender, string T
 public sealed record RoomReaction(Guid SenderId, string Emoji);
 public sealed class RoomPresence(TimeProvider clock)
 {
-    private sealed record Connection(Guid Account, string Session, string Name, Action Abort, Guid? Room);
+    private sealed record Connection(Guid Account, string Session, string Name, Action Abort, Guid? Room, string? AvatarUrl);
     private readonly object gate = new();
     private readonly Dictionary<string, Connection> connections = [];
     private readonly Dictionary<Guid, Queue<RoomMessage>> messages = [];
@@ -20,13 +20,13 @@ public sealed class RoomPresence(TimeProvider clock)
     private readonly Dictionary<Guid, (Guid Owner, DateTimeOffset Since)> missingOwners = [];
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> locks = new();
     public SemaphoreSlim RoomLock(Guid id) => locks.GetOrAdd(id, _ => new(1, 1));
-    public void Connect(string id, Guid account, string session, string name, Action abort)
+    public void Connect(string id, Guid account, string session, string name, Action abort, string? avatarUrl = null)
     {
         lock (gate)
         {
             if (connections.Count >= 1000 || connections.Values.Count(x => x.Account == account) >= 5)
                 throw new Microsoft.AspNetCore.SignalR.HubException("Cierra otra conexión antes de entrar de nuevo.");
-            connections[id] = new(account, session, name, abort, null);
+            connections[id] = new(account, session, name, abort, null, avatarUrl);
         }
     }
     public Guid? Enter(string id, Guid room)
@@ -38,7 +38,7 @@ public sealed class RoomPresence(TimeProvider clock)
     public bool InRoom(string connection, Guid room)
     {lock (gate) return connections.TryGetValue(connection, out var c) && c.Room == room;}
     public RoomMember[] Members(Guid room)
-    {lock (gate) return connections.Values.Where(c => c.Room == room).DistinctBy(c => c.Account).Select(c => new RoomMember(c.Account, c.Name)).ToArray();}
+    {lock (gate) return connections.Values.Where(c => c.Room == room).DistinctBy(c => c.Account).Select(c => new RoomMember(c.Account, c.Name, c.AvatarUrl)).ToArray();}
     public int Count(Guid room) => Members(room).Length;
     public DateTimeOffset? HostAbsentSince(Guid room, Guid owner)
     {

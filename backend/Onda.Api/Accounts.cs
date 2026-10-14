@@ -12,17 +12,17 @@ using Onda.Application;
 using Onda.Infrastructure;
 namespace Onda.Api;
 
-public sealed record AccountView(Guid Id, string DisplayName, string? Email, bool Guest, string Provider = "email");
-public sealed record AccountSession(string Token, DateTimeOffset ExpiresAt, AccountView User, string? RecoveryCode = null);
+public sealed record AccountView(Guid Id, string DisplayName, string? Email, bool Guest, string Provider = "email", string? AvatarUrl = null, bool EmailVerified = false);
+public sealed record AccountSession(string Token, DateTimeOffset ExpiresAt, AccountView User, string? RecoveryCode = null, string? EmailVerificationStatus = null);
 public sealed record RegisterAccount(string? DisplayName, string? Email, string? Password);
 public sealed record LoginAccount(string? Email, string? Password);
 public sealed record RecoverAccount(string? Email, string? Code, string? Password);
 public sealed record GuestAccount(string? DisplayName);
 public sealed record PasswordConfirmation(string? Password);
 
-public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswordHasher<ListenerAccount> hasher, RoomUploadStore? files = null)
+public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswordHasher<ListenerAccount> hasher, RoomUploadStore? files = null, EmailVerificationService? verification = null)
 {
-    public static AccountView View(ListenerAccount user) => new(user.Id, user.DisplayName, user.Email, user.Email is null, user.GoogleSubject is not null ? "google" : user.Email is null ? "guest" : "email");
+    public static AccountView View(ListenerAccount user) => new(user.Id, user.DisplayName, user.Email, user.Email is null, user.GoogleSubject is not null ? "google" : user.Email is null ? "guest" : "email", user.AvatarUrl, user.EmailVerifiedAt is not null || user.GoogleSubject is not null);
     public static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     public static string NewSecret() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     public static string? Email(string? value)
@@ -48,7 +48,7 @@ public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswo
         if (user is null) {user = new() {Id = Guid.NewGuid(), CreatedAt = clock.GetUtcNow()}; db.ListenerAccounts.Add(user);}
         var recovery = NewSecret();
         user.Email = email; user.DisplayName = name; user.PasswordHash = hasher.HashPassword(user, input.Password!); user.RecoveryHash = Hash(recovery);
-        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        var registered = await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             try
@@ -58,6 +58,9 @@ public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswo
             }
             catch (DbUpdateException) {return null;}
         });
+        if (registered is null) return null;
+        var result = verification is null ? new VerificationResult("unavailable") : await verification.RequestAsync(user.Id, ct);
+        return registered with {EmailVerificationStatus = result.Status};
     }
     public async Task<AccountSession?> LoginAsync(LoginAccount input, CancellationToken ct)
     {
@@ -83,6 +86,8 @@ public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswo
         if (existing is not null)
         {
             if (currentId is { } currentAccount && currentAccount != existing.Id && await db.ListenerAccounts.AnyAsync(x => x.Id == currentAccount && x.Email != null, ct)) return null;
+            existing.AvatarUrl = GoogleIdentityVerifier.SafeAvatar(identity.AvatarUrl);
+            existing.EmailVerifiedAt ??= clock.GetUtcNow();
             return await SessionAsync(existing, null, ct);
         }
         var current = currentId is { } id ? await db.ListenerAccounts.FindAsync([id], ct) : null;
@@ -94,6 +99,8 @@ public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswo
         var name = Text.CleanName(identity.Name, 40);
         if (user.DisplayName.Length < 2) user.DisplayName = name.Length >= 2 ? name : "Oyente ONDA";
         user.Email = identity.Email; user.GoogleSubject = identity.Subject;
+        user.EmailVerifiedAt ??= clock.GetUtcNow();
+        user.AvatarUrl = GoogleIdentityVerifier.SafeAvatar(identity.AvatarUrl);
         var recovery = user.RecoveryHash.Length == 0 ? NewSecret() : null;
         if (recovery is not null) user.RecoveryHash = Hash(recovery);
         return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
@@ -190,6 +197,7 @@ public sealed class ListenerAuthentication(IOptionsMonitor<AuthenticationSchemeO
         var identity = new ClaimsIdentity([
             new(ClaimTypes.NameIdentifier, result.User.Id.ToString()), new(ClaimTypes.Name, result.User.DisplayName),
             new("sid", result.Session.TokenHash), new("registered", (result.User.Email is not null).ToString())], Scheme.Name);
+        if (result.User.AvatarUrl is { } avatar) identity.AddClaim(new("avatar", avatar));
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), new AuthenticationProperties {ExpiresUtc = result.Session.ExpiresAt}, Scheme.Name));
     }
 }
