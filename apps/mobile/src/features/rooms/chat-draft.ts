@@ -8,8 +8,10 @@ export type PendingAttachment = LocalAttachment & {status: 'uploading' | 'ready'
 /** A message handed to the server but not yet confirmed. Shown immediately (WhatsApp-style) with its real state. */
 export type Outgoing = {key: string; text: string; replyTo: ChatMessage | null; attachments: PendingAttachment[]; at: string; status: 'sending' | 'failed'; error?: string};
 type Draft = {roomId: string | null; text: string; stash: string; replyTo: ChatMessage | null; editing: ChatMessage | null;
-  pending: PendingAttachment[]; sending: boolean; autoSend: boolean; error: string; outbox: Outgoing[]};
-const empty: Draft = {roomId: null, text: '', stash: '', replyTo: null, editing: null, pending: [], sending: false, autoSend: false, error: '', outbox: []};
+  pending: PendingAttachment[]; sending: boolean; autoSend: boolean; error: string; outbox: Outgoing[];
+  /** The chat input has focus: on phones the stage collapses so the conversation stays visible. */
+  composing: boolean};
+const empty: Draft = {roomId: null, text: '', stash: '', replyTo: null, editing: null, pending: [], sending: false, autoSend: false, error: '', outbox: [], composing: false};
 /** The composer draft lives outside the component so switching tabs or a failed send never loses it. */
 export const useChatDraft = create<Draft>(() => empty);
 const uploads = new Map<string, UploadHandle>();
@@ -29,6 +31,7 @@ function release(roomId: string | null, item: PendingAttachment) {
 }
 export function ensureDraftRoom(roomId: string) {if (useChatDraft.getState().roomId !== roomId) resetDraft(roomId);}
 export const setDraftText = (text: string) => set({text, error: ''});
+export const setComposing = (composing: boolean) => set({composing});
 export const replyTo = (message: ChatMessage | null) => set(s => ({replyTo: message, editing: null, text: s.editing ? s.stash : s.text, error: ''}));
 export function startEditing(message: ChatMessage) {
   set(s => ({editing: message, replyTo: null, stash: s.editing ? s.stash : s.text, text: message.text, error: ''}));

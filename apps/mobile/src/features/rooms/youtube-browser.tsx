@@ -6,14 +6,14 @@ import { Button, IconButton, Label, Muted, SearchField } from "../../ui";
 import { useTheme } from "../../theme";
 import { canBrowseYoutube, youtubeBrowseUrl, youtubeVideoUrl } from "./youtube-navigation";
 
-export function YoutubeBrowser({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
+export function YoutubeBrowser({ onSelect, onClose, initialQuery = "" }: { onSelect: (url: string) => void; onClose: () => void; initialQuery?: string }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const size = useWindowDimensions();
   const ref = useRef<WebView>(null);
   const picking = useRef(false);
-  const [query, setQuery] = useState("");
-  const [url, setUrl] = useState(youtubeBrowseUrl(""));
+  const [query, setQuery] = useState(initialQuery);
+  const [url, setUrl] = useState(youtubeBrowseUrl(initialQuery));
   const [back, setBack] = useState(false);
   const [failure, setFailure] = useState("");
   const select = (value: string) => {

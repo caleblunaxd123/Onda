@@ -27,6 +27,7 @@ export function SourcePicker({
   onChange,
   initialStation,
   openYoutubeInitially = false,
+  youtubeQuery = "",
   onChoose,
   onBrowseClose,
 }: {
@@ -34,6 +35,7 @@ export function SourcePicker({
   onChange: (value: MediaInput) => void;
   initialStation?: Station | null;
   openYoutubeInitially?: boolean;
+  youtubeQuery?: string;
   onChoose?: (value: MediaInput) => void;
   onBrowseClose?: () => void;
 }) {
@@ -209,7 +211,7 @@ export function SourcePicker({
         <StreamForm value={value} onChange={onChange} />
       ) : (
         <>
-          {youtubeOpen && <YoutubeBrowser onClose={() => {setYoutubeOpen(false); onBrowseClose?.();}} onSelect={(url) => {
+          {youtubeOpen && <YoutubeBrowser initialQuery={youtubeQuery} onClose={() => {setYoutubeOpen(false); onBrowseClose?.();}} onSelect={(url) => {
             setYoutubeOpen(false);
             choose({ kind: value.kind === "audio" ? "audio" : "youtube", url });
           }} />}

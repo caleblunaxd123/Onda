@@ -69,6 +69,7 @@ export default function RoomScreen() {
   const initialProvider = ["youtube", "radio", "audio", "video", "stream"].includes(params.choose ?? "") ? params.choose as MediaInput["kind"] : undefined;
   const [startupPicker, setStartupPicker] = useState(!!initialProvider);
   const [openYoutube, setOpenYoutube] = useState(initialProvider === "youtube");
+  const [youtubeQuery, setYoutubeQuery] = useState("");
   const [directSelection, setDirectSelection] = useState(!!initialProvider);
   const id = typeof params.id === "string" ? params.id : "";
   const code = typeof params.code === "string" ? params.code : "";
@@ -399,8 +400,8 @@ export default function RoomScreen() {
           : library.toggleMedia(room.media)
       }
       onMember={setMember}
-      onBrowseYoutube={() => {
-        setStartupPicker(false); setDirectSelection(true);
+      onBrowseYoutube={(query) => {
+        setYoutubeQuery(query ?? ""); setStartupPicker(false); setDirectSelection(true);
         setInput({kind: "youtube"}); setOpenYoutube(true); setSheet("add");
       }}
       onSheet={(sheet) => {
@@ -484,8 +485,13 @@ export default function RoomScreen() {
       )}
       {sheet === "add" && (!startupPicker || !room.media.url) && (
         <Sheet title={room.media.url ? "Qué compartimos después" : "Elige qué mostrar"} onClose={() => setSheet(null)}>
-          <SourcePicker value={input} onChange={setInput} openYoutubeInitially={openYoutube} onBrowseClose={() => {if (directSelection) setSheet(null);}} onChoose={(media) => {
-            if (!directSelection || !host || !ready) return;
+          <SourcePicker value={input} onChange={setInput} openYoutubeInitially={openYoutube} youtubeQuery={youtubeQuery} onBrowseClose={() => {if (directSelection) setSheet(null);}} onChoose={(media) => {
+            if (!directSelection || !ready) return;
+            // Guests never change what the group is watching: their pick becomes a proposal in the queue.
+            if (!host) {
+              if (media.kind === "youtube") void act("AddToQueue", room.id, media).then((ok) => {if (ok) {setSheet(null); setTab("queue");}});
+              return;
+            }
             const latest = useRoom.getState().room;
             if (latest) void act("ChangeMedia", latest.id, {media, version: latest.version}).then((ok) => {if (ok) setSheet(null);});
           }} />

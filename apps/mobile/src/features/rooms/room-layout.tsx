@@ -19,6 +19,8 @@ import { Button, IconButton, Label, Muted } from "../../ui";
 import { MediaFrame, type MediaEvent } from "./media-frame";
 import { MemberStack, RadioStage } from "./presentation";
 import { StreamRoomStage } from "./stream";
+import { YoutubeSearchBar } from "./youtube-bar";
+import { useChatDraft } from "./chat-draft";
 import {
   orderedQueue,
   projectedPosition,
@@ -60,7 +62,8 @@ export type RoomLayoutProps = {
   saved: boolean;
   toggleSave: () => void;
   onMember: (member: Member) => void;
-  onBrowseYoutube: () => void;
+  /** Opens the YouTube explorer, optionally with a search already typed in the room. */
+  onBrowseYoutube: (query?: string) => void;
   onSheet: (sheet: "add" | "invite" | "report" | "close") => void;
   act: (method: string, ...args: unknown[]) => Promise<boolean>;
   children?: ReactNode;
@@ -81,7 +84,9 @@ export function RoomLayout(p: RoomLayoutProps) {
   }, []);
   const dimensions = useWindowDimensions();
   const wide = Platform.OS === "web" && dimensions.width >= 900 && !theater;
-  const typing = keyboard && !wide && p.tab === "chat";
+  const composing = useChatDraft((s) => s.composing);
+  // Only while writing in the chat: the YouTube search bar lives in the stage and must stay visible.
+  const typing = keyboard && composing && !wide && p.tab === "chat";
   // Subscription titles have no embedded player: the room's reference clock is the position.
   const current = () => p.room.media.kind === "stream" ? projectedPosition(p.desiredPosition, p.room.isPlaying, p.positionAt) : p.position;
   const contentLabel = p.room.media.kind === "youtube" ? "YouTube" : p.room.media.kind === "radio" ? "Buscar emisoras" : "Elegir contenido";
@@ -181,7 +186,7 @@ export function RoomLayout(p: RoomLayoutProps) {
               >
                 <Muted accessibilityRole="alert">{p.mediaError}</Muted>
                 {p.room.media.kind === "youtube" && p.controller && (
-                  <Button title="Elegir otro video" icon="search-outline" onPress={p.onBrowseYoutube} />
+                  <Button title="Elegir otro video" icon="search-outline" onPress={() => p.onBrowseYoutube()} />
                 )}
                 {p.room.media.url && (
                   <Button
@@ -333,9 +338,9 @@ export function RoomLayout(p: RoomLayoutProps) {
                 label="Volver a sincronizar"
                 onPress={p.resync}
               />
-              {!!p.room.media.url && !wide && (
+              {!!p.room.media.url && !wide && p.room.media.kind !== "youtube" && (
                 <IconButton
-                  icon={p.room.media.kind === "youtube" ? "logo-youtube" : "add"}
+                  icon="add"
                   label={contentLabel}
                   disabled={!p.connected || p.busy}
                   onPress={chooseContent}
@@ -366,8 +371,11 @@ export function RoomLayout(p: RoomLayoutProps) {
                 {p.error}
               </Muted>
             )}
-            {(!p.room.media.url || wide) && <Button title={contentLabel}
-              secondary icon={p.room.media.kind === "youtube" ? "logo-youtube" : "add-outline"}
+            {p.room.media.kind === "youtube" && (
+              <YoutubeSearchBar controller={p.controller} disabled={!p.connected || p.busy} onSearch={(query) => p.onBrowseYoutube(query)} />
+            )}
+            {p.room.media.kind !== "youtube" && (!p.room.media.url || wide) && <Button title={contentLabel}
+              secondary icon="add-outline"
               disabled={!p.connected || p.busy} onPress={chooseContent} />}
           </View>
         </View>

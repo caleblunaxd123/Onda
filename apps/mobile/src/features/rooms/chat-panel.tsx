@@ -6,7 +6,7 @@ import {Ionicons} from '../../icons';
 import {ActionRow, Chip, Label, Muted, Sheet, type IconName} from '../../ui';
 import {Avatar} from './presentation';
 import {canDelete, canEdit, chatLimits, continuesGroup, describeMessage, emojiPanel, formatBytes, formatDuration, isJumboEmoji, myReaction, pruneTyping, sameDay, typingLabel} from './chat';
-import {addAttachment, ensureDraftRoom, removeAttachment, replyTo, retryAttachment, sendDraft, setDraftText, startEditing, stopEditing, useChatDraft,
+import {addAttachment, ensureDraftRoom, removeAttachment, replyTo, retryAttachment, sendDraft, setComposing, setDraftText, startEditing, stopEditing, useChatDraft,
   type PendingAttachment} from './chat-draft';
 import {discardLocal, saveAttachment, voiceAttachmentAsync} from './chat-files';
 import {ChatImage, DaySeparator, FileCard, ImageViewer, LinkedText, OutgoingBubble, Quote, Reactions, SwipeToReply, VoiceBar, VoiceNote} from './chat-parts';
@@ -219,6 +219,7 @@ function Composer(p: RoomLayoutProps & {onError: (message: string) => void}) {
       {!draft.editing && <RoundButton icon={menu ? 'close' : 'happy-outline'} label={menu ? 'Cerrar emojis' : 'Emojis, stickers y reacciones'} onPress={() => setMenu(x => !x)}/>}
       <TextInput accessibilityLabel={draft.editing ? 'Editar mensaje' : 'Mensaje para la sala'} value={text}
         onChangeText={value => {setDraftText(value); if (value.trim()) notifyTyping();}}
+        onFocus={() => setComposing(true)} onBlur={() => setComposing(false)}
         placeholder={draft.editing ? 'Edita tu mensaje' : 'Escribe a la sala…'} placeholderTextColor={c.muted} maxLength={chatLimits.text} multiline
         style={{flex: 1, minHeight: 46, maxHeight: 120, borderWidth: 1, borderColor: c.border, borderRadius: 24, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
           backgroundColor: c.surface, color: c.text, fontSize: 14}}/>

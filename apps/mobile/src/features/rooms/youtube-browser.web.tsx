@@ -3,8 +3,8 @@ import { View } from "react-native";
 import { Button, Muted, SearchField } from "../../ui";
 import { youtubeBrowseUrl } from "./youtube-navigation";
 
-export function YoutubeBrowser({ onSelect: _onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
-  const [query, setQuery] = useState("");
+export function YoutubeBrowser({ onSelect: _onSelect, onClose, initialQuery = "" }: { onSelect: (url: string) => void; onClose: () => void; initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery);
   return <View style={{ gap: 8 }}>
     <SearchField value={query} onChange={(text) => setQuery(text.slice(0, 200))} placeholder="Video, artista o canal" label="Buscar en YouTube" />
     <Button title="Buscar en YouTube" secondary icon="logo-youtube" onPress={() => {
