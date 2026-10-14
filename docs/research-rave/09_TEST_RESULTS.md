@@ -25,7 +25,7 @@ incorpora los límites; no se cambió configuración global. Avisos de deprecaci
 
 Resend confirmó el dominio ONDA y TLS obligatorio; cuenta en plan Free, 3.000/mes y 100/día,
 dos de tres dominios, extras de pago deshabilitados. Clave solo envío/solo dominio ONDA, guardada en VPS
-root/mode600. DNS de otros proyectos preservados. Prueba sintética a `delivered@resend.dev`, dirección
+root:grupo API/mode640 dentro de carpeta root/0700. DNS de otros proyectos preservados. Prueba sintética a `delivered@resend.dev`, dirección
 oficial sandbox: HTTP **200** con HttpClient .NET 10 y respuesta con ID. No verifica llegada a un inbox real.
 La prueba con urllib recibió 403 sin JSON; no se interpretó como error de clave ni se ampliaron permisos.
 Prueba del flujo real registro→inbox→confirmación queda pendiente de publicar la API compatible.

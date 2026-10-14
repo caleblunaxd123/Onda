@@ -1,5 +1,24 @@
 # Producción y revisión local — 2026-10-14
 
+## Candidata 0.6.2 preparada, pendiente de aprobación
+
+PR #2, rama `codex/onda-rave-research`: 164 pruebas SQL y 99 móviles; web exportada,
+APK 0.6.2/code10, 124.514.158 bytes, SHA256 `cba8590a88ff2415ce779bc79c636a4a2060cf57cd5b7d84f710ade86bcb9db2`.
+No instalado sobre la app principal ni publicado. Tres migraciones nullable aditivas, SQL generado revisado:
+ProfileAvatar, EmailVerification y PlaybackIdempotency. No se borran cuentas/salas previas.
+
+Resend configurado con autorización: dominio verificado, clave solo envío/dominio, plan Free y sandbox200.
+Host `/opt/onda/secrets/resend-api-key` root:1654/0640 dentro de carpeta root/0700; copia de staging local
+protegida sigue presente por rechazo automático de su eliminación. Clave ausente del bundle APK.
+`infra/contabo/compose.email.yaml` se preparó y `docker compose config --quiet` pasó en VPS.
+Un contenedor temporal sin red confirmó que UID/GID1654 puede leer el montaje; fue eliminado por --rm.
+No se reinició la API principal. La clave no aparece en Compose/env y se monta como secreto.
+
+Tras aprobación, activar imagen 0.6.2 y `ONDA_EMAIL_ENABLED=true`, migrar con base Compose,
+recrear solo API con `-f compose.yaml -f compose.email.yaml`; conservar runtime_connection y Google.
+Mantener ese overlay en comandos siguientes de API. Rollback: imagen/env/index/APK anteriores y
+configuración Compose anterior, dejando las columnas aditivas. Ver [guía de correo](EMAIL_VERIFICATION.md).
+
 ## Beta 0.6.1 publicada con aprobación
 
 Web exportada y APK local `dist/ONDA-0.6.1-contabo.apk`, versionCode 9, tres ABI, 124.503.330 bytes,

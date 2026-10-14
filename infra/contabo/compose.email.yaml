@@ -1,0 +1,15 @@
+# Optional overlay, only after provisioning secrets/resend-api-key.
+# docker compose --env-file compose.env -f compose.yaml -f compose.email.yaml ...
+services:
+  api:
+    environment:
+      Email__Enabled: ${ONDA_EMAIL_ENABLED:-false}
+      Email__ApiKeyFile: /run/secrets/resend
+      Email__FromAddress: no-reply@mail.onda.lunalav.pe
+      Email__PublicOrigin: https://onda.lunalav.pe
+    secrets:
+      - source: resend_api_key
+        target: resend
+secrets:
+  # Host parent root/0700; file root:1654/0640 so API's non-root group can read the mounted secret.
+  resend_api_key: {file: ./secrets/resend-api-key}

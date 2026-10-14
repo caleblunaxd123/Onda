@@ -14,11 +14,15 @@ Subdominio propio para no cambiar MX/servicio de correo del dominio raíz. Crear
 copiar únicamente sus registros exactos de verificación a Cloudflare como DNS sin proxy y esperar validación.
 No inventar claves DKIM/SPF ni reemplazar un registro raíz existente.
 
-Crear API key limitada a envío para ese dominio; escribirla en archivo secreto mode600 del VPS,
+Crear API key limitada a envío para ese dominio; escribirla en archivo secreto legible solo por API/root del VPS,
 montarlo read-only en API y definir `Email__ApiKeyFile` con su ruta dentro del contenedor.
 Nunca usar EXPO_PUBLIC, Git, URLs, capturas o logs para la clave.
 Solo entonces activar `Email__Enabled=true`, `Email__FromAddress` y `Email__PublicOrigin`.
-La clave ya está en `/opt/onda/secrets/resend-api-key`, root/mode600, fuera de Git.
+La clave ya está en `/opt/onda/secrets/resend-api-key`, root:1654/mode640 dentro de directorio root/0700,
+fuera de Git. El grupo permite leer el mount a la API no root (UID/GID 1654); otros procesos del host no
+pueden recorrer ese directorio. Overlay preparado `infra/contabo/compose.email.yaml`, montaje de secreto.
+Configuración combinada validada en VPS con `docker compose config --quiet`; contenedor temporal
+sin red, read-only, sin capacidades y con UID/GID1654 confirmó lectura. No se activó el overlay en la API.
 Todavía no se modificó compose ni se reinició la API para usarla. La revisión automática rechazó
 eliminar la copia local de staging: permanece en `.tools/resend-secret/api-key`, ACL solo propietario/SYSTEM,
 excluida de Git. No se intentó eludir ese rechazo ni se mostró el valor de la clave.

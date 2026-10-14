@@ -13,7 +13,7 @@
 
 El propietario aprobó Resend gratuito y DNS: dominio `mail.onda.lunalav.pe` verificado,
 registros exactos añadidos solo a ese subdominio, TLS obligatorio y clave limitada a envío guardada
-como secreto root/mode600 en Contabo. Remitente `no-reply@mail.onda.lunalav.pe`.
+como secreto protegido en Contabo, legible solo por root/grupo de API dentro del montaje. Remitente `no-reply@mail.onda.lunalav.pe`.
 No se activaron sobrecostes ni el envío en la API publicada. Ver [guía operativa](../EMAIL_VERIFICATION.md).
 
 Pendiente: publicación coordinada API/migraciones/web/APK 0.6.2 con respaldo cifrado, restauración,
