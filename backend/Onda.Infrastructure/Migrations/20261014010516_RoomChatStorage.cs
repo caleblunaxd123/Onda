@@ -45,6 +45,7 @@ namespace Onda.Infrastructure.Migrations
                     Mime = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Kind = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
                     Length = table.Column<long>(type: "bigint", nullable: false),
+                    DurationMs = table.Column<int>(type: "int", nullable: true),
                     At = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
                 constraints: table =>
@@ -67,6 +68,11 @@ namespace Onda.Infrastructure.Migrations
                 name: "IX_RoomChatEntries_SenderId",
                 table: "RoomChatEntries",
                 column: "SenderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RoomUploads_MessageId",
+                table: "RoomUploads",
+                column: "MessageId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoomUploads_RoomId_At",

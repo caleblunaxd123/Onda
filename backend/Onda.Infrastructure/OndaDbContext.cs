@@ -28,7 +28,7 @@ public sealed class OndaDbContext(DbContextOptions<OndaDbContext> options) : DbC
         });
         model.Entity<RoomUpload>(e => {
             e.HasKey(x => x.Id); e.Property(x => x.Name).HasMaxLength(120); e.Property(x => x.Mime).HasMaxLength(100); e.Property(x => x.Kind).HasMaxLength(10);
-            e.HasIndex(x => new {x.RoomId, x.At}); e.HasIndex(x => x.UploaderId);
+            e.HasIndex(x => new {x.RoomId, x.At}); e.HasIndex(x => x.UploaderId); e.HasIndex(x => x.MessageId);
             e.HasOne<ListeningRoom>().WithMany().HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<ListenerAccount>(e =>

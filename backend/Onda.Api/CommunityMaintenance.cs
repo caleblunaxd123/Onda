@@ -14,6 +14,9 @@ public sealed class CommunityMaintenance(IServiceScopeFactory scopes, TimeProvid
                 await db.ListenerSessions.Where(x => x.ExpiresAt < now).ExecuteDeleteAsync(stoppingToken);
                 var old = now.AddDays(-8);
                 var guests = await db.ListenerAccounts.Where(x => x.Email == null && x.CreatedAt < old).Select(x => x.Id).Take(1000).ToArrayAsync(stoppingToken);
+                var files = scope.ServiceProvider.GetRequiredService<RoomUploadStore>();
+                // Expired guests: same chat/upload cleanup as an explicit account deletion.
+                files.Delete(await RoomChatService.ForgetAccountsAsync(db, guests, stoppingToken));
                 await db.ListeningRooms.Where(x => guests.Contains(x.OwnerId)).ExecuteDeleteAsync(stoppingToken);
                 await db.RoomBans.Where(x => guests.Contains(x.AccountId)).ExecuteDeleteAsync(stoppingToken);
                 await db.CommunityReports.Where(x => guests.Contains(x.ReporterId)).ExecuteUpdateAsync(x => x.SetProperty(r => r.ReporterId, Guid.Empty), stoppingToken);
@@ -21,6 +24,9 @@ public sealed class CommunityMaintenance(IServiceScopeFactory scopes, TimeProvid
                 await db.ListenerAccounts.Where(x => guests.Contains(x.Id)).ExecuteDeleteAsync(stoppingToken);
                 var closed = now.AddDays(-7);
                 await db.ListeningRooms.Where(x => x.Closed && x.UpdatedAt < closed).ExecuteDeleteAsync(stoppingToken);
+                // Chat retention (30 days), unsent uploads (1 h) and files whose rows were removed by cascades.
+                files.Delete(await RoomChatService.PruneExpiredAsync(db, now, stoppingToken));
+                await files.PruneAsync(db, stoppingToken);
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested) {logger.LogWarning("Community maintenance could not finish ({Type}).", ex.GetType().Name);}
         }

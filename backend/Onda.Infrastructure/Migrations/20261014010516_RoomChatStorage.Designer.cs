@@ -12,7 +12,7 @@ using Onda.Infrastructure;
 namespace Onda.Infrastructure.Migrations
 {
     [DbContext(typeof(OndaDbContext))]
-    [Migration("20261014004745_RoomChatStorage")]
+    [Migration("20261014010516_RoomChatStorage")]
     partial class RoomChatStorage
     {
         /// <inheritdoc />
@@ -273,6 +273,9 @@ namespace Onda.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("At")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("int");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -301,6 +304,8 @@ namespace Onda.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("MessageId");
 
                     b.HasIndex("UploaderId");
 

@@ -27,6 +27,8 @@ builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<LibrarySyncService>();
 builder.Services.AddSingleton<RoomPresence>();
 builder.Services.AddScoped<RoomService>();
+builder.Services.AddSingleton<RoomUploadStore>();
+builder.Services.AddScoped<RoomChatService>();
 builder.Services.AddSingleton<RoomContinuity>();
 builder.Services.AddHostedService(p => p.GetRequiredService<RoomContinuity>());
 builder.Services.AddHostedService<CommunityMaintenance>();
@@ -36,7 +38,7 @@ builder.Services.Configure<AssistantOptions>(builder.Configuration.GetSection("A
 builder.Services.AddSingleton<AssistantGate>();
 builder.Services.AddScoped<DiscoveryAssistant>();
 builder.Services.AddHttpClient("discovery-ai", c => c.Timeout = TimeSpan.FromSeconds(40));
-builder.Services.AddSignalR(o => {o.MaximumReceiveMessageSize = 8192; o.EnableDetailedErrors = false; o.AddFilter<RoomSessionFilter>();});
+builder.Services.AddSignalR(o => {o.MaximumReceiveMessageSize = 32768; o.EnableDetailedErrors = false; o.AddFilter<RoomSessionFilter>();});
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options => options.AddPolicy("LocalWebPreview", policy =>
     policy.WithOrigins("http://localhost:8081", "http://127.0.0.1:8081")
@@ -63,6 +65,8 @@ builder.Services.AddRateLimiter(o =>
         (context.Connection.RemoteIpAddress?.ToString() ?? "unknown") + context.Request.Path, _ => new() { PermitLimit = context.Request.Path.Value?.EndsWith("/guest") == true ? 60 : 12, Window = TimeSpan.FromMinutes(5), QueueLimit = 0 }));
     o.AddPolicy("create-room", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "anonymous", _ => new() { PermitLimit = 6, Window = TimeSpan.FromMinutes(5), QueueLimit = 0 }));
+    o.AddPolicy("uploads", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new() { PermitLimit = 20, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
     o.AddPolicy("assistant", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new() { PermitLimit = 6, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
@@ -132,6 +136,7 @@ api.MapPost("/stations/{id:guid}/reports", async (Guid id, ReportRequest body, I
 }).RequireRateLimiting("reports");
 api.MapGet("/moods", () => Recommendations.Moods);
 app.MapCommunityEndpoints();
+app.MapRoomUploads();
 api.MapPost("/assistant/discover", async (AssistantRequest input, DiscoveryAssistant assistant, CancellationToken ct) =>
     input.Text is not {Length: >= 2 and <= 500} || input.Tags?.Length > 8 || input.Tags?.Any(x => x is null || x.Length > 40) == true
         ? Results.Problem("Escribe entre 2 y 500 caracteres.", statusCode: 400)

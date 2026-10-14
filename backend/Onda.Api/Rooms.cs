@@ -92,7 +92,7 @@ public sealed class RoomSessionFilter : IHubFilter
 }
 
 [Authorize]
-public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbContext db, MediaResolver resolver, TimeProvider clock) : Hub
+public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbContext db, MediaResolver resolver, TimeProvider clock, RoomChatService chat) : Hub
 {
     private Guid Account => Context.User!.ListenerId();
     private CancellationToken Ct => Context.ConnectionAborted;
@@ -147,13 +147,54 @@ public sealed class RoomsHub(RoomService rooms, RoomPresence presence, OndaDbCon
         {await Groups.RemoveFromGroupAsync(Context.ConnectionId, id.ToString()); await BroadcastAsync(id); if (presence.Count(id) == 0) presence.Close(id);}
     }
     public async Task<RoomView> Snapshot(Guid id) => rooms.View(await MemberAsync(id));
-    public async Task<RoomMessage[]> History(Guid id) {await MemberAsync(id); return presence.Messages(id);}
+    private string DisplayName => Context.User!.Identity!.Name!;
+    /// <summary>Runs a chat mutation under the room lock after re-validating membership (and the session via the hub filter).</summary>
+    private async Task<T> ChatAsync<T>(Guid id, Func<ListeningRoom, Task<T>> action)
+    {
+        var gate = presence.RoomLock(id); await gate.WaitAsync(Ct);
+        try {db.ChangeTracker.Clear(); return await action(await MemberAsync(id));}
+        finally {gate.Release();}
+    }
+    public async Task<RoomMessage[]> History(Guid id) {await MemberAsync(id); return await chat.HistoryAsync(id, Ct);}
+    public async Task<ChatPage> ChatHistory(Guid id, Guid before) {Limit("history", 10, 30); await MemberAsync(id); return await chat.OlderAsync(id, before, Ct);}
+    /// <summary>Legacy text-only command kept for clients released before the extended chat.</summary>
     public async Task SendMessage(Guid id, string text)
     {
-        Limit("message", 12, 10); await MemberAsync(id);
-        if (text is null || text.Length > 300 || Text.CleanName(text, 300).Trim() is not {Length: > 0} clean) throw new HubException("Escribe un mensaje de hasta 300 caracteres.");
-        var message = presence.AddMessage(id, Account, Context.User!.Identity!.Name!, clean);
+        Limit("message", 12, 10);
+        if (text is null || text.Length > RoomChatService.LegacyMaxText) throw new HubException("Escribe un mensaje de hasta 300 caracteres.");
+        var message = await ChatAsync(id, _ => chat.SendAsync(id, Account, DisplayName, new(text), Ct, RoomChatService.LegacyMaxText));
         await Clients.Group(id.ToString()).SendAsync("Message", message);
+    }
+    public async Task<RoomMessage> SendChat(Guid id, SendChatCommand command)
+    {
+        Limit("message", 12, 10);
+        var message = await ChatAsync(id, _ => chat.SendAsync(id, Account, DisplayName, command ?? new(null), Ct));
+        await Clients.Group(id.ToString()).SendAsync("Message", message); return message;
+    }
+    public async Task<RoomMessage> EditChat(Guid id, EditChatCommand command)
+    {
+        Limit("chat-change", 12, 10);
+        var message = await ChatAsync(id, _ => chat.EditAsync(id, Account, command, Ct));
+        await Clients.Group(id.ToString()).SendAsync("MessageUpdated", message); return message;
+    }
+    /// <summary>Delete for everyone: the author or the room owner. Co-hosts do not gain moderation.</summary>
+    public async Task<RoomMessage> DeleteChat(Guid id, ChatTarget command)
+    {
+        Limit("chat-change", 12, 10);
+        var message = await ChatAsync(id, room => chat.DeleteAsync(id, Account, room.OwnerId == Account, command, Ct));
+        await Clients.Group(id.ToString()).SendAsync("MessageUpdated", message); return message;
+    }
+    public async Task<RoomMessage> ReactChat(Guid id, ReactChatCommand command)
+    {
+        Limit("reaction", 12, 10);
+        var message = await ChatAsync(id, _ => chat.ReactAsync(id, Account, DisplayName, command, Ct));
+        await Clients.Group(id.ToString()).SendAsync("MessageUpdated", message); return message;
+    }
+    /// <summary>Ephemeral typing signal; never stored. Extra calls inside the rate window are ignored silently.</summary>
+    public async Task Typing(Guid id)
+    {
+        if (!presence.InRoom(Context.ConnectionId, id) || !presence.Allow(Account, "typing", 4, 10)) return;
+        await Clients.OthersInGroup(id.ToString()).SendAsync("Typing", new TypingEvent(Account, DisplayName));
     }
     public async Task React(Guid id, string emoji)
     {

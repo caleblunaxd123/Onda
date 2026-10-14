@@ -76,5 +76,7 @@ public sealed class RoomUpload
     public string Mime { get; set; } = "";
     public string Kind { get; set; } = "file";
     public long Length { get; set; }
+    /// <summary>Voice note length reported by the recording client; display only.</summary>
+    public int? DurationMs { get; set; }
     public DateTimeOffset At { get; set; }
 }

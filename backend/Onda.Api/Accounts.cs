@@ -20,7 +20,7 @@ public sealed record RecoverAccount(string? Email, string? Code, string? Passwor
 public sealed record GuestAccount(string? DisplayName);
 public sealed record PasswordConfirmation(string? Password);
 
-public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswordHasher<ListenerAccount> hasher)
+public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswordHasher<ListenerAccount> hasher, RoomUploadStore? files = null)
 {
     public static AccountView View(ListenerAccount user) => new(user.Id, user.DisplayName, user.Email, user.Email is null);
     public static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
@@ -117,9 +117,13 @@ public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswo
     {
         var user = await db.ListenerAccounts.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (user is null || user.Email is not null && (password is null || password.Length > 128 || hasher.VerifyHashedPassword(user, user.PasswordHash, password) == PasswordVerificationResult.Failed)) return false;
-        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        Guid[] removedFiles = [];
+        var deleted = await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            // Owned rooms cascade to their chat and uploads; elsewhere, remove the account's messages, files and reactions.
+            var ownedUploads = await db.RoomUploads.Where(x => db.ListeningRooms.Any(r => r.Id == x.RoomId && r.OwnerId == id)).Select(x => x.Id).ToArrayAsync(ct);
+            removedFiles = [..ownedUploads, ..await RoomChatService.ForgetAccountsAsync(db, [id], ct)];
             await db.ListeningRooms.Where(x => x.OwnerId == id).ExecuteDeleteAsync(ct);
             await db.RoomBans.Where(x => x.AccountId == id).ExecuteDeleteAsync(ct);
             await db.CommunityReports.Where(x => x.ReporterId == id).ExecuteDeleteAsync(ct);
@@ -128,6 +132,9 @@ public sealed class AccountService(OndaDbContext db, TimeProvider clock, IPasswo
             db.Entry(user).State = EntityState.Detached;
             await transaction.CommitAsync(ct); return true;
         });
+        // Files are removed only after the rows are gone; anything missed is collected by the hourly prune.
+        if (deleted) files?.Delete(removedFiles);
+        return deleted;
     }
 }
 
