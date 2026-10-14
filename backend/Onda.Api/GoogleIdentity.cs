@@ -4,11 +4,19 @@ using System.Text.Json;
 using Google.Apis.Auth;
 namespace Onda.Api;
 
-public sealed record GoogleIdentity(string Subject, string Email, string Name, string Nonce);
+public sealed record GoogleIdentity(string Subject, string Email, string Name, string Nonce, string? AvatarUrl = null);
 public sealed record GoogleLogin(string? IdToken, string? Nonce);
 public interface IGoogleIdentityVerifier {Task<GoogleIdentity?> VerifyAsync(string token, CancellationToken ct);}
 public sealed class GoogleIdentityVerifier(IConfiguration config) : IGoogleIdentityVerifier
 {
+    // Keep a provider URL only. No image upload, disk storage, arbitrary-host fetch or user-supplied avatar URL.
+    public static string? SafeAvatar(string? value)
+    {
+        if (value is not {Length: > 0 and <= 2048} || !Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
+            uri.Scheme != "https" || !uri.IsDefaultPort || uri.UserInfo.Length != 0 || uri.Fragment.Length != 0) return null;
+        return uri.AbsoluteUri.Length <= 2048 && (uri.Host.EndsWith(".googleusercontent.com", StringComparison.OrdinalIgnoreCase) ||
+            uri.Host.EndsWith(".ggpht.com", StringComparison.OrdinalIgnoreCase)) ? uri.AbsoluteUri : null;
+    }
     public async Task<GoogleIdentity?> VerifyAsync(string token, CancellationToken ct)
     {
         var client = config["Google:WebClientId"];
@@ -20,7 +28,8 @@ public sealed class GoogleIdentityVerifier(IConfiguration config) : IGoogleIdent
             var segment = token.Split('.')[1].Replace('-', '+').Replace('_', '/'); segment += new string('=', (4 - segment.Length % 4) % 4);
             using var body = JsonDocument.Parse(Convert.FromBase64String(segment));
             if (!body.RootElement.TryGetProperty("nonce", out var nonce)) return null;
-            return new(payload.Subject, email, payload.Name ?? "", nonce.GetString() ?? "");
+            var avatar = body.RootElement.TryGetProperty("picture", out var picture) && picture.ValueKind == JsonValueKind.String ? SafeAvatar(picture.GetString()) : null;
+            return new(payload.Subject, email, payload.Name ?? "", nonce.GetString() ?? "", avatar);
         }
         catch (Exception error) when (error is InvalidJwtException or FormatException or JsonException or HttpRequestException) {return null;}
     }

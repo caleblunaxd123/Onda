@@ -3,16 +3,19 @@ import * as SecureStore from 'expo-secure-store';
 import {create} from 'zustand';
 import {ApiError, request} from '../../api';
 
-export type Listener = {id: string; displayName: string; email: string | null; guest: boolean; provider?: 'google' | 'email' | 'guest'};
+export type Listener = {id: string; displayName: string; email: string | null; guest: boolean; provider?: 'google' | 'email' | 'guest'; avatarUrl?: string | null; emailVerified?: boolean};
 export type Session = {token: string; expiresAt: string; user: Listener};
-export type SessionResponse = Session & {recoveryCode: string | null};
+export type SessionResponse = Session & {recoveryCode: string | null; emailVerificationStatus?: string | null};
 const key = 'onda.listener.session.v1';
-type AuthState = {session: Session | null; ready: boolean; storageError: string; setSession: (session: Session | null) => Promise<void>};
+type AuthState = {session: Session | null; ready: boolean; storageError: string; recoveryCode: string | null; emailVerificationStatus: string | null; clearRecoveryCode: () => void; setSession: (session: Session | null) => Promise<void>};
 export const useAuth = create<AuthState>(set => ({
-  session: null, ready: false, storageError: '',
+  session: null, ready: false, storageError: '', recoveryCode: null, emailVerificationStatus: null,
+  clearRecoveryCode: () => set({recoveryCode: null}),
   setSession: async session => {
     const clean = session ? {token: session.token, expiresAt: session.expiresAt, user: session.user} : null;
-    set({session: clean, ready: true, storageError: ''});
+    const recoveryCode = session && 'recoveryCode' in session && typeof session.recoveryCode === 'string' ? session.recoveryCode : null;
+    const emailVerificationStatus = session && 'emailVerificationStatus' in session && typeof session.emailVerificationStatus === 'string' ? session.emailVerificationStatus : null;
+    set({session: clean, ready: true, storageError: '', recoveryCode, emailVerificationStatus});
     try {
       if (Platform.OS === 'web') {
         if (clean) sessionStorage.setItem(key, JSON.stringify(clean));

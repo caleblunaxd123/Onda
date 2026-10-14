@@ -1,6 +1,6 @@
 {
   "name": "@onda/mobile",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

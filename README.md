@@ -9,6 +9,10 @@ Web: https://onda.lunalav.pe · API: https://onda-api.lunalav.pe · [APK beta An
 El APK incluye JavaScript, funciona sin Metro y usa HTTPS. Firma de depuración para beta interna; no es una publicación en tiendas.
 Estado de lanzamiento: [verificación y pendientes reales](docs/LAUNCH_READINESS.md). El desarrollo continúa directamente en este proyecto.
 
+Candidata 0.6.2 en `codex/onda-rave-research`: navegación de acceso, foto Google, una sala retomable,
+inicio compacto y refuerzo de sincronización. Investigación REA sobre el APK oficial Rave:
+[evidencias y límites](docs/research-rave/10_EXECUTIVE_SUMMARY.md). La candidata aún no está publicada.
+
 ## Qué incluye
 - Catálogo de ~68.000 emisoras de Radio Browser sincronizado en SQL Server (solo se reproducen streams HTTPS),
   con paginación por cursor, recuentos reales, variantes y fuentes alternativas, y disponibilidad sin falsas «caídas».

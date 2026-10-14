@@ -22,10 +22,20 @@ public sealed class RoomContinuity(IServiceScopeFactory scopes, RoomPresence pre
                 if (room is null || presence.HostAbsentSince(id, room.OwnerId) is not { } since || clock.GetUtcNow() - since < TimeSpan.FromSeconds(GraceSeconds)) continue;
                 var members = presence.Members(id);
                 var cohosts = RoomService.Cohosts(room);
-                var next = members.FirstOrDefault(x => cohosts.Contains(x.Id)) ?? members.FirstOrDefault();
+                RoomMember? next = null;
+                foreach (var candidate in members.OrderByDescending(x => cohosts.Contains(x.Id)))
+                {
+                    var accountGate = presence.RoomLock(candidate.Id); await accountGate.WaitAsync(ct);
+                    try
+                    {
+                        if (await db.ListeningRooms.AnyAsync(x => x.OwnerId == candidate.Id && !x.Closed && x.Id != id, ct)) continue;
+                        next = candidate; room.OwnerId = next.Id;
+                        room.Cohosts = JsonSerializer.Serialize(cohosts.Where(x => x != next.Id));
+                        await rooms.SaveAsync(room, ct); break;
+                    }
+                    finally {accountGate.Release();}
+                }
                 if (next is null) continue;
-                room.OwnerId = next.Id; room.Cohosts = JsonSerializer.Serialize(cohosts.Where(x => x != next.Id));
-                await rooms.SaveAsync(room, ct);
                 await hub.Clients.Group(id.ToString()).SendAsync("State", rooms.View(room), ct);
                 var notice = presence.AddMessage(id, Guid.Empty, "ONDA", next.Name + " lleva el control para que el momento continúe.", "system");
                 await hub.Clients.Group(id.ToString()).SendAsync("Message", notice, ct);

@@ -15,6 +15,8 @@ builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 1_000_000);
 // Docker mounts this file read-only; credentials stay out of image layers and environment dumps.
 if (builder.Configuration["ConnectionStringFile"] is { Length: > 0 } connectionFile)
     builder.Configuration["ConnectionStrings:Onda"] = File.ReadAllText(connectionFile).Trim();
+if (builder.Configuration["Email:ApiKeyFile"] is {Length: > 0} emailKeyFile)
+    builder.Configuration["Email:ApiKey"] = File.ReadAllText(emailKeyFile).Trim();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
     ProxyHeaders.Configure(options, builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? []));
 builder.Logging.AddJsonConsole();
@@ -24,6 +26,9 @@ builder.Services.AddAuthorization(o => o.AddPolicy("RegisteredListener", p => p.
 builder.Services.Configure<PasswordHasherOptions>(o => o.IterationCount = 210000);
 builder.Services.AddScoped<IPasswordHasher<ListenerAccount>, PasswordHasher<ListenerAccount>>();
 builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<IVerificationMailer, ResendVerificationMailer>();
+builder.Services.AddScoped<EmailVerificationService>();
+builder.Services.AddHttpClient("verification-mail", c => c.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.AddScoped<IGoogleIdentityVerifier, GoogleIdentityVerifier>();
 builder.Services.AddSingleton<GoogleChallenges>();
 builder.Services.AddScoped<LibrarySyncService>();
@@ -51,6 +56,8 @@ if (appOrigins.Length > 0) builder.Services.AddCors(options => options.AddPolicy
 builder.Services.AddDbContext<OndaDbContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("Onda")
     ?? throw new InvalidOperationException("Configure ConnectionStrings__Onda."), sql => sql.EnableRetryOnFailure(3)));
 builder.Services.AddOndaCatalog(builder.Configuration);
+// Persisted times remain UTC; NTP/wall-clock adjustments cannot jump playback during this process.
+builder.Services.AddSingleton<TimeProvider>(new MonotonicUtcClock(TimeProvider.System));
 builder.Services.AddOutputCache(o =>
 {
     o.AddBasePolicy(p => p.Expire(TimeSpan.FromMinutes(5)).SetVaryByQuery("*"));

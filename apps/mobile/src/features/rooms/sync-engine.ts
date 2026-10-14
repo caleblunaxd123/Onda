@@ -46,7 +46,7 @@ export type ClockSample = {sentMs: number; serverMs: number; receivedMs: number}
  * trustworthy, because asymmetric network delay is bounded by half its RTT.
  */
 export function estimateClock(samples: ClockSample[]) {
-  const valid = samples.filter(x => x.receivedMs >= x.sentMs && Number.isFinite(x.serverMs));
+  const valid = samples.filter(x => Number.isFinite(x.sentMs) && Number.isFinite(x.receivedMs) && x.receivedMs >= x.sentMs && Number.isFinite(x.serverMs));
   if (!valid.length) return null;
   const best = valid.reduce((a, b) => (b.receivedMs - b.sentMs < a.receivedMs - a.sentMs ? b : a));
   const rtt = best.receivedMs - best.sentMs;

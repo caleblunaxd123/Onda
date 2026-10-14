@@ -17,7 +17,7 @@ using Onda.Domain;
 using Onda.Infrastructure;
 namespace Onda.Tests;
 
-public class CommunityTests : IAsyncLifetime
+public partial class CommunityTests : IAsyncLifetime
 {
     private static readonly string? Server = Environment.GetEnvironmentVariable("ONDA_TEST_SQL") ?? (OperatingSystem.IsWindows() ? @"Server=.\SQLEXPRESS;Integrated Security=true;TrustServerCertificate=true" : null);
     private readonly string name = "OndaCommunityTest_" + Guid.NewGuid().ToString("N")[..12];
@@ -62,6 +62,29 @@ public class CommunityTests : IAsyncLifetime
         var clock = new ManualClock(); var expiring = new GoogleChallenges(clock); var old = expiring.Create(); clock.Advance(301);
         Assert.False(expiring.Consume(old));
     }
+    [Theory]
+    [InlineData("https://lh3.googleusercontent.com/a/photo", true)]
+    [InlineData("https://lh3.ggpht.com/photo", true)]
+    [InlineData("http://lh3.googleusercontent.com/a/photo", false)]
+    [InlineData("https://lh3.googleusercontent.com.evil.test/a", false)]
+    [InlineData("https://evil.test/a", false)]
+    [InlineData("https://user:password@lh3.googleusercontent.com/a", false)]
+    [InlineData("https://lh3.googleusercontent.com:444/a", false)]
+    [InlineData("https://lh3.googleusercontent.com/a#fragment", false)]
+    public void GoogleAvatarAcceptsOnlyTrustedHttpsProviderUrls(string url, bool accepted) => Assert.Equal(accepted, GoogleIdentityVerifier.SafeAvatar(url) is not null);
+
+    [SkippableFact] public async Task GoogleProfilePhotoIsPersistedAndRefreshedWithoutChangingIdentity()
+    {
+        RequireSql(); await using var db = Db(); var accounts = Accounts(db);
+        const string first = "https://lh3.googleusercontent.com/a/first";
+        var user = await accounts.GoogleAsync(new("avatar-qa-sub", "avatar-qa@example.test", "QA", "nonce", first), null, default);
+        Assert.Equal(first, user!.User.AvatarUrl);
+        Assert.Equal(first, (await db.ListenerAccounts.SingleAsync(x => x.Id == user.User.Id)).AvatarUrl);
+        var again = await accounts.GoogleAsync(new("avatar-qa-sub", "avatar-qa@example.test", "QA", "nonce", "https://lh3.googleusercontent.com/a/second"), null, default);
+        Assert.Equal(user.User.Id, again!.User.Id); Assert.EndsWith("/second", again.User.AvatarUrl);
+        var noPhoto = await accounts.GoogleAsync(new("avatar-qa-sub", "avatar-qa@example.test", "QA", "nonce", "https://unknown.test/photo"), null, default);
+        Assert.Null(noPhoto!.User.AvatarUrl);
+    }
     [SkippableFact] public async Task GoogleRemainsDisabledWithoutClientConfiguration()
     {
         RequireSql(); await using var app = Factory(); var client = app.CreateClient();
@@ -74,6 +97,30 @@ public class CommunityTests : IAsyncLifetime
         if (clock is not null) builder.ConfigureServices(services => services.AddSingleton(clock));
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Onda"] = Connection, ["Catalog:SyncEnabled"] = "false" }));
     });
+    [SkippableFact] public async Task OneOpenRoomPerAccountAndOnlyOccupiedPublicRoomsAreDiscoverable()
+    {
+        RequireSql(); await using var app = Factory();
+        using var ownerClient = await ClientAsync(app, "Owner lifecycle"); using var otherClient = await ClientAsync(app, "Other lifecycle");
+        Assert.Equal(HttpStatusCode.NoContent, (await ownerClient.GetAsync("/api/v1/rooms/current")).StatusCode);
+        var request = new CreateRoom("QA lifecycle", false, new("youtube"), Provider: "youtube");
+        var attempts = await Task.WhenAll(ownerClient.PostAsJsonAsync("/api/v1/rooms/", request), ownerClient.PostAsJsonAsync("/api/v1/rooms/", request));
+        Assert.Single(attempts, x => x.StatusCode == HttpStatusCode.Created); Assert.Single(attempts, x => x.StatusCode == HttpStatusCode.Conflict);
+        var room = (await attempts.Single(x => x.StatusCode == HttpStatusCode.Created).Content.ReadFromJsonAsync<RoomView>())!;
+        Assert.Equal(room.Id, (await ownerClient.GetFromJsonAsync<RoomView>("/api/v1/rooms/current"))!.Id);
+        Assert.Equal(HttpStatusCode.NoContent, (await otherClient.GetAsync("/api/v1/rooms/current")).StatusCode);
+        Assert.Empty((await otherClient.GetFromJsonAsync<RoomList>("/api/v1/rooms/"))!.Items);
+        Assert.Single((await ownerClient.GetFromJsonAsync<RoomList>("/api/v1/rooms/?mine=true"))!.Items);
+        await using var owner = Hub(app, ownerClient); await owner.StartAsync(); await owner.InvokeAsync("Join", room.Id, room.InviteCode);
+        Assert.Contains((await otherClient.GetFromJsonAsync<RoomList>("/api/v1/rooms/"))!.Items, x => x.Id == room.Id && x.Listeners == 1);
+        await owner.StopAsync();
+        RoomList? listed = null;
+        for (var retry = 0; retry < 20; retry++) {listed = await otherClient.GetFromJsonAsync<RoomList>("/api/v1/rooms/"); if (listed!.Items.Length == 0) break; await Task.Delay(50);}
+        Assert.Empty(listed!.Items);
+        Assert.Equal(room.Id, (await ownerClient.GetFromJsonAsync<RoomView>("/api/v1/rooms/current"))!.Id); // Owner can resume; no data was deleted.
+        await owner.StartAsync(); await owner.InvokeAsync("Join", room.Id, room.InviteCode); await owner.InvokeAsync("CloseRoom", room.Id);
+        Assert.Equal(HttpStatusCode.NoContent, (await ownerClient.GetAsync("/api/v1/rooms/current")).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await ownerClient.PostAsJsonAsync("/api/v1/rooms/", request)).StatusCode);
+    }
     private static async Task<HttpClient> ClientAsync(WebApplicationFactory<Program> app, string user)
     {
         var client = app.CreateClient();
@@ -265,7 +312,7 @@ public class CommunityTests : IAsyncLifetime
                 catch (HubException) {return false;}
             }
             var accepted = await Task.WhenAll(Control(hubs[0], 150), Control(hubs[1], 151));
-            Assert.Single(accepted.Where(x => x));
+            Assert.Single(accepted, x => x);
             var canonical = await hubs[0].InvokeAsync<RoomView>("Snapshot", room.Id);
             Assert.Equal(before.Version + 1, canonical.Version); Assert.False(canonical.IsPlaying);
             for (var i = 1; i < 5; i++)

@@ -3,7 +3,7 @@
 Estado al 14 de octubre de 2026: **activado en la API de producción y probado con acceso real en Android**.
 El propietario autorizó crear OAuth y aceptar la política de Google. Proyecto `onda-511605`
 (número `349721745900`), marca ONDA, audiencia externa en **Prueba**, una cuenta de prueba autorizada.
-La API anterior permanece desplegada; los cambios de moderación 0.6.1 son una candidata separada.
+La API 0.6.1 con moderación está publicada. La candidata 0.6.2 añade foto Google y regreso al inicio.
 
 Clientes públicos (no son secretos):
 - Web: `349721745900-mib2jvdhbe0khjhnr7k7ard8fr89edhq.apps.googleusercontent.com`.

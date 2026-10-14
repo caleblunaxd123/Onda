@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$ApiUrl, [string]$Abis = 'arm64-v8a,armeabi-v7a,x86_64')
+param([Parameter(Mandatory = $true)][string]$ApiUrl, [string]$Abis = 'arm64-v8a,armeabi-v7a,x86_64', [ValidateRange(1,8)][int]$MaxWorkers = 2)
 # Test APK with embedded JS (no Metro). HTTPS builds disable cleartext traffic; HTTP is for LAN testing.
 # Signed with the debug key from the generated Android project; not for store distribution.
 $ErrorActionPreference = 'Stop'
@@ -27,7 +27,7 @@ $env:CI = '1'
 npx expo prebuild --platform android --no-install
 if ($LASTEXITCODE -ne 0) { throw 'Prebuild failed' }
 Push-Location android
-.\gradlew.bat --no-daemon assembleRelease "-PreactNativeArchitectures=$Abis"
+.\gradlew.bat --no-daemon "--max-workers=$MaxWorkers" '-Dorg.gradle.jvmargs=-Xmx3072m -XX:MaxMetaspaceSize=1024m' assembleRelease "-PreactNativeArchitectures=$Abis"
 $code = $LASTEXITCODE
 Pop-Location
 if ($code -ne 0) { throw 'Gradle build failed' }

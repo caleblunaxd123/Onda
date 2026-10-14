@@ -16,6 +16,11 @@ no suplanta clientes oficiales ni elimina restricciones de un reproductor.
 
 La FAQ no describe el mecanismo de sincronización ni acuerdos. ONDA no asume ninguno.
 
+Investigación posterior: APK oficial Rave 9.0.49 verificado y analizado con REA/JADX. Declara
+WebViewGridFragment y PlayerSynchronizer con referencia Media3. La captura MyDisney del propietario
+muestra el acceso dentro del flujo de Rave. Es compatible con un navegador integrado, pero no prueba
+el reproductor posterior ni un iframe. Evidencias en [estudio Rave](research-rave/03_RAVE_APK_EVIDENCE.md).
+
 ## Matriz
 | Proveedor | Adaptador ONDA | Reproduce en la app | Control y sync | Estado |
 |---|---|---|---|---|
@@ -32,11 +37,12 @@ La FAQ no describe el mecanismo de sincronización ni acuerdos. ONDA no asume ni
 ## Netflix y plataformas DRM
 - **Widevine/FairPlay** protegen la licencia. expo-video admite DRM solo con `licenseServer` propio; tener soporte
   técnico de Widevine no da autorización para reproducir el catálogo de Netflix u otro servicio.
-- **WebView**: los servicios no permiten insertarse en sitios de terceros (X-Frame-Options/CSP en web) y su uso en
-  WebView depende de sus términos y del nivel de seguridad DRM del dispositivo. Controlar su reproductor con
-  scripts inyectados o fingir ser un navegador de escritorio es suplantar al cliente oficial: ONDA no lo hace.
+- **WebView e iframe**: son superficies distintas. Un WebView Android puede mostrar una página como documento
+  principal dentro de la app; eso no equivale a insertarla en un iframe web, sujeto a X-Frame-Options/CSP.
+  La reproducción posterior depende del soporte/dispositivo y de la integración admitida por el proveedor.
+  Mostrar su login no demuestra control sincronizado. ONDA no altera clientes, licencias ni autenticación.
   Un prototipo así existió solo en una build de desarrollo local durante esta iteración y se retiró sin publicarse.
-- **Integraciones oficiales**: no hay SDK público de co-visionado para estos servicios (Netflix, Disney+, Prime).
+- **Integraciones oficiales**: en esta investigación no se encontró SDK público de co-visionado para estos servicios (Netflix, Disney+, Prime).
   Sin acuerdo o API autorizada, la experiencia honesta es abrir el título en la app oficial con el reloj de la sala.
 - **Qué ve la persona**: «Sincronización manual: ONDA no controla el reproductor del servicio».
 

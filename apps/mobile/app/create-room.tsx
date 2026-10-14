@@ -9,6 +9,7 @@ import { FormField } from "../src/components/forms";
 import { accountRequest, ensureListener, useAuth } from "../src/features/account/session";
 import { type MediaInput, type MediaKind, type Room } from "../src/features/rooms/types";
 import {OndaAmbientBackground, OndaCategoryTile, OndaGlassSurface, OndaGradientButton} from '../src/components/experience';
+import {useCurrentRoom} from '../src/features/rooms/current-room';
 
 type Provider = {id: string; kind: MediaKind; name: string; icon: "logo-youtube" | "radio-outline" | "musical-notes-outline" | "link-outline" | "tv-outline"; color: string; note?: string};
 /** Rave-style grid: tap a source and you are in your room. Subscription services say clearly how they work. */
@@ -22,6 +23,7 @@ const providers: Provider[] = [
 export default function CreateRoomScreen() {
   const c = useTheme();
   const user = useAuth((s) => s.session?.user);
+  const currentRoom = useCurrentRoom();
   const params = useLocalSearchParams<{stationId?: string; bookmark?: string; source?: string}>();
   const saved = useLibrary((s) => s.mediaFavorites.find((x) => x.id === params.bookmark));
   const selected: MediaInput | null = saved
@@ -47,13 +49,21 @@ export default function CreateRoomScreen() {
         isPrivate: privateRoom, autoRecovery, media: media ?? {kind}, provider: media ? undefined : kind,
       }});
       router.replace({pathname: "/room", params: {id: room.id, code: room.inviteCode ?? "", ...(media ? {} : {choose: kind})}});
-    } catch (e) {setError(e instanceof Error ? e.message : "No se pudo crear la sala.");}
+    } catch (e) {setError(e instanceof Error ? e.message : "No se pudo crear la sala."); void currentRoom.refetch();}
     finally {creating.current = false; setBusy(null);}
   };
   return <View style={{flex: 1}}>
     <OndaAmbientBackground/>
     <ScreenHeader title="Crear sala" subtitle="Un momento juntos, en tres decisiones." back />
     <Page>
+      {currentRoom.data ? <Card>
+        <Label style={{fontSize: 23, fontWeight: '800'}}>Tu sala ya está lista</Label>
+        <Label style={{fontWeight: '700'}}>{currentRoom.data.name}</Label>
+        <Muted>Vuelve a tu sala para cambiar el contenido e invitar a tus amigos. Puedes mantener una sala abierta por cuenta.</Muted>
+        <Button title="Volver a mi sala" icon="play" onPress={() => router.replace({pathname: '/room', params: {id: currentRoom.data!.id, code: currentRoom.data!.inviteCode ?? ''}})}/>
+        <Muted>Para empezar otra, cierra esta desde las opciones de la sala.</Muted>
+        <Button title="Ver mis salas" secondary onPress={() => router.replace({pathname: '/rooms', params: {view: 'mine'}})}/>
+      </Card> : <>
       <View style={{gap: 5}}><Label style={{fontSize: 25, lineHeight: 31, fontWeight: '800'}}>¿Qué vamos a disfrutar hoy?</Label><Muted>Elige la fuente. Buscarás el contenido dentro de la sala.</Muted></View>
       {selected && <Card>
         <Label style={{fontWeight: "800"}}>{saved?.media.title ?? "Tu emisora seleccionada"}</Label>
@@ -74,11 +84,13 @@ export default function CreateRoomScreen() {
         <Ionicons name={source === 'stream' ? 'checkmark-circle' : 'chevron-forward'} size={18} color={c.primaryText}/>
       </Pressable>}
       <OndaGlassSurface><Label style={{fontWeight: '800', fontSize: 16}}>¿Quién puede unirse?</Label><View style={{flexDirection: 'row', gap: 8, flexWrap: 'wrap'}}><Chip label="Solo invitados" icon="lock-closed-outline" selected={privateRoom} onPress={() => setPrivateRoom(true)}/><Chip label="Pública" icon="earth-outline" selected={!privateRoom} onPress={() => setPrivateRoom(false)}/></View><Muted>{privateRoom ? 'Entran con tu enlace o código.' : 'Aparecerá en Descubrir para que otros puedan entrar.'}</Muted></OndaGlassSurface>
-      <OndaGradientButton title={busy ? 'Creando y entrando…' : 'Crear y entrar'} icon="add" disabled={!!busy} onPress={() => void create(selected?.kind ?? source, selected ?? undefined)}/>
+      <OndaGradientButton title={busy ? 'Creando y entrando…' : currentRoom.isFetching ? 'Comprobando tu sala…' : 'Crear y entrar'} icon="add" disabled={!!busy || !!user && (currentRoom.isFetching || currentRoom.isError)} onPress={() => void create(selected?.kind ?? source, selected ?? undefined)}/>
+      {user && currentRoom.isError && <Card><Muted>No se pudo comprobar tu sala. Reintenta para evitar crear otra por error.</Muted><Button title="Reintentar" secondary onPress={() => void currentRoom.refetch()}/></Card>}
       <View style={{flexDirection: "row", alignItems: "center", gap: 8}}>
         <Muted style={{flex: 1, fontSize: 12}}>Nombre y preferencias son opcionales.</Muted>
         <Chip label="Opciones" icon="options-outline" onPress={() => setOptions(true)}/>
       </View>
+      </>}
     </Page>
     {options && <Sheet title="Opciones de sala" onClose={() => setOptions(false)}>
       {!user && <FormField label="Tu nombre (opcional)" value={displayName} onChange={setDisplayName} maxLength={40} placeholder="Cómo te verán tus amigos" />}

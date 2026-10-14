@@ -1,5 +1,12 @@
 # Progreso — candidata 0.6.1 (2026-10-14, Lima)
 
+Investigación posterior en `codex/onda-rave-research`: candidata 0.6.2, 164 pruebas SQL y 99 móviles,
+REA MCP sobre sitio Rave y CLI/JADX sobre APK oficial Play 9.0.49. Corrige navegación de acceso,
+foto Google, una sala retomable, descubrimiento de salas ocupadas y densidad del inicio; refuerza reloj
+y reintentos. Resend gratuito: dominio verificado, TLS Enforced, clave de envío restringida guardada en
+Contabo y prueba sandbox HTTP200; envío aún desactivado en la API 0.6.1. Web/APK 0.6.2 compilados, no publicados.
+Ver [resumen verificable](research-rave/10_EXECUTIVE_SUMMARY.md).
+
 Actualización de producción: propietario autorizó publicar 0.6.1. API `onda-api:20261014-061-safety-sync`,
 SafetyBlocks, web y APK code9 publicados tras respaldo cifrado/restauración. Health pública 200/200,
 smoke chat 32/32 y seguridad 21/21, index/hash APK públicos comprobados. Android carga bloqueos sin error.

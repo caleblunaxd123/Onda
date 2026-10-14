@@ -16,6 +16,7 @@ import { Label, MiniPlayer } from '../src/ui';
 import {initializeSession} from '../src/features/account/session';
 import {useLibraryCloudSync} from '../src/features/account/cloud-sync';
 import {SafetySync} from '../src/features/account/safety';
+import {RecoveryCodeNotice} from '../src/features/account/recovery-notice';
 const queryClient = new QueryClient();
 const REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;
 
@@ -72,6 +73,7 @@ function RootShell({wide}: {wide: boolean}) {
           <Stack.Screen name="onboarding" options={{animation: 'fade', gestureEnabled: false}}/>
         </Stack>
         <StackPlayerDock/>
+        <RecoveryCodeNotice/>
       </SafeAreaView></QueryClientProvider></SafeAreaProvider>
     </View>
   </GestureHandlerRootView>;
