@@ -1,9 +1,8 @@
-# Preparación de lanzamiento — candidata 0.6.1
+# Preparación de lanzamiento — beta 0.6.1 publicada
 
-**No publicada aún.** La nueva migración de seguridad no está aplicada en Contabo. APK pública: 0.5.0
-build 7.1; emulador principal: candidata 0.6.1 con cuenta preservada (Android rechazó downgrade a 0.6.0).
-El chat nuevo necesita la API candidata de bloques para dejar de mostrar el error de sincronización.
-Google sí está activo en la API existente y el
+**Publicada con autorización explícita.** API/web/APK 0.6.1 y SafetyBlocks activos en Contabo; hash público
+comprobado, chat 32/32 y seguridad 21/21. Emulador 0.6.1 con datos intactos; bloqueos ya cargan sin error.
+Google está activo y el
 acceso Android fue comprobado. OAuth permanece en Testing, por lo que no se anuncia acceso abierto a todos.
 
 ## Listo en código / validado
@@ -19,7 +18,7 @@ acceso Android fue comprobado. OAuth permanece en Testing, por lo que no se anun
 
 | Antes de | Condición |
 |---|---|
-| Publicar 0.6.1 | Aprobar el despliegue; respaldo cifrado/restauración, SQL aditivo, health, smoke, web/APK hash y rollback. No instalar la nueva UI sobre una API antigua como release pública. |
+| Publicar nuevas revisiones | Aprobar cada despliegue según el documento maestro; el de 0.6.1 ya terminó con respaldo/restauración, health, smokes y hash verificados. |
 | Abrir OAuth | Revisar marca y requisitos Google, pasar audiencia de Testing cuando corresponda; verificar login web físico. |
 | Operar UGC | Designar moderadores y configurarlos por ID en servidor; revisar reportes y plazos reales; aceptación de términos antes de publicar, política de edad/menores y procedimientos pendientes. |
 | Tiendas | Firma de distribución/Play App Signing con OAuth propio, privacidad/fichas y revisión de requisitos UGC; beta actual usa firma de depuración. |

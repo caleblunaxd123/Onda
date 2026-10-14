@@ -1,5 +1,11 @@
 # Progreso — candidata 0.6.1 (2026-10-14, Lima)
 
+Actualización de producción: propietario autorizó publicar 0.6.1. API `onda-api:20261014-061-safety-sync`,
+SafetyBlocks, web y APK code9 publicados tras respaldo cifrado/restauración. Health pública 200/200,
+smoke chat 32/32 y seguridad 21/21, index/hash APK públicos comprobados. Android carga bloqueos sin error.
+APK: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.6.1&build=9.1. Las notas de candidata siguientes
+describen el proceso previo; ya no indican la versión desplegada.
+
 Actualización: OAuth creado en `onda-511605` con autorización, cliente web/Android, audiencia externa en
 Prueba. API Google activa y acceso real Android confirmado. Web muestra botón oficial; login web completo
 pendiente. `docs/GOOGLE_SIGN_IN.md` contiene IDs públicos y límites.

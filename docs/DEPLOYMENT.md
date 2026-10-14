@@ -1,22 +1,30 @@
 # Producción y revisión local — 2026-10-14
 
-## Candidata 0.6.1: pendiente de aprobación
+## Beta 0.6.1 publicada con aprobación
 
 Web exportada y APK local `dist/ONDA-0.6.1-contabo.apk`, versionCode 9, tres ABI, 124.503.330 bytes,
 SHA256 `1b2f302b2bc17bab50ec32a8379836f4ec73eebcfcc275081c69d788475afec5`.
-Firma beta conserva SHA1 de OAuth; no hay RECORD_AUDIO. Nueva API/migración SafetyBlocks pendiente de
-publicar; no publicar la APK candidata contra la API anterior porque los bloques no están disponibles.
-Respaldo cifrado/restauración antes de migrar y rollback preparados como requisitos del release.
+Firma beta conserva SHA1 de OAuth; no hay RECORD_AUDIO. Imagen activa `onda-api:20261014-061-safety-sync`;
+SafetyBlocks aplicada, Google preservado. Respaldo cifrado `Onda-20261014T181246Z.bak.enc` restaurado en base
+separada y catálogo comprobado; adjuntos descifrados/listados. Solo API ONDA recreada con --no-deps.
+Rollback conserva Compose, index y APK previos; no ejecuta Down destructivo del esquema aditivo.
 No se han activado cobros ni nuevas infraestructuras. Ver [preparación](LAUNCH_READINESS.md).
 QA nativa: pausa/±10 segundos y fotogramas oficiales confirmados. La principal quedó 0.6.1 con datos
-preservados: Android rechazó downgrade a 0.6.0; no se desinstaló ni limpió. API antigua aún causa aviso de
-bloqueos en chat. Cuenta/sala QA propias eliminadas. No se publica esta combinación como release.
+preservados: Android rechazó downgrade a 0.6.0; no se desinstaló ni limpió. La nueva API ya carga los bloques
+en Android sin error. Cuenta/sala QA propias eliminadas.
+
+URL comprobada: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.6.1&build=9.1.
+El nombre alternativo ONDA-0.6.1-build9.apk devolvió 404 porque la API sirve la ruta beta específica;
+no usarlo. Se descargó la URL beta pública y su hash/tamaño coincidieron con el artefacto revisado.
+Web raíz coincide exactamente con index exportado, Cache-Control no-store, Cloudflare DYNAMIC.
+Health pública 200/200; smoke chat 32/32 y seguridad 21/21. Seguridad verifica revocación real de conexión,
+reingreso tras desbloqueo, privacidad de bloqueos y denegación de moderación a personas sin allowlist.
 
 Google se activó con aprobación en la API vigente: `GOOGLE_WEB_CLIENT_ID` público en compose.env,
 `Google__WebClientId` interpolado en Compose. Solo se recreó API con su misma imagen y se comprobó ready.
 OAuth `onda-511605` en Testing; Android comprobado con cuenta real autorizada. No se guardó client secret.
 
-## Versión pública conservada
+## Histórico: publicación 0.5 conservada como rollback
 
 - Web: https://onda.lunalav.pe
 - API: https://onda-api.lunalav.pe (`/health/live`, `/health/ready`).

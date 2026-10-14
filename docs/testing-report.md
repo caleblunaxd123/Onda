@@ -1,5 +1,13 @@
 # Informe de pruebas — 2026-10-14
 
+Publicación 0.6.1 autorizada y completada: respaldo cifrado/restauración independiente, SafetyBlocks,
+health pública 200/200, chat 32/32 y nuevo `smoke-safety.mjs` 21/21 contra producción. El test reconecta
+después de desbloquear porque la revocación cierra el socket. Primera iteración del script intentaba
+reusar esa conexión cerrada; corregido el test, no se atribuye ese fallo al producto.
+Index público idéntico al export y APK público con SHA256/tamaño idénticos al revisado. La pantalla
+Personas bloqueadas del emulador carga sin error: `android-061-blocks-production.png`. La bandeja de
+moderación conserva su límite previo de E2E; allowlist vacía impide acciones a usuarios normales.
+
 ## Automatizadas
 
 | Validación | Resultado | Alcance |
