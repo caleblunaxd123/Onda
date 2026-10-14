@@ -59,6 +59,27 @@ GO
     check.unlink()
     print('Encrypted backup decrypted and restored to a separate database; populated catalog verified; test database removed.')
 native.unlink()
+# Private chat attachments travel with the database backup (same key, same retention).
+uploads = Path('/opt/onda/uploads')
+if uploads.is_dir():
+    files = folder / ('OndaUploads-' + stamp + '.tar.enc')
+    archive = subprocess.Popen(['tar', '-C', str(uploads), '-cf', '-', '.'], stdout=subprocess.PIPE)
+    subprocess.run(['openssl', 'enc', '-aes-256-cbc', '-salt', '-pbkdf2', '-iter', '200000',
+        '-pass', 'file:' + str(key), '-out', str(files)], stdin=archive.stdout, check=True)
+    if archive.wait():
+        raise RuntimeError('ONDA uploads archive failed.')
+    os.chmod(files, 0o600)
+    files.with_suffix('.enc.sha256').write_text(hashlib.file_digest(files.open('rb'), 'sha256').hexdigest() + '\n')
+    if '--restore-check' in sys.argv:
+        listing = subprocess.run(f"openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass file:{key} -in {files} | tar -tf - | wc -l",
+            shell=True, capture_output=True, text=True, check=True)
+        print('Uploads archive decrypted and listed: ' + listing.stdout.strip() + ' entries.')
+    print('Verified encrypted uploads backup: ' + str(files))
+    kept = sorted(folder.glob('OndaUploads-*.tar.enc'), reverse=True)
+    for old in kept[2:]:
+        if datetime.now(timezone.utc).timestamp() - old.stat().st_mtime > 14 * 86400:
+            old.unlink()
+            old.with_suffix('.enc.sha256').unlink(missing_ok=True)
 # Only completed ONDA encrypted backups older than 14 days; retain at least the newest two.
 archives = sorted(folder.glob('Onda-*.bak.enc'), reverse=True)
 now = datetime.now(timezone.utc).timestamp()

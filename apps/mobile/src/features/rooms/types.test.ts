@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {orderedQueue, playbackPosition, projectedPosition} from './types';
+import {formatClock, orderedQueue, parseClock, playbackPosition, projectedPosition, streamServiceOf} from './types';
 import {roomPlayerHtml} from './player-html';
 describe('shared media timeline', () => {
   it('keeps transport anchors current when a local control is applied later', () => {
@@ -24,5 +24,28 @@ describe('shared media timeline', () => {
     expect(html).not.toContain('</script><script>attack()');
     expect(html).toContain('\\u003c/script>');
     expect(html).not.toContain('Bearer');
+  });
+});
+
+describe('watch with your own account', () => {
+  it('recognizes only official title links, like the server', () => {
+    expect(streamServiceOf('https://www.netflix.com/watch/81234567?trackId=1')?.id).toBe('netflix');
+    expect(streamServiceOf('https://www.netflix.com/pe/title/80100172')?.id).toBe('netflix');
+    expect(streamServiceOf('https://www.amazon.com/gp/video/detail/B0XYZ')?.label).toBe('Prime Video');
+    expect(streamServiceOf('https://play.max.com/video/watch/x')?.id).toBe('max');
+    expect(streamServiceOf('https://www.netflix.com/browse')).toBeNull();
+    expect(streamServiceOf('http://www.netflix.com/watch/1')).toBeNull();
+    expect(streamServiceOf('https://netflix.com.evil.example/watch/1')).toBeNull();
+    expect(streamServiceOf('https://www.netflix.com:8443/watch/1')).toBeNull();
+    expect(streamServiceOf('no es un enlace')).toBeNull();
+  });
+  it('formats and parses the shared clock', () => {
+    expect(formatClock(75)).toBe('1:15');
+    expect(formatClock(3723)).toBe('1:02:03');
+    expect(parseClock('1:02:03')).toBe(3723);
+    expect(parseClock('12:34')).toBe(754);
+    expect(parseClock('95')).toBe(95);
+    expect(parseClock('1:75')).toBeNull();
+    expect(parseClock('abc')).toBeNull();
   });
 });

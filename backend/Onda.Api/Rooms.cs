@@ -48,8 +48,8 @@ public sealed class RoomService(OndaDbContext db, MediaResolver resolver, RoomPr
         RoomMedia? media;
         if (input.Provider is not null)
         {
-            if (input.Provider is not ("youtube" or "radio" or "audio" or "video") || input.Media.Kind != input.Provider || input.Media.Url is not null || input.Media.StationId is not null) return null;
-            media = new(input.Provider, input.Provider switch {"youtube" => "Elige un video de YouTube", "radio" => "Busca una emisora", "audio" => "Elige música", _ => "Elige un video"}, null, null, null, input.Provider == "audio" ? "music" : "video");
+            if (input.Provider is not ("youtube" or "radio" or "audio" or "video" or "stream") || input.Media.Kind != input.Provider || input.Media.Url is not null || input.Media.StationId is not null) return null;
+            media = new(input.Provider, input.Provider switch {"youtube" => "Elige un video de YouTube", "radio" => "Busca una emisora", "audio" => "Elige música", "stream" => "Elige qué ver con tu cuenta", _ => "Elige un video"}, null, null, null, input.Provider switch {"audio" => "music", "stream" => "", _ => "video"});
         }
         else media = await resolver.ResolveAsync(input.Media, ct);
         if (media is null) return null;

@@ -13,6 +13,7 @@ const providers = [
   { kind: "youtube", name: "YouTube", icon: "logo-youtube", color: "#FF5268", detail: "Busca videos dentro de tu sala" },
   { kind: "radio", name: "Radio", icon: "radio-outline", color: "#47D9EA", detail: "Elige una emisora con tu gente" },
   { kind: "audio", name: "Música", icon: "musical-notes-outline", color: "#B7A0FF", detail: "Comparte música por enlace" },
+  { kind: "stream", name: "Netflix, Prime y más", icon: "tv-outline", color: "#FF7A85", detail: "Cada persona con su cuenta; ONDA sincroniza el tiempo y el chat" },
   { kind: "video", name: "Video por enlace", icon: "link-outline", color: "#FBC786", detail: "Comparte un archivo de video HTTPS" },
 ] as const;
 

@@ -20,6 +20,7 @@ import type { Station } from "../../types";
 import type { MediaInput } from "./types";
 import { MediaPoster } from "./presentation";
 import { YoutubeBrowser } from "./youtube-browser";
+import { StreamForm } from "./stream";
 import { youtubeVideoUrl } from "./youtube-navigation";
 export function SourcePicker({
   value,
@@ -91,6 +92,7 @@ export function SourcePicker({
             { kind: "youtube", label: "YouTube", icon: "logo-youtube" },
             { kind: "audio", label: "Música", icon: "musical-notes-outline" },
             { kind: "video", label: "Enlace", icon: "link-outline" },
+            { kind: "stream", label: "Con tu cuenta", icon: "tv-outline" },
           ] as const
         ).map((item) => (
           <Chip
@@ -203,6 +205,8 @@ export function SourcePicker({
             </>
           )}
         </>
+      ) : value.kind === "stream" ? (
+        <StreamForm value={value} onChange={onChange} />
       ) : (
         <>
           {youtubeOpen && <YoutubeBrowser onClose={() => {setYoutubeOpen(false); onBrowseClose?.();}} onSelect={(url) => {

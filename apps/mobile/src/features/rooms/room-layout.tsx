@@ -1,5 +1,6 @@
 import {SeekBar} from "./seek-bar";
-import { RoomChat, RoomQueue, RoomPeople } from "./room-panels";
+import { RoomQueue, RoomPeople } from "./room-panels";
+import { RoomChat } from "./chat-panel";
 import { useState, type ReactNode } from "react";
 import {
   KeyboardAvoidingView,
@@ -16,8 +17,10 @@ import { Ionicons } from "../../icons";
 import { Button, IconButton, Label, Muted } from "../../ui";
 import { MediaFrame, type MediaEvent } from "./media-frame";
 import { MemberStack, RadioStage } from "./presentation";
+import { StreamStage } from "./stream";
 import {
   orderedQueue,
+  projectedPosition,
   type ChatMessage,
   type Member,
   type Room,
@@ -33,14 +36,13 @@ export type RoomLayoutProps = {
   connection: string;
   tab: Tab;
   onTab: (tab: Tab) => void;
-  text: string;
-  onText: (text: string) => void;
-  send: () => void;
   busy: boolean;
   messages: ChatMessage[];
   votes: string[];
   mutedMembers: string[];
   audioMuted: boolean;
+  /** Paused only on this device while a voice note records or plays. */
+  ducked?: boolean;
   radioStatus: string;
   position: number;
   duration: number;
@@ -75,6 +77,8 @@ export function RoomLayout(p: RoomLayoutProps) {
   const owner = p.room.members.find((x) => x.id === p.room.ownerId);
   const isOwner = p.userId === p.room.ownerId;
   const queue = orderedQueue(p.room.queue);
+  // Subscription titles have no embedded player: the room clock is the position.
+  const current = () => p.room.media.kind === "stream" ? projectedPosition(p.desiredPosition, p.room.isPlaying, p.positionAt) : p.position;
   const exit = () =>
     router.canGoBack() ? router.back() : router.replace("/rooms");
   return (
@@ -131,12 +135,15 @@ export function RoomLayout(p: RoomLayoutProps) {
           <View style={{ paddingHorizontal: 14, gap: 9 }}>
             {!p.room.media.url ? (
               <View style={{minHeight: 190, padding: 22, borderRadius: 20, backgroundColor: c.surface, alignItems: "center", justifyContent: "center", gap: 10}}>
-                <Ionicons name={p.room.media.kind === "youtube" ? "logo-youtube" : p.room.media.kind === "radio" ? "radio-outline" : "play-circle-outline"} size={44} color={c.primary} />
+                <Ionicons name={p.room.media.kind === "youtube" ? "logo-youtube" : p.room.media.kind === "radio" ? "radio-outline" : p.room.media.kind === "stream" ? "tv-outline" : "play-circle-outline"} size={44} color={c.primary} />
                 <Label style={{fontSize: 20, fontWeight: "800"}}>Tu sala está lista</Label>
                 <Muted style={{textAlign: "center"}}>{p.controller ? "Busca el contenido que quieres compartir." : "El anfitrión está eligiendo el contenido. Puedes proponer algo en la cola."}</Muted>
               </View>
             ) : p.room.media.kind === "radio" ? (
               <RadioStage media={p.room.media} status={p.radioStatus} />
+            ) : p.room.media.kind === "stream" ? (
+              <StreamStage media={p.room.media} playing={p.connected && p.room.isPlaying} position={p.desiredPosition} positionAt={p.positionAt}
+                controller={p.controller} connected={p.connected} onPlayback={p.onPlayback} />
             ) : (
               <MediaFrame
               key={`${p.room.media.url ?? p.room.media.kind}:${p.frameRevision ?? 0}`}
@@ -145,7 +152,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                 playing={p.connected && p.room.isPlaying}
                 position={p.desiredPosition}
               positionAt={p.positionAt}
-                muted={p.audioMuted}
+                muted={p.audioMuted || !!p.ducked}
                 onEvent={p.onEvent}
                 theater={theater}
               />
@@ -219,7 +226,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                 label="Guardar o quitar contenido"
                 onPress={p.toggleSave}
               />}
-              {p.room.media.kind !== "radio" && !!p.room.media.url && (
+              {p.room.media.kind !== "radio" && p.room.media.kind !== "stream" && !!p.room.media.url && (
                 <IconButton
                   icon={theater ? "contract-outline" : "expand-outline"}
                   label={theater ? "Salir del modo cine" : "Modo cine"}
@@ -227,7 +234,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                 />
               )}
             </View>
-            {p.room.media.kind !== "radio" && !!p.room.media.url && (
+            {p.room.media.kind !== "radio" && p.room.media.kind !== "stream" && !!p.room.media.url && (
               <SeekBar
                 position={p.position}
                 duration={p.duration}
@@ -256,7 +263,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                     onPress={() =>
                       p.onPlayback(
                         !p.room.isPlaying,
-                        p.room.media.kind === "radio" ? 0 : p.position,
+                        p.room.media.kind === "radio" ? 0 : current(),
                       )
                     }
                     style={{
@@ -283,7 +290,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                         onPress={() =>
                           p.onPlayback(
                             p.room.isPlaying,
-                            Math.max(0, p.position - 15),
+                            Math.max(0, current() - 15),
                           )
                         }
                       />
@@ -291,7 +298,7 @@ export function RoomLayout(p: RoomLayoutProps) {
                         icon="play-forward-outline"
                         label="Avanzar 15 segundos"
                         onPress={() =>
-                          p.onPlayback(p.room.isPlaying, p.position + 15)
+                          p.onPlayback(p.room.isPlaying, current() + 15)
                         }
                       />
                     </>

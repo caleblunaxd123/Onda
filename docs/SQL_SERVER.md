@@ -17,7 +17,11 @@ Los scripts leen `scripts/sql-config.ps1`. Las migraciones se aplican explícita
 - `ListenerAccounts`, `ListenerSessions`: identidad y hashes de contraseña/token/código de recuperación, expiración y bloqueo.
 - `CloudLibraries`: biblioteca JSON por cuenta con versión optimista; no almacena archivos de audio/video.
 - `ListeningRooms`, `RoomBans`, `CommunityReports`: contenido/cola/roles, acceso por sala y reportes.
-  Chat/presencia/votos en memoria; no se inventan recuentos de oyentes.
+  Presencia/votos en memoria; no se inventan recuentos de oyentes.
+- `RoomChatEntries` (0.4): mensajes por sala (`RoomId`, `SenderId`, `At`, `Payload` JSON, `Version` concurrencia),
+  índices `RoomId+At` y `SenderId`. `RoomUploads`: metadatos de adjuntos (nombre, MIME por firma, tipo, tamaño,
+  duración, quién subió, mensaje); los bytes viven en el volumen privado, no en SQL. Cascada al borrar la sala.
+  Migración aditiva `RoomChatStorage`: no modifica tablas existentes.
 - Migraciones `CommunityModules` y `HardenAccountRecovery` aplicadas explícitamente en Contabo;
   la segunda introduce metadata de concurrencia del recovery hash, sin destruir catálogo.
 - `RoomContinuity`: columnas `AutoRecovery` (default false) y `Cohosts` (default JSON `[]`), preserva salas existentes.

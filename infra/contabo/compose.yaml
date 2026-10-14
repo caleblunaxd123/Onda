@@ -30,11 +30,14 @@ services:
       Catalog__Mode: auto
       Assistant__OllamaUrl: http://ollama:11434
       Assistant__Model: qwen2.5:1.5b
+      # Private chat attachments: outside public assets, only served by the authenticated endpoint.
+      Chat__UploadsPath: /data/chat-uploads
     secrets:
       - source: runtime_connection
         target: connection
     networks: [data, web, ai]
-    volumes: ["./public:/app/public:ro"]
+    # ./uploads is owned by the container user (UID 1654), mode 0700, and included in backup.py.
+    volumes: ["./public:/app/public:ro", "./uploads:/data/chat-uploads:rw"]
     restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]

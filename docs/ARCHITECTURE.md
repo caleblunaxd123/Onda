@@ -95,8 +95,8 @@ Expo SDK 57, Expo Router, TanStack Query, Zustand, Expo Audio, MapLibre (RN en A
 
 ## Límites conocidos
 Búsqueda por palabras y ranking de nombres, sin índice SQL Full-Text. Temporizador dependiente del runtime JS.
-Variantes solo por criterios exactos (no difusos). Salas en una instancia: presencia, votos y chat en memoria;
-cola/contenido/roles en SQL. No escalar a múltiples réplicas sin coordinar la presencia.
+Variantes solo por criterios exactos (no difusos). Salas en una instancia: presencia y votos en memoria;
+chat, adjuntos, cola/contenido/roles en SQL. No escalar a múltiples réplicas sin coordinar la presencia.
 Sin pruebas físicas de audio, Bluetooth, llamadas, batería o background prolongado.
 
 ## Comunidad, multimedia y cuentas (0.2)
@@ -106,7 +106,26 @@ Sin pruebas físicas de audio, Bluetooth, llamadas, batería o background prolon
 - `LibrarySync.cs`: payload JSON por cuenta con versión optimista. El móvil combina tres versiones y conserva
   cambios locales durante solicitudes; favoritos, colecciones y multimedia; historial optativo. Cuotas explícitas.
 - `Rooms.cs` + `RoomPresence.cs`: SignalR autenticado, validación por acción, permisos de anfitrión, invitación privada,
-  chat limitado, votos por cuenta, bans por sala, transferencia de control y rotación de invitación.
+  votos por cuenta, bans por sala, transferencia de control y rotación de invitación.
+- `RoomChatService.cs` (0.4): chat persistente por sala en `RoomChatEntries` (payload JSON + `Version` como token de
+  concurrencia; cada cambio incrementa la revisión). Comandos con DTO propios: `SendChat`, `EditChat` (autor, 15 min,
+  marca editado), `DeleteChat` (autor o dueño; los coanfitriones no moderan), `ReactChat` (una reacción por persona:
+  mismo emoji quita, otro reemplaza), `ChatHistory` (páginas de 50 anteriores) y `Typing` (efímero, limitado, nunca guardado).
+  Eventos `Message` y `MessageUpdated`; los clientes anteriores siguen usando `SendMessage`/`Message` (300 caracteres)
+  y reciben un texto de lápida legible al borrar. La cita de respuesta no se guarda: se hidrata al leer, así refleja
+  ediciones y borrados. Retención 30 días; borrado de cuenta y mantenimiento eliminan mensajes, reacciones y archivos.
+- `RoomUploadStore.cs` + `RoomUploadEndpoints.cs`: adjuntos privados fuera de los assets públicos (`Chat:UploadsPath`).
+  Subida multipart con sesión válida y presencia real en esa sala, revalidada bajo el lock de la sala; tipo por firma
+  (PNG/JPEG ≤4096 px; audio M4A/WebM/MP3/OGG/WAV; el resto se guarda opaco y solo se sirve como descarga).
+  10 MB por archivo, 100 MB por persona y día, 200 MB por sala, límite de tasa propio. Archivos sin enviar: solo los ve
+  quien subió, pueden retirarse y se purgan a la hora. Respuestas `nosniff`, CSP sandbox y sin tokens en URLs.
+- Móvil (0.4): `chat.ts` (estado puro y probado: fusión por revisión sin reordenar, citas vivas, escritura con caducidad),
+  `chat-draft.ts` (borrador que sobrevive a cambios de pestaña y errores; libera subidas y temporales al salir),
+  `chat-files(.web).ts` (selector de fotos con re-codificación JPEG ≤2048 px sin EXIF, documentos, subida con progreso
+  y cancelación, imágenes/audio con cabecera Authorization u object URL en web, guardar/compartir) y `voice.ts`
+  (permiso de micrófono solo al tocar grabar, máximo 3 min, pre-escucha, un solo reproductor). Grabar o escuchar una nota
+  pausa/silencia únicamente el audio local de la sala; nunca envía SetPlayback. «Eliminar para mí» es local.
+  TLS protege el transporte; no hay cifrado de extremo a extremo.
 - `RoomContinuity.cs`: continuidad optativa, 60 s de margen y selección de coanfitrión/participante conectado.
   Coanfitriones controlan reproducción/cola; solo anfitrión modera. `AutoRecovery` y `Cohosts` persistidos en SQL.
   Migración conserva continuidad desactivada en salas anteriores. Cola JSON con prioridad fijada; votos consultables por usuario.

@@ -9,11 +9,17 @@ if (-not $ondaApiUri.IsAbsoluteUri -or $ondaApiUri.Scheme -notin @('http','https
 $ondaApiSecure = $ondaApiUri.Scheme -eq 'https'
 $env:APP_VARIANT = if ($ondaApiSecure) { 'preview' } else { 'development' }
 $env:EXPO_PUBLIC_API_URL = $ApiUrl
+# Never let apps/mobile/.env.local (or a Gradle daemon started with another environment) choose the API.
+$env:EXPO_NO_DOTENV = '1'
+# EXPO_PUBLIC_* values are inlined at transform time and Metro reuses cached transforms: start clean.
+foreach ($cache in @((Join-Path $env:TEMP 'metro-cache'), 'node_modules/.cache')) { if (Test-Path $cache) { Remove-Item $cache -Recurse -Force } }
 if (-not $env:ANDROID_HOME) { $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
-npx expo prebuild --platform android --no-install
+# --clean: the generated project is disposable and the package id differs between variants.
+$env:CI = '1'
+npx expo prebuild --platform android --no-install --clean
 if ($LASTEXITCODE -ne 0) { throw 'Prebuild failed' }
 Push-Location android
-.\gradlew.bat assembleRelease "-PreactNativeArchitectures=$Abis"
+.\gradlew.bat --no-daemon assembleRelease "-PreactNativeArchitectures=$Abis"
 $code = $LASTEXITCODE
 Pop-Location
 if ($code -ne 0) { throw 'Gradle build failed' }
@@ -21,5 +27,14 @@ $version = (Get-Content app.json -Raw | ConvertFrom-Json).expo.version
 New-Item -ItemType Directory -Force (Join-Path $root 'dist') | Out-Null
 $ondaApiLabel = if ($ondaApiSecure) { 'contabo' } else { 'lan' }
 $target = Join-Path $root "dist/ONDA-$version-$ondaApiLabel.apk"
-Copy-Item 'android/app/build/outputs/apk/release/app-release.apk' $target -Force
+$built = 'android/app/build/outputs/apk/release/app-release.apk'
+# Verify the embedded JavaScript targets the requested API before publishing anything.
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path $built))
+try {
+  $reader = New-Object IO.StreamReader($zip.GetEntry('assets/index.android.bundle').Open())
+  $bundle = $reader.ReadToEnd(); $reader.Close()
+} finally { $zip.Dispose() }
+if (-not $bundle.Contains($ApiUrl)) { throw "The APK bundle does not contain $ApiUrl; refusing to copy it." }
+Copy-Item $built $target -Force
 Write-Output "APK: $target (API $ApiUrl)"

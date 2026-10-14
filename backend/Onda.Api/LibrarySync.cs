@@ -17,9 +17,9 @@ public sealed class LibrarySyncService(OndaDbContext db, TimeProvider clock)
         library.Collections.All(x => x is not null && x.Id is {Length: >= 1 and <= 80} && x.Name is {Length: >= 1 and <= 50} && x.Stations is {Length: <= 500}) &&
         library.Collections.Select(x => x.Id).Distinct().Count() == library.Collections.Length &&
         library.Favorites.Length + (library.History?.Length ?? 0) + library.Collections.Sum(x => x.Stations.Length) <= 10000 &&
-        (library.Media is null || library.Media.Length <= 100 && library.Media.All(x => x is not null && x.Id is {Length: >= 1 and <= 80} && x.Title is {Length: <= 120} && x.Kind is "youtube" or "audio" or "video" &&
+        (library.Media is null || library.Media.Length <= 100 && library.Media.All(x => x is not null && x.Id is {Length: >= 1 and <= 80} && x.Title is {Length: <= 120} && x.Kind is "youtube" or "audio" or "video" or "stream" &&
             x.Url is {Length: <= 2000} && Uri.TryCreate(x.Url, UriKind.Absolute, out var uri) && uri.Scheme == "https" && uri.UserInfo.Length == 0 &&
-            (x.Kind != "youtube" || MediaResolver.YoutubeId(x.Url) is not null)) && library.Media.Select(x => x.Id).Distinct().Count() == library.Media.Length) &&
+            (x.Kind != "youtube" || MediaResolver.YoutubeId(x.Url) is not null) && (x.Kind != "stream" || MediaResolver.StreamService(uri) is not null)) && library.Media.Select(x => x.Id).Distinct().Count() == library.Media.Length) &&
         !library.Favorites.Concat(library.History ?? []).Concat(library.Collections.SelectMany(x => x.Stations)).Contains(Guid.Empty);
     public async Task<LibraryEnvelope> GetAsync(Guid id, CancellationToken ct)
     {

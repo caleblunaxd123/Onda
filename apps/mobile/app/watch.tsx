@@ -1,5 +1,5 @@
 import {useCallback, useRef, useState} from 'react';
-import {View} from 'react-native';
+import {Linking, View} from 'react-native';
 import {router, useFocusEffect, useIsFocused, useLocalSearchParams} from 'expo-router';
 import {useLibrary} from '../src/library';
 import {useTheme} from '../src/theme';
@@ -7,7 +7,7 @@ import {isActive, player} from '../src/player';
 import {Button, Label, Loading, Muted, Page, ScreenHeader} from '../src/ui';
 import {accountRequest, ensureListener} from '../src/features/account/session';
 import {MediaFrame, type MediaEvent} from '../src/features/rooms/media-frame';
-import type {RoomMedia} from '../src/features/rooms/types';
+import {streamServiceOf, type RoomMedia} from '../src/features/rooms/types';
 export default function Watch() {
   const c = useTheme(); const params = useLocalSearchParams<{id?: string}>(); const focused = useIsFocused();
   const bookmark = useLibrary(s => s.mediaFavorites.find(x => x.id === params.id));
@@ -15,7 +15,7 @@ export default function Watch() {
   const [command, setCommand] = useState({playing: true, position: 0, muted: false}); const [progress, setProgress] = useState(0); const position = useRef(0);
   const id = bookmark?.id; const kind = bookmark?.media.kind; const url = bookmark?.media.url; const title = bookmark?.media.title;
   useFocusEffect(useCallback(() => {
-    if (!id || !url) return;
+    if (!id || !url || kind === 'stream') return;
     let cancelled = false; if (isActive(player.getSnapshot().state)) player.toggle();
     const run = async () => {
       try {await ensureListener(); const resolved = await accountRequest<RoomMedia>('/api/v1/media/resolve', {method: 'POST', body: {kind, url, title}}); if (!cancelled) setMedia(resolved);}
@@ -30,7 +30,12 @@ export default function Watch() {
     if (e.kind === 'error') setError('No se pudo reproducir este contenido. Revisa la fuente o prueba otro enlace.');
   };
   return <View style={{flex: 1, backgroundColor: c.bg}}><ScreenHeader title={bookmark?.media.title ?? 'Tu contenido'} back/><Page>
-    {!bookmark ? <Muted>Este contenido ya no está guardado en tu biblioteca.</Muted> : !media && !error ? <Loading label="Abriendo contenido…"/> : media && focused ? <><MediaFrame media={media} host playing={command.playing} position={command.position} muted={command.muted} onEvent={event}/><Label>{Math.floor(progress / 60)}:{String(Math.floor(progress) % 60).padStart(2, '0')}</Label><Button title={command.playing ? 'Pausar' : 'Reproducir'} icon={command.playing ? 'pause' : 'play'} onPress={() => setCommand(current => ({...current, position: position.current, playing: !current.playing}))}/><Button title="Compartir en una sala" secondary icon="people-outline" onPress={() => router.push({pathname: '/create-room', params: {bookmark: bookmark.id}})}/></> : null}
+    {!bookmark ? <Muted>Este contenido ya no está guardado en tu biblioteca.</Muted> : bookmark.media.kind === 'stream' ? <>
+      <Label style={{fontWeight: '800', fontSize: 18}}>{bookmark.media.title}</Label>
+      <Muted>Este título se ve con tu cuenta en {streamServiceOf(bookmark.media.url)?.label ?? 'su servicio'}. ONDA no lo reproduce; en una sala sincroniza el tiempo y el chat.</Muted>
+      <Button title={`Abrir en ${streamServiceOf(bookmark.media.url)?.label ?? 'el servicio'}`} icon="open-outline" onPress={() => void Linking.openURL(bookmark.media.url!)}/>
+      <Button title="Ver juntos en una sala" secondary icon="people-outline" onPress={() => router.push({pathname: '/create-room', params: {bookmark: bookmark.id}})}/>
+    </> : !media && !error ? <Loading label="Abriendo contenido…"/> : media && focused ? <><MediaFrame media={media} host playing={command.playing} position={command.position} muted={command.muted} onEvent={event}/><Label>{Math.floor(progress / 60)}:{String(Math.floor(progress) % 60).padStart(2, '0')}</Label><Button title={command.playing ? 'Pausar' : 'Reproducir'} icon={command.playing ? 'pause' : 'play'} onPress={() => setCommand(current => ({...current, position: position.current, playing: !current.playing}))}/><Button title="Compartir en una sala" secondary icon="people-outline" onPress={() => router.push({pathname: '/create-room', params: {bookmark: bookmark.id}})}/></> : null}
     {error && <Muted accessibilityRole="alert">{error}</Muted>}
   </Page></View>;
 }

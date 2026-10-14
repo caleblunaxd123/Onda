@@ -2,11 +2,23 @@ import {HubConnectionBuilder, HubConnectionState, HttpTransportType, LogLevel, t
 import {create} from 'zustand';
 import {apiBase} from '../../api';
 import {isActive, player} from '../../player';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {createJSONStorage, persist} from 'zustand/middleware';
 import {useAuth} from '../account/session';
+import {addTyping, chatLimits, clearTyping, mergeMessages, oldestPersisted, upsertMessage, type TypingMap} from './chat';
 import type {ChatMessage, Room} from './types';
 
-type RoomState = {room: Room | null; messages: ChatMessage[]; status: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed'; error: string; reaction: string; clockOffset: number; muted: string[]; audioMuted: boolean; votes: string[]};
-export const useRoom = create<RoomState>(() => ({room: null, messages: [], status: 'idle', error: '', reaction: '', clockOffset: 0, muted: [], audioMuted: false, votes: []}));
+type RoomState = {room: Room | null; messages: ChatMessage[]; status: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed'; error: string; reaction: string; clockOffset: number; muted: string[]; audioMuted: boolean; votes: string[];
+  /** Typing signals from others; each expires on its own after a few seconds. */
+  typing: TypingMap; olderAvailable: boolean; loadingOlder: boolean;
+  /** Recording or listening to a voice note pauses only this device's room audio; nothing is published to the room. */
+  chatAudio: boolean};
+export const useRoom = create<RoomState>(() => ({room: null, messages: [], status: 'idle', error: '', reaction: '', clockOffset: 0, muted: [], audioMuted: false, votes: [],
+  typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false}));
+/** "Delete for me" is local to this device: the message stays for everyone else. */
+export const useHiddenMessages = create<{ids: string[]; hide: (id: string) => void}>()(persist(set => ({
+  ids: [], hide: id => set(s => ({ids: [...s.ids.filter(x => x !== id), id].slice(-1000)})),
+}), {name: 'onda-chat-hidden-v1', storage: createJSONStorage(() => AsyncStorage)}));
 let connection: HubConnection | null = null;
 let generation = 0;
 let joinedCode: string | null = null;
@@ -17,7 +29,8 @@ function applyRoom(room: Room) {
   const old = useRoom.getState().room?.media;
   useRoom.setState(state => ({room, votes: state.votes.filter(id => room.queue.some(x => x.id === id))}));
   if (room.media.kind === 'radio' && room.media.station) {
-    if (room.isPlaying && useRoom.getState().status === 'connected' && !useRoom.getState().audioMuted) {
+    const local = useRoom.getState();
+    if (room.isPlaying && local.status === 'connected' && !local.audioMuted && !local.chatAudio) {
       const current = player.getSnapshot();
       if (current.station?.id !== room.media.station.id) player.select(room.media.station, {stations: [room.media.station], title: room.name});
       else if (!isActive(current.state)) player.toggle();
@@ -28,7 +41,7 @@ function applyRoom(room: Room) {
 export async function leaveRoom() {
   generation++; const old = connection; connection = null; joinedCode = null;
   if (player.getSnapshot().station?.id === lastRadio) pauseAudio(); lastRadio = undefined;
-  useRoom.setState({room: null, messages: [], status: 'idle', error: '', reaction: '', audioMuted: false, votes: []});
+  useRoom.setState({room: null, messages: [], status: 'idle', error: '', reaction: '', audioMuted: false, votes: [], typing: {}, olderAvailable: false, loadingOlder: false, chatAudio: false});
   if (old) await old.stop().catch(() => {});
 }
 export async function enterRoom(id: string, code?: string | null) {
@@ -48,13 +61,25 @@ export async function enterRoom(id: string, code?: string | null) {
     if (!valid()) return;
     useRoom.setState({clockOffset: Date.parse(room.serverNow) - (before + Date.now()) / 2, status: 'connected'});
     applyRoom(room);
-    const messages = await hub.invoke<ChatMessage[]>('History', id);
-    if (valid()) useRoom.setState({messages: messages.slice(-100)});
+    const history = await hub.invoke<ChatMessage[]>('History', id);
+    if (valid()) useRoom.setState(s => {
+      const persisted = history.filter(x => x.kind !== 'system');
+      const newest = [...s.messages].reverse().find(x => x.kind !== 'system');
+      // After a long disconnection the fresh page may not touch what we had: start again instead of leaving a silent gap.
+      const gap = !!newest && persisted.length >= 100 && Date.parse(persisted[0].at) > Date.parse(newest.at);
+      return {messages: gap ? history : mergeMessages(s.messages, history, chatLimits.memory),
+        olderAvailable: gap || !s.messages.length ? persisted.length >= 100 : s.olderAvailable};
+    });
     const votes = await hub.invoke<string[]>('MyVotes', id);
     if (valid()) useRoom.setState({votes});
   };
   hub.on('State', (room: Room) => {if (valid()) applyRoom(room);});
-  hub.on('Message', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: [...s.messages.filter(x => x.id !== message.id), message].slice(-100)}));});
+  hub.on('Message', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: upsertMessage(s.messages, message), typing: clearTyping(s.typing, message.senderId)}));});
+  hub.on('MessageUpdated', (message: ChatMessage) => {if (valid()) useRoom.setState(s => ({messages: upsertMessage(s.messages, message)}));});
+  hub.on('Typing', (event: {senderId: string; sender: string}) => {
+    if (!valid() || useRoom.getState().muted.includes(event.senderId)) return;
+    useRoom.setState(s => ({typing: addTyping(s.typing, event)}));
+  });
   hub.on('Reaction', (event: {senderId: string; emoji: string}) => {
     if (!valid() || useRoom.getState().muted.includes(event.senderId)) return;
     useRoom.setState({reaction: event.emoji}); setTimeout(() => {if (valid()) useRoom.setState({reaction: ''});}, 2000);
@@ -87,4 +112,35 @@ export async function refreshRoom() {
 }
 export function muteMember(id: string) {useRoom.setState(s => ({muted: s.muted.includes(id) ? s.muted.filter(x => x !== id) : [...s.muted, id].slice(-200)}));}
 export function toggleRoomAudio() {useRoom.setState(s => ({audioMuted: !s.audioMuted})); const room = useRoom.getState().room; if (room) applyRoom(room);}
+/** Pauses/resumes only this device's room audio while a voice note records or plays. */
+export function setChatAudio(active: boolean) {
+  if (useRoom.getState().chatAudio === active) return;
+  useRoom.setState({chatAudio: active}); const room = useRoom.getState().room; if (room) applyRoom(room);
+}
+export type ChatDraft = {text?: string; replyToId?: string | null; attachmentIds?: string[]};
+const keep = (message: ChatMessage) => {useRoom.setState(s => ({messages: upsertMessage(s.messages, message)})); return message;};
+const currentRoom = () => {const room = useRoom.getState().room; if (!room) throw new Error('Espera a que la sala vuelva a conectarse.'); return room.id;};
+export async function sendChat(draft: ChatDraft) {
+  return keep(await roomCommand('SendChat', currentRoom(), {text: draft.text ?? null, replyToId: draft.replyToId ?? null, attachmentIds: draft.attachmentIds ?? []}) as ChatMessage);
+}
+export async function editChat(messageId: string, text: string) {return keep(await roomCommand('EditChat', currentRoom(), {messageId, text}) as ChatMessage);}
+export async function deleteChat(messageId: string) {return keep(await roomCommand('DeleteChat', currentRoom(), {messageId}) as ChatMessage);}
+export async function reactChat(messageId: string, emoji: string) {return keep(await roomCommand('ReactChat', currentRoom(), {messageId, emoji}) as ChatMessage);}
+let lastTyping = 0;
+/** Throttled, fire-and-forget: a lost typing signal is harmless and never blocks writing. */
+export function notifyTyping() {
+  const room = useRoom.getState().room; const now = Date.now();
+  if (!room || !connection || connection.state !== HubConnectionState.Connected || now - lastTyping < 3000) return;
+  lastTyping = now; void connection.send('Typing', room.id).catch(() => {});
+}
+export async function loadOlderMessages() {
+  const state = useRoom.getState(); const anchor = oldestPersisted(state.messages);
+  if (!state.room || state.loadingOlder || !state.olderAvailable) return;
+  if (!anchor) {useRoom.setState({olderAvailable: false}); return;}
+  useRoom.setState({loadingOlder: true});
+  try {
+    const page = await roomCommand('ChatHistory', state.room.id, anchor.id) as {items: ChatMessage[]; hasMore: boolean};
+    useRoom.setState(s => ({messages: mergeMessages(s.messages, page.items, chatLimits.memory), olderAvailable: page.hasMore}));
+  } finally {useRoom.setState({loadingOlder: false});}
+}
 useAuth.subscribe((state, previous) => {if (state.session?.token !== previous.session?.token && connection) void leaveRoom();});

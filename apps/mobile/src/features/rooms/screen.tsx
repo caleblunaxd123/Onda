@@ -35,11 +35,15 @@ import {
 } from "./client";
 import type { MediaEvent } from "./media-frame";
 import { RoomLayout } from "./room-layout";
+import { resetDraft } from "./chat-draft";
+import { clearChatCache } from "./chat-files";
+import { stopVoice } from "./voice";
 import { SourcePicker } from "./source-picker";
 import { youtubeVideoUrl } from "./youtube-navigation";
 import {
   orderedQueue,
   playbackPosition,
+  streamServiceOf,
   type MediaInput,
   type Member,
   type Room,
@@ -53,7 +57,7 @@ export default function RoomScreen() {
   const nativePlayback = usePlayer();
   const focused = useIsFocused();
   const params = useLocalSearchParams<{ id?: string; code?: string; choose?: string }>();
-  const initialProvider = ["youtube", "radio", "audio", "video"].includes(params.choose ?? "") ? params.choose as MediaInput["kind"] : undefined;
+  const initialProvider = ["youtube", "radio", "audio", "video", "stream"].includes(params.choose ?? "") ? params.choose as MediaInput["kind"] : undefined;
   const [startupPicker, setStartupPicker] = useState(!!initialProvider);
   const [openYoutube, setOpenYoutube] = useState(initialProvider === "youtube");
   const [directSelection, setDirectSelection] = useState(!!initialProvider);
@@ -64,7 +68,6 @@ export default function RoomScreen() {
   const [joining, setJoining] = useState(false);
   const [retry, setRetry] = useState(0);
   const [tab, setTab] = useState<"chat" | "queue" | "people">("chat");
-  const [text, setText] = useState("");
   const [actionError, setActionError] = useState("");
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState<
@@ -81,6 +84,7 @@ export default function RoomScreen() {
     position: 0,
     duration: 0,
   });
+  const validInput = input.kind === "radio" ? !!input.stationId : input.kind === "stream" ? !!streamServiceOf(input.url) : !!input.url?.trim();
   const positionRef = useRef(0);
   const navigating = useRef(false);
   const [frameRevision, setFrameRevision] = useState(0);
@@ -131,6 +135,10 @@ export default function RoomScreen() {
       void start();
       return () => {
         cancelled = true;
+        // Leaving releases chat resources: unsent uploads, local recordings, voice playback and shared copies.
+        stopVoice();
+        resetDraft();
+        clearChatCache();
         void leaveRoom();
       };
     }, [auth.ready, sessionToken, id, code, retry]),
@@ -235,10 +243,6 @@ export default function RoomScreen() {
       void playback(event.playing ?? false, event.position ?? 0);
     if (event.kind === "ended" && isOwner && room?.queue[0] && ready)
       void act("PlayQueued", room.id, orderedQueue(room.queue)[0].id);
-  };
-  const send = async () => {
-    if (!room || !text.trim()) return;
-    if (await act("SendMessage", room.id, text.trim())) setText("");
   };
   const share = () => {
     if (room?.inviteCode)
@@ -363,14 +367,12 @@ export default function RoomScreen() {
       connection={state.status}
       tab={tab}
       onTab={setTab}
-      text={text}
-      onText={setText}
-      send={() => void send()}
       busy={busy}
       messages={state.messages.filter((x) => !state.muted.includes(x.senderId))}
       votes={state.votes}
       mutedMembers={state.muted}
       audioMuted={state.audioMuted}
+      ducked={state.chatAudio}
       radioStatus={radioStatus}
       position={progress.position}
       duration={progress.duration}
@@ -485,7 +487,7 @@ export default function RoomScreen() {
           {host && <Button
             title={busy ? "Cambiando…" : "Reproducir para todos"}
             icon="play-outline"
-            disabled={busy || !ready || (input.kind === "radio" ? !input.stationId : !input.url?.trim())}
+            disabled={busy || !ready || !validInput}
             onPress={() => {
               const latest = useRoom.getState().room;
               if (!latest) return;
@@ -497,11 +499,7 @@ export default function RoomScreen() {
           <Button
             title={busy ? "Añadiendo…" : "Añadir a la cola"}
             secondary={host}
-            disabled={
-              busy || !ready ||
-              (input.kind === "radio" && !input.stationId) ||
-              (input.kind !== "radio" && !input.url?.trim())
-            }
+            disabled={busy || !ready || !validInput}
             onPress={() => {
               void act("AddToQueue", room.id, input).then((ok) => {
                 if (ok) {

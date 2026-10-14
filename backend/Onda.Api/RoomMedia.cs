@@ -34,8 +34,39 @@ public sealed partial class MediaResolver(ICatalogQueries catalog, IHttpClientFa
             !(b[0] == 192 && b[1] == 168) && !(b[0] == 100 && b[1] is >= 64 and <= 127);
         return !ip.IsIPv6LinkLocal && !ip.IsIPv6Multicast && !ip.IsIPv6SiteLocal && !ip.Equals(IPAddress.IPv6Any) && (b[0] & 0xfe) != 0xfc;
     }
+    /// <summary>
+    /// Subscription services: only official title/watch links are accepted. ONDA never embeds, proxies or fetches them;
+    /// each person opens the title with their own account and the room shares the clock, pause and chat.
+    /// </summary>
+    public static (string Service, string Label)? StreamService(Uri uri)
+    {
+        var host = uri.IdnHost.ToLowerInvariant(); var path = uri.AbsolutePath.ToLowerInvariant();
+        return host switch
+        {
+            "netflix.com" or "www.netflix.com" when path.StartsWith("/watch/") || path.StartsWith("/title/") || path.Contains("/title/") => ("netflix", "Netflix"),
+            "primevideo.com" or "www.primevideo.com" or "app.primevideo.com" => ("prime", "Prime Video"),
+            "www.amazon.com" or "amazon.com" when path.Contains("/gp/video/") || path.StartsWith("/dp/") => ("prime", "Prime Video"),
+            "disneyplus.com" or "www.disneyplus.com" => ("disney", "Disney+"),
+            "max.com" or "www.max.com" or "play.max.com" or "hbomax.com" or "www.hbomax.com" or "play.hbomax.com" => ("max", "Max"),
+            "tv.apple.com" => ("appletv", "Apple TV+"),
+            "crunchyroll.com" or "www.crunchyroll.com" => ("crunchyroll", "Crunchyroll"),
+            "paramountplus.com" or "www.paramountplus.com" => ("paramount", "Paramount+"),
+            "mubi.com" or "www.mubi.com" => ("mubi", "MUBI"),
+            _ => null,
+        };
+    }
+    public static RoomMedia? StreamMedia(MediaInput input)
+    {
+        if (input.Kind != "stream" || input.Url is not {Length: <= 2000} || !Uri.TryCreate(input.Url, UriKind.Absolute, out var uri) ||
+            uri.Scheme != "https" || !uri.IsDefaultPort || uri.UserInfo.Length > 0 || StreamService(uri) is not { } service || uri.AbsolutePath.Length <= 1) return null;
+        // Query strings and fragments are dropped: they can carry tracking or personal session parameters.
+        var clean = new UriBuilder(uri) {Query = "", Fragment = ""}.Uri.AbsoluteUri;
+        var title = Text.CleanName(input.Title ?? "", 120);
+        return new("stream", title.Length > 0 ? title : "Título en " + service.Label, clean, null, null, service.Service);
+    }
     public async Task<RoomMedia?> ResolveAsync(MediaInput input, CancellationToken ct)
     {
+        if (input.Kind == "stream") return StreamMedia(input);
         if (input.Kind == "radio" && input.StationId is { } id)
         {
             var station = (await catalog.LookupAsync([id], ct)).FirstOrDefault();
