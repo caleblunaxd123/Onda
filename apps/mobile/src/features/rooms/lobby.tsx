@@ -1,11 +1,10 @@
 import {useTheme} from '../../theme';
 import { useState } from "react";
-import { FlatList, Keyboard, View } from "react-native";
+import { FlatList, Keyboard, Pressable, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { request } from "../../api";
 import { fold } from "../../format";
-import { Ionicons } from "../../icons";
 import {
   BrandHeader,
   Button,
@@ -20,13 +19,15 @@ import {
 } from "../../ui";
 import { FormField } from "../../components/forms";
 import { useAuth } from "../account/session";
-import { RoomRow } from "./presentation";
+import { Avatar, RoomRow } from "./presentation";
 import type { RoomSummary } from "./types";
-import {OndaAmbientBackground, OndaCategoryTile, OndaGlassSurface, OndaGradientButton, OndaMotionCard, OndaSkeleton} from '../../components/experience';
+import {OndaAmbientBackground, OndaGradientButton, OndaMotionCard, OndaSkeleton} from '../../components/experience';
+import {useCurrentRoom} from './current-room';
 
 export default function RoomsScreen() {
   const c = useTheme();
   const auth = useAuth();
+  const currentRoom = useCurrentRoom();
   const params = useLocalSearchParams<{view?: string}>();
   const mine = params.view === "mine";
   const setMine = (value: boolean) => router.setParams({view: value ? "mine" : "discover"});
@@ -72,11 +73,12 @@ export default function RoomsScreen() {
           label="Entrar con invitación"
           onPress={() => setInvite(true)}
         />
-        <IconButton
+        {auth.session?.user ? <Pressable accessibilityRole="button" accessibilityLabel="Tu cuenta" onPress={() => router.push('/account')}
+          style={{width: 44, height: 44, alignItems: 'center', justifyContent: 'center'}}><Avatar size={38} member={{id: auth.session.user.id, name: auth.session.user.displayName, avatarUrl: auth.session.user.avatarUrl}}/></Pressable> : <IconButton
           icon="person-outline"
           label="Tu cuenta"
           onPress={() => router.push("/account")}
-        />
+        />}
       </BrandHeader>
       <FlatList
         data={items}
@@ -88,7 +90,7 @@ export default function RoomsScreen() {
         ListHeaderComponent={
           <View style={{ gap: 14, paddingBottom: 6 }}>
             <View style={{gap: 6}}><Label accessibilityRole="header" style={{fontSize: 25, lineHeight: 31, fontWeight: "800", letterSpacing: -.5}}>Mira y escucha con amigos.</Label>
-            <Muted style={{fontSize: 14, lineHeight: 20}}>Descubre salas, comparte contenido y vive la experiencia juntos.</Muted></View>
+            <Muted style={{fontSize: 14, lineHeight: 20}}>Entra a una sala o crea la tuya.</Muted></View>
             <SearchField value={search} onChange={setSearch} placeholder="Buscar sala, video o canción" label="Buscar sala o contenido" />
             <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
               <Chip label="Descubrir" icon="earth-outline" selected={!mine} onPress={() => setMine(false)} />
@@ -116,13 +118,8 @@ export default function RoomsScreen() {
           )
         }
         renderItem={({ item, index }) => <OndaMotionCard index={index}><RoomRow room={item} ownerName={item.ownerId === auth.session?.user.id ? auth.session.user.displayName : undefined} onPress={() => {Keyboard.dismiss(); router.push({ pathname: "/room", params: { id: item.id } });}} /></OndaMotionCard>}
-        ListFooterComponent={!rooms.isPending && !rooms.isError && !search && (rooms.data?.items.length ?? 0) < 4 ? <View style={{gap: 14, paddingTop: 6}}>
-          <OndaGlassSurface><View style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}><Ionicons name="sparkles-outline" size={26} color={c.accent}/><View style={{flex: 1, gap: 4}}><Label style={{fontSize: 17, fontWeight: '800'}}>El siguiente momento lo creas tú</Label><Muted>Elige una fuente, entra e invita a tus amigos.</Muted></View></View></OndaGlassSurface>
-          <View style={{flexDirection: 'row', gap: 10}}><OndaCategoryTile title="Videos" note="YouTube y enlaces" icon="play-circle-outline" color="#4895FF" onPress={() => router.push({pathname: '/create-room', params: {source: 'youtube'}})}/><OndaCategoryTile title="Música" note="Escuchar juntos" icon="musical-notes-outline" color="#F063D5" onPress={() => router.push({pathname: '/create-room', params: {source: 'audio'}})}/></View>
-          <View style={{flexDirection: 'row', gap: 10}}><OndaCategoryTile title="Radio" note="Explora el catálogo" icon="radio-outline" color="#11DDF4" onPress={() => router.push('/radio')}/><OndaCategoryTile title="Invitación" note="Entrar con código" icon="ticket-outline" color="#B195FF" onPress={() => setInvite(true)}/></View>
-        </View> : null}
       />
-      <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, alignItems: 'flex-end'}}><OndaGradientButton title="Crear sala" icon="add" onPress={() => {Keyboard.dismiss(); router.push('/create-room');}}/></View>
+      <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, alignItems: 'flex-end'}}><OndaGradientButton title={currentRoom.data ? 'Entrar a mi sala' : 'Crear sala'} icon={currentRoom.data ? 'play' : 'add'} onPress={() => {Keyboard.dismiss(); if (currentRoom.data) router.push({pathname: '/room', params: {id: currentRoom.data.id, code: currentRoom.data.inviteCode ?? ''}}); else router.push('/create-room');}}/></View>
       {filtersOpen && <Sheet title="¿Qué quieres compartir?" onClose={() => setFiltersOpen(false)}><View style={{flexDirection: 'row', gap: 8, flexWrap: 'wrap'}}>{([{id: 'all', name: 'Todas las salas'}, {id: 'music', name: 'Música y radio'}, {id: 'video', name: 'Videos'}] as const).map(x => <Chip key={x.id} label={x.name} selected={filter === x.id} onPress={() => {setFilter(x.id); setFiltersOpen(false);}}/>)}</View></Sheet>}
       {invite && (
         <Sheet

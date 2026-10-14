@@ -2,7 +2,7 @@
   "expo": {
     "name": "ONDA",
     "slug": "onda",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "scheme": "onda",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -11,7 +11,7 @@
       "bundleIdentifier": "app.onda.radio"
     },
     "android": {
-      "versionCode": 9,
+      "versionCode": 10,
       "package": "app.onda.radio",
       "blockedPermissions": [
         "android.permission.ACCESS_FINE_LOCATION",

@@ -126,6 +126,13 @@ export async function enterRoom(id: string, code?: string | null) {
 export async function roomCommand(method: string, ...args: unknown[]) {
   if (!connection || connection.state !== HubConnectionState.Connected || useRoom.getState().status !== 'connected') throw new Error('Espera a que la sala vuelva a conectarse.');
   try {
+    if (method === 'SetPlayback' && args[1] && typeof args[1] === 'object') {
+      // Correlation only, never a credential. One ID per user intent; caller-supplied retry IDs are preserved.
+      const command = args[1] as {eventId?: string};
+      if (!command.eventId) args[1] = {...command, eventId: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
+        const value = Math.floor(Math.random() * 16); return (char === 'x' ? value : (value & 3) | 8).toString(16);
+      })};
+    }
     const result = await connection.invoke(method, ...args);
     if (method === 'Vote' && typeof result === 'boolean') useRoom.setState(state => ({votes: result ? [...new Set([...state.votes, String(args[1])])] : state.votes.filter(x => x !== args[1])}));
     return result;

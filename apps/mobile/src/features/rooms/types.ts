@@ -2,7 +2,7 @@ import type {Station} from '../../types';
 export type MediaKind = 'radio' | 'youtube' | 'audio' | 'video' | 'stream';
 export type MediaInput = {kind: MediaKind; stationId?: string; url?: string; title?: string};
 export type RoomMedia = {kind: MediaKind; title: string; url: string | null; videoId: string | null; station: Station | null; category?: string};
-export type Member = {id: string; name: string};
+export type Member = {id: string; name: string; avatarUrl?: string | null};
 export type QueueItem = {id: string; media: RoomMedia; proposedBy: string; votes: number; pinned?: boolean};
 export type Room = {id: string; name: string; isPrivate: boolean; ownerId: string; inviteCode: string | null; media: RoomMedia; isPlaying: boolean;
   positionSeconds: number; playbackUpdatedAt: string; version: number; members: Member[]; queue: QueueItem[]; serverNow: string;
@@ -12,7 +12,7 @@ export function acceptsRoomState(current: Pick<Room, 'id' | 'version'> | null, i
   return Number.isSafeInteger(incoming.version) && incoming.version >= 0 &&
     (!current || current.id === incoming.id && incoming.version >= current.version);
 }
-export type RoomSummary = Pick<Room, 'id' | 'name' | 'isPrivate' | 'ownerId' | 'media'> & {listeners: number};
+export type RoomSummary = Pick<Room, 'id' | 'name' | 'isPrivate' | 'ownerId' | 'media'> & {listeners: number; members?: Member[]};
 export type ChatReaction = {accountId: string; name: string; emoji: string};
 export type ChatAttachment = {id: string; name: string; mime: string; kind: 'image' | 'audio' | 'file'; length: number; durationMs?: number | null};
 export type ChatReply = {id: string; sender: string; text: string; deleted: boolean; senderId?: string | null};

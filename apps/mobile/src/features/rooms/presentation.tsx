@@ -17,6 +17,7 @@ export function Avatar({
   host?: boolean;
 }) {
   const c = useTheme();
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const hue = [...member.id].reduce((sum, x) => sum + x.charCodeAt(0), 0) % 4;
   const colors = ["#533887", "#165E77", "#735231", "#69445C"];
   return (
@@ -31,6 +32,7 @@ export function Avatar({
         justifyContent: "center",
         borderWidth: 2,
         borderColor: host ? c.primary : c.bg,
+        overflow: 'hidden',
       }}
     >
       <Label
@@ -38,6 +40,8 @@ export function Avatar({
       >
         {member.name.trim().slice(0, 1).toUpperCase()}
       </Label>
+      {member.avatarUrl && failedAvatar !== member.avatarUrl && <Image source={{uri: member.avatarUrl}} resizeMode="cover"
+        onError={() => setFailedAvatar(member.avatarUrl ?? null)} style={{position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%'}}/>}
     </View>
   );
 }
@@ -130,7 +134,7 @@ export function MediaPoster({
     </View>
   );
 }
-/** Real room metadata only; presence portraits are not available in the lobby API. */
+/** Compact landscape row with real presence only; large text may expand it. */
 export function RoomRow({room, onPress, ownerName}: {room: RoomSummary; onPress: () => void; ownerName?: string}) {
   const c = useTheme(); const {width, fontScale} = useWindowDimensions();
   const stacked = width < 320 || fontScale > 1.5;
@@ -139,7 +143,7 @@ export function RoomRow({room, onPress, ownerName}: {room: RoomSummary; onPress:
     style={{padding: 6, gap: 10, borderRadius: 20, borderWidth: 1, borderColor: c.border, flexDirection: stacked ? 'column' : 'row',
       ...gradientStyle(c.isDark ? 'linear-gradient(135deg, #202451EF 0%, #111A3FEE 65%, #30215BEE 100%)' : 'linear-gradient(130deg, #FFFFFF 10%, #F0EAFE 100%)', c.surface), boxShadow: c.shadow}}>
     <View style={stacked ? {} : {width: '40%'}}>
-      <MediaPoster media={room.media} style={{height: stacked ? 120 : 112, borderRadius: 14}}>
+      <MediaPoster media={room.media} style={{height: stacked ? 120 : 96, borderRadius: 14}}>
         <View style={{position: 'absolute', top: 9, left: 8, right: 8, alignItems: 'flex-start'}}>
           <View style={{paddingHorizontal: 7, paddingVertical: 4, borderRadius: 10, backgroundColor: '#0F174DDD', borderWidth: 1, borderColor: '#FFFFFF35'}}>
             <Label style={{color: '#FFFFFF', fontWeight: '700', fontSize: 10, lineHeight: 13}}>{label}</Label>
@@ -150,13 +154,12 @@ export function RoomRow({room, onPress, ownerName}: {room: RoomSummary; onPress:
     </View>
     <View style={{flex: 1, gap: 4, paddingVertical: 2, paddingRight: 3}}>
       <Label numberOfLines={2} style={{fontSize: 15, lineHeight: 18, fontWeight: '800'}}>{room.media.title}</Label>
-      <Muted numberOfLines={1} style={{fontSize: 11, lineHeight: 15}}>{room.name}</Muted>
       <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
-        {ownerName ? <Avatar member={{id: room.ownerId, name: ownerName}} size={20} host/> : <Ionicons name={room.isPrivate ? 'lock-closed-outline' : 'earth-outline'} size={13} color={c.primaryText}/>}
-        <Muted numberOfLines={1} style={{fontSize: 11, lineHeight: 14, flex: 1}}>{ownerName ? `Por ${ownerName}` : room.isPrivate ? 'Solo invitados' : 'Sala pública'}</Muted>
+        <Ionicons name={room.isPrivate ? 'lock-closed-outline' : 'earth-outline'} size={13} color={c.primaryText}/>
+        <Muted numberOfLines={1} style={{fontSize: 11, lineHeight: 14, flex: 1}}>{ownerName ? `Tu sala · ${room.name}` : room.name}</Muted>
       </View>
       <View style={{marginTop: 'auto', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, paddingTop: 3}}>
-        <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}><Ionicons name="people-outline" size={14} color={c.primaryText}/><Muted style={{fontSize: 11, lineHeight: 14}}>{room.listeners}</Muted></View>
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>{room.members?.length ? <MemberStack members={room.members} owner={room.ownerId} max={3}/> : <Ionicons name="people-outline" size={14} color={c.primaryText}/>}<Muted style={{fontSize: 11, lineHeight: 14}}>{room.listeners}</Muted></View>
         <View style={{minHeight: 34, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 13, flexDirection: 'row', alignItems: 'center', gap: 5, ...gradientStyle(c.brand, c.primary)}}><Ionicons name="play" size={14} color="#FFFFFF"/><Label style={{color: '#FFFFFF', fontSize: 12, lineHeight: 16, fontWeight: '800'}}>Unirse</Label></View>
       </View>
     </View>

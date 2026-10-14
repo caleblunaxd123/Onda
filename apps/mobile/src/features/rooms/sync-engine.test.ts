@@ -39,5 +39,17 @@ describe('shared playback sync', () => {
     expect(clock).toEqual({offsetMs: 5000, rttMs: 100, uncertaintyMs: 50});
     expect(estimateClock([])).toBeNull();
     expect(estimateClock([{sentMs: 5, serverMs: 1, receivedMs: 1}])).toBeNull();
+    expect(estimateClock([{sentMs: NaN, serverMs: 1, receivedMs: Infinity}])).toBeNull();
+  });
+  it('reconciles five simulated clocks with latency and a fresh snapshot after disconnection', () => {
+    const state = {positionSeconds: 60, isPlaying: true, updatedAtMs: 100000};
+    for (const bias of [-7200000, -5000, 0, 60000, 10800000]) {
+      const sentMs = 100000 + bias;
+      const clock = estimateClock([{sentMs, serverMs: 100100, receivedMs: sentMs + 200}])!;
+      expect(expectedPosition(state, 110000 + bias + clock.offsetMs)).toBe(70);
+      const resumed = {positionSeconds: 150, isPlaying: false, updatedAtMs: 130000};
+      expect(expectedPosition(resumed, 140000 + bias + clock.offsetMs)).toBe(150);
+      expect(correction(150, 70, youtube)).toEqual({action: 'seek', target: 150});
+    }
   });
 });
