@@ -9,7 +9,7 @@
   Pendiente: búsqueda de texto completo, recomendaciones editoriales, sincronización de biblioteca con cuenta.
 - Fase 4: pruebas automatizadas amplias (62 backend con SQL real + 36 móvil); pendiente beta Android física,
   rendimiento, memoria, batería, accesibilidad completa (TalkBack) y background prolongado.
-- Fase 5: salas SignalR NO iniciadas; dependen de la aceptación del MVP. La pestaña lo indica sin simular personas.
+- Fase 5: salas SignalR descartadas por ahora; la app se mantiene como radio mundial simple.
 - Fase 6: IA NO iniciada.
 - Fase 7: publicación NO iniciada (falta proveedor de mapas con licencia de producción, HTTPS, firma y auditoría).
 

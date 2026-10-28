@@ -5,7 +5,7 @@ import { useTheme } from '../../src/theme';
 import { Label, MiniPlayer } from '../../src/ui';
 const items = {
   index: {icon: 'home', title: 'Inicio'}, world: {icon: 'earth', title: 'Mundo'}, radar: {icon: 'radio', title: 'Radar'},
-  rooms: {icon: 'people', title: 'Salas'}, library: {icon: 'albums', title: 'Biblioteca'},
+  library: {icon: 'albums', title: 'Biblioteca'},
 } as const;
 export default function TabLayout() {
   const c = useTheme();
@@ -25,6 +25,6 @@ export default function TabLayout() {
       })}
     </View>
   </View>}>
-    <Tabs.Screen name="index"/><Tabs.Screen name="world"/><Tabs.Screen name="radar"/><Tabs.Screen name="rooms"/><Tabs.Screen name="library"/>
+    <Tabs.Screen name="index"/><Tabs.Screen name="world"/><Tabs.Screen name="radar"/><Tabs.Screen name="library"/>
   </Tabs>;
 }

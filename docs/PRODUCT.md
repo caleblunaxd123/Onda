@@ -10,7 +10,7 @@ Primera entrega: inicio con populares, filtro de ánimo, búsqueda, favoritos, h
 reproductor persistente, radar vertical, mapa inicial, ajustes de país y temas.
 Los estados de ánimo se traducen a géneros del catálogo; no analizan el audio actual.
 
-Salas anuncia explícitamente su disponibilidad futura. ONDA AI queda fuera de esta primera versión.
+Salas y ONDA AI quedan fuera: ONDA es una app simple de radios mundiales.
 Aún faltan colecciones, cuenta, reportes, preferencias musicales avanzadas y descubrimiento editorial.
 El propietario aportó un panel con 10 pantallas de referencia: inicio editorial, mapa con panel,
 Radar con tarjetas, reproductor, búsqueda, biblioteca, salas, IA, perfil y temas.

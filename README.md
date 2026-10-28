@@ -12,7 +12,7 @@ Estado: implementación funcional en desarrollo; **MVP todavía no aceptado** (f
   (país, ciudad, idioma, género), mapa por área visible con clusters, Radio Radar con carga progresiva,
   reproductor global con reintentos y fuentes alternativas, reportes de problemas, biblioteca local con colecciones.
 - Diseño según docs/design-reference.png, tema claro/oscuro/automático. Capturas: docs/screenshots.
-- Sin cuentas, sincronización de biblioteca, salas ni IA todavía.
+- Sin cuentas, sincronización de biblioteca ni IA.
 
 ## Inicio en Windows
 Requisitos: Node 22+, .NET SDK 10 (se usa `.tools/dotnet` si existe), SQL Server (por defecto `.\SQLEXPRESS`,
