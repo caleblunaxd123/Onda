@@ -5,6 +5,17 @@ const storage = vi.hoisted(() => ({getItem:vi.fn(async (_key:string):Promise<str
 vi.mock('@react-native-async-storage/async-storage',()=>({default:storage}));
 const station:Station={id:'a',name:'Fixture',country:'Peru',countryCode:'PE',language:'spanish',tags:[],streamUrl:'https://example.com/test',artworkUrl:null,codec:'MP3',bitrate:128,votes:0,latitude:null,longitude:null};
 beforeEach(()=>{useLibrary.getState().clear();vi.clearAllMocks();});
+it('restores the immersive identity on upgrade while retaining the existing radio library',async()=>{
+ storage.getItem.mockResolvedValueOnce(JSON.stringify({state:{theme:'dark',favorites:[station],history:[],collections:[]},version:0}));
+ await useLibrary.persist.rehydrate();
+ expect(useLibrary.getState().theme).toBe('immersive');
+ expect(useLibrary.getState().favorites[0].id).toBe(station.id);
+});
+it('keeps an explicit dark preference after the immersive migration has already run',async()=>{
+ storage.getItem.mockResolvedValueOnce(JSON.stringify({state:{theme:'dark',visualVersion:1,favorites:[],history:[],collections:[]},version:0}));
+ await useLibrary.persist.rehydrate();
+ expect(useLibrary.getState().theme).toBe('dark');
+});
 it('keeps radio favorites and collections when upgrading from the social beta soft theme',async()=>{
  storage.getItem.mockResolvedValueOnce(JSON.stringify({state:{theme:'soft',favorites:[station],history:[],collections:[{id:'saved',name:'Viajes',stations:[station]}]},version:0}));
  await useLibrary.persist.rehydrate();

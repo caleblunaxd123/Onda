@@ -11,6 +11,17 @@ describe('Global audio lifecycle', () => {
     const engine = new PlayerEngine((s, url, emit) => {const h = {url, station: s.id, play: vi.fn(), pause: vi.fn(), dispose: vi.fn(), emit}; handles.push(h); return h;}, () => Date.now());
     return {engine, handles};
   };
+  it('applies volume to the active stream and preserves it when switching stations', () => {
+    const volumes: ReturnType<typeof vi.fn>[] = [];
+    const engine = new PlayerEngine(() => {const setVolume = vi.fn(); volumes.push(setVolume); return {play: vi.fn(), pause: vi.fn(), dispose: vi.fn(), setVolume};});
+    engine.setVolume(.35); engine.select(station);
+    expect(volumes[0]).toHaveBeenLastCalledWith(.35);
+    engine.setVolume(0); expect(volumes[0]).toHaveBeenLastCalledWith(0);
+    engine.select({...station, id:'next'}); expect(volumes[1]).toHaveBeenLastCalledWith(0);
+    engine.setVolume(2); expect(engine.snapshot.volume).toBe(1);
+    engine.setVolume(Number.NaN); expect(engine.snapshot.volume).toBe(1);
+    engine.dispose();
+  });
   it('disposes the previous stream and ignores its late callbacks', () => {
     const {engine, handles} = setup(); engine.select(station); engine.select({...station, id: 'two'});
     expect(handles[0].dispose).toHaveBeenCalledOnce();

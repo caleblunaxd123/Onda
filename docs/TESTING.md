@@ -2,7 +2,7 @@
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
   con `ONDA_TEST_SQL` definido). 69 pruebas: catálogo/API/SQL real, proxy y alojamiento de producción.
-- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 38 pruebas.
+- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 41 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
 - Compatibilidad: en apps/mobile `npx expo install --check`; bundling `npx expo export --platform android`.
@@ -18,6 +18,21 @@
 | API | validación de filtros/cursor/bbox, sobre con cursor y total, 503, mapa, reportes 400/404/201, lookup, CORS (ApiTests) |
 | Reproductor | un solo stream con 20 cambios rápidos, eventos tardíos, «conectando» ≠ «reproduciendo», reintentos acotados, failover entre fuentes HTTPS, tope total, temporizador también con JS retrasado, interrupciones/lockscreen respetadas, reintento manual (player-engine.test.ts) |
 | Biblioteca y región | actualización de instantáneas sin perder datos, compatibilidad con almacenamiento antiguo, país automático/manual, detección por zona horaria (library/region tests) |
+
+## Verificación 0.7.1 — 2026-10-28
+
+- 41 pruebas cliente, tipos y lint. Añadidas coberturas de volumen activo/cambio de fuente/clamp/NaN
+  y migración del tema inmersivo conservando la biblioteca y la elección explícita de tema.
+- Export web y APK tres ABI correctos. Actualización `install -r` de code11 a code12 conserva
+  favoritos e historial; cambio de país a Perú se refleja en Inicio sin solicitar ubicación.
+- Web 390/768/1440/1920 px sin desbordamiento horizontal del documento. Barra lateral y reproductor
+  persistente desde 1000 px; móvil conserva pestañas. Navegar Radar → Inicio oculta la pantalla anterior.
+- Radio Oxígeno reproduciéndose en web; navegación a Biblioteca conserva audio; volumen/silencio,
+  temporizador y cancelación comprobados. Favorita añadida aparece inmediatamente en Inicio y tras recargar.
+- Creación de colección en el origen local de QA; no se modificó la biblioteca de producción del propietario.
+- Mapa real, filtros de búsqueda y reproductor de dos columnas revisados. Capturas `docs/screenshots/*071*`.
+- API/SQL sin cambios; CI backend/móvil correcto en `b439759`. No se repitió la batería SQL local para esta
+  entrega visual; los 69 casos se ejecutaron de nuevo en CI. No equivale a pruebas físicas.
 
 ## Verificación en emulador (2026-10-12)
 Emulador `emulator-5554` Medium_Phone_API_36.1 con el Development Build existente (sin cambios nativos: no fue

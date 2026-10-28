@@ -17,6 +17,7 @@ export const player = new PlayerEngine((station, streamUrl, onStatus) => {
   });
   audio.setActiveForLockScreen(true, {title: station.name, artist: [station.region, station.country].filter(Boolean).join(' · '), artworkUrl: station.artworkUrl ?? undefined}, {isLiveStream: true});
   return {
+    setVolume: value => {audio.volume = value;},
     play: () => audio.play(), pause: () => audio.pause(),
     dispose: () => {listener.remove(); audio.pause(); audio.clearLockScreenControls(); audio.remove();},
   };

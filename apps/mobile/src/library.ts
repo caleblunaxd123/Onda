@@ -37,7 +37,7 @@ export const libraryIds = (lists: {favorites: Station[]; history: Station[]; col
 export const collectionName = (name: string) => name.trim().replace(/\s+/g, ' ').slice(0, 50);
 type Library = {
   favorites: Station[]; history: Station[]; searches: string[]; collections: Collection[];
-  country: string; theme: 'dark' | 'light' | 'system';
+  country: string; theme: 'dark' | 'light' | 'system' | 'immersive'; visualVersion: number;
   /** auto: follows the country detected from the device time zone; manual: chosen in Settings. */
   countryMode: 'auto' | 'manual';
   syncDeviceCountry: (code: string) => void; followDeviceCountry: (code: string) => void;
@@ -55,7 +55,7 @@ type Library = {
   removeFromCollection: (id: string, stationId: string) => void;
 };
 export const useLibrary = create<Library>()(persist((set) => ({
-  favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'system', countryMode: 'auto',
+  favorites: [], history: [], searches: [], collections: [], country: 'PE', theme: 'immersive', visualVersion: 1, countryMode: 'auto',
   syncDeviceCountry: code => set(x => x.countryMode === 'auto' && x.country !== code ? {country: code} : {}),
   followDeviceCountry: code => set({countryMode: 'auto', country: code}),
   onboarded: false, likedTags: [], refreshedAt: 0,
@@ -93,8 +93,9 @@ export const useLibrary = create<Library>()(persist((set) => ({
     const saved = (persisted ?? {}) as Partial<Library>;
     const existing = !!saved.favorites?.length || !!saved.history?.length || !!saved.collections?.length;
     // The previous social beta also offered "soft". Keep its light appearance without an invalid setting.
-    const theme = saved.theme === 'dark' || saved.theme === 'light' || saved.theme === 'system' ? saved.theme : 'light';
-    return {...current, ...saved, theme: saved.theme ? theme : current.theme, onboarded: saved.onboarded ?? existing};
+    const valid = ['dark', 'light', 'system', 'immersive'].includes(saved.theme ?? '');
+    const theme = valid ? saved.theme! : saved.theme ? 'light' : current.theme;
+    return {...current, ...saved, visualVersion: 1, theme: !saved.visualVersion && theme === 'dark' ? 'immersive' : theme, onboarded: saved.onboarded ?? existing};
   },
 }));
 

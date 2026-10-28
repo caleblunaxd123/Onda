@@ -1,8 +1,9 @@
 # Vista web local
 
 ONDA mantiene React Native/Expo para generar binarios nativos Android/iOS.
-La vista web comparte pantallas, estado, catálogo y lógica de reproducción; el mapa tiene una
-implementación específica world.web.tsx con MapLibre GL JS.
+La vista web comparte estado, catálogo, biblioteca y lógica de reproducción. Desde 1000 px tiene
+pantallas específicas de escritorio (menú lateral, columnas, mapa con panel y reproductor fijo).
+En móvil usa las pantallas táctiles. El mapa utiliza world.web.tsx con MapLibre GL JS.
 
 Terminal 1, desde la raíz: `./scripts/start-web-api.ps1`.
 Terminal 2: `npm --prefix apps/mobile run web -- --localhost`.
@@ -25,3 +26,11 @@ El temporizador, Bluetooth, notificación y segundo plano deben validarse en And
 
 Exportación web: `npm --prefix apps/mobile run export:web`.
 No hay despliegue público ni publicación en Play Store.
+
+## ONDA Experience 0.7.1
+
+Tema Inmersivo ONDA predeterminado con ondas estáticas; sin imágenes remotas decorativas ni animación
+continua de fondo. Temas claro/oscuro/automático disponibles en Ajustes. País de escucha sugerido por
+zona horaria/idioma y modificable, sin GPS; Inicio incluye radios nacionales, favoritas e historial antes
+del descubrimiento mundial. Los contenedores de pestañas inactivas permanecen montados para conservar
+estado, pero se ocultan visualmente para no traslucirse tras el fondo inmersivo.

@@ -3,13 +3,14 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '../../src/icons';
 import { useTheme } from '../../src/theme';
 import { Label, MiniPlayer } from '../../src/ui';
+import {useDesktop} from '../../src/web/layout';
 const items = {
   index: {icon: 'home', title: 'Inicio'}, world: {icon: 'earth', title: 'Mundo'}, radar: {icon: 'radio', title: 'Radar'},
   library: {icon: 'albums', title: 'Biblioteca'},
 } as const;
 export default function TabLayout() {
-  const c = useTheme();
-  return <Tabs screenOptions={{headerShown: false, sceneStyle: {backgroundColor: c.bg}}} tabBar={({state, navigation, insets}) => <View style={{backgroundColor: c.bg, paddingBottom: Math.max(insets.bottom, 6)}}>
+  const c = useTheme(); const desktop = useDesktop();
+  return <Tabs screenOptions={{headerShown: false, sceneStyle: {backgroundColor: 'transparent'}}} tabBar={({state, navigation, insets}) => desktop ? null : <View style={{backgroundColor: c.bg, paddingBottom: Math.max(insets.bottom, 6)}}>
     <MiniPlayer/>
     <View accessibilityRole="tablist" style={{flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.border, paddingTop: 6, backgroundColor: c.surface}}>
       {state.routes.map((route, index) => {

@@ -3,23 +3,24 @@ import { ActivityIndicator, FlatList, Image, Keyboard, KeyboardAvoidingView, Mod
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from './icons';
-import { useTheme, type Palette } from './theme';
+import { gradientStyle, useTheme, type Palette } from './theme';
 import { useLibrary } from './library';
 import { isActive, player, usePlayer } from './player';
 import type { Station } from './types';
 import { Equalizer, Waveform } from './waves';
+import {useDesktop} from './web/layout';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 export const stateLabels = {idle: 'Elige una emisora', connecting: 'Conectando…', buffering: 'Cargando audio…', playing: 'En vivo', paused: 'En pausa', error: 'Sin reproducción'};
 
-export const cardStyle = (c: Palette): ViewStyle => ({backgroundColor: c.surface, borderRadius: 20, boxShadow: c.shadow} as ViewStyle);
+export const cardStyle = (c: Palette): ViewStyle => ({backgroundColor: c.surface, borderRadius: 20, borderWidth: c.immersive ? 1 : 0, borderColor: c.border, boxShadow: c.shadow} as ViewStyle);
 
 export function Label({style, ...props}: TextProps) {const c = useTheme(); return <Text maxFontSizeMultiplier={1.6} {...props} style={[{color: c.text, fontSize: 15, lineHeight: 21}, style]}/>;}
 export function Muted({style, ...props}: TextProps) {const c = useTheme(); return <Label {...props} style={[{color: c.muted, fontSize: 13, lineHeight: 18}, style]}/>;}
 
 export function Page({children, refresh}: PropsWithChildren<{refresh?: ReactNode}>) {
-  const c = useTheme();
-  return <ScrollView style={{flex: 1, backgroundColor: c.bg}} contentContainerStyle={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32, gap: 20}} keyboardShouldPersistTaps="handled">{refresh}{children}</ScrollView>;
+  const desktop = useDesktop();
+  return <ScrollView style={{flex: 1, backgroundColor: 'transparent'}} contentContainerStyle={{paddingHorizontal: desktop ? 36 : 20, paddingTop: desktop ? 24 : 8, paddingBottom: 32, gap: 20, ...(desktop ? {maxWidth: 1100, width: '100%', alignSelf: 'center'} as const : {})}} keyboardShouldPersistTaps="handled">{refresh}{children}</ScrollView>;
 }
 export function Heading({children}: PropsWithChildren) {return <Label accessibilityRole="header" style={{fontSize: 24, lineHeight: 30, fontWeight: '800'}}>{children}</Label>;}
 
@@ -41,7 +42,7 @@ const logo = require('../assets/brand/onda-logo-header.png');
 /** Tab screen header from the owner's model: ONDA logo, brand waveform, optional title and trailing actions. */
 export function BrandHeader({title, subtitle, emoji, children}: PropsWithChildren<{title?: string; subtitle?: string; emoji?: string}>) {
   const c = useTheme(); const playback = usePlayer();
-  return <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10, backgroundColor: c.bg, experimental_backgroundImage: c.headerGlow} as ViewStyle}>
+  return <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10, ...gradientStyle(c.headerGlow, c.immersive ? 'transparent' : c.bg)} as ViewStyle}>
     <View pointerEvents="none" style={{position: 'absolute', right: 70, top: 6}}><Waveform active={playback.state === 'playing'} height={46} opacity={c.isDark ? 0.55 : 0.4}/></View>
     <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48}}>
       <Image source={logo} accessibilityRole="header" accessibilityLabel="ONDA" resizeMode="contain" style={{width: 128, height: 36}}/>
@@ -155,11 +156,11 @@ export function ActionRow({icon, label, detail, onPress}: {icon: IconName; label
 
 /** Bottom sheet used for menus, pickers and forms. */
 export function Sheet({title, onClose, children, scroll = true}: PropsWithChildren<{title: string; onClose: () => void; scroll?: boolean}>) {
-  const c = useTheme(); const insets = useSafeAreaInsets();
+  const c = useTheme(); const insets = useSafeAreaInsets(); const desktop = useDesktop();
   return <Modal transparent animationType="slide" onRequestClose={onClose}>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000066'}}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Cerrar" onPress={onClose} style={{flex: 1}}/>
-      <View accessibilityViewIsModal style={{backgroundColor: c.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16 + insets.bottom, gap: 10, maxHeight: '88%', width: '100%', maxWidth: 480, alignSelf: 'center'}}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{flex: 1, justifyContent: desktop ? 'center' : 'flex-end', backgroundColor: '#00000066'}}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Cerrar" onPress={onClose} style={desktop ? {position: 'absolute', inset: 0} : {flex: 1}}/>
+      <View accessibilityViewIsModal style={{backgroundColor: c.bg, borderRadius: desktop ? 24 : 0, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16 + insets.bottom, gap: 10, maxHeight: '88%', width: '100%', maxWidth: desktop ? 560 : 480, alignSelf: 'center'}}>
         <View style={{alignSelf: 'center', width: 40, height: 4, borderRadius: 4, backgroundColor: c.border}}/>
         <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}><Label accessibilityRole="header" numberOfLines={2} style={{flex: 1, fontSize: 19, lineHeight: 25, fontWeight: '800'}}>{title}</Label><IconButton icon="close" label="Cerrar" onPress={onClose}/></View>
         {scroll ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{gap: 4, paddingBottom: 8}}>{children}</ScrollView> : children}
@@ -242,7 +243,7 @@ export function MiniPlayer() {
 
 export function PlayButton({active, onPress, label, size = 44}: {active: boolean; onPress: () => void; label: string; size?: number}) {
   const c = useTheme();
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({pressed}) => ({width: size, height: size, borderRadius: size / 2, backgroundColor: c.primary, experimental_backgroundImage: c.brand, alignItems: 'center', justifyContent: 'center', opacity: pressed ? .75 : 1, boxShadow: `0px 6px 16px ${c.primary}55`} as ViewStyle)}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({pressed}) => ({width: size, height: size, borderRadius: size / 2, ...gradientStyle(c.brand, c.primary), alignItems: 'center', justifyContent: 'center', opacity: pressed ? .75 : 1, boxShadow: `0px 6px 16px ${c.primary}55`} as ViewStyle)}>
     <Ionicons name={active ? 'pause' : 'play'} size={size * .45} color="#FFFFFF" style={{marginLeft: active ? 0 : size * .05}}/>
   </Pressable>;
 }
