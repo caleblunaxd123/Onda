@@ -1,3 +1,23 @@
+# Progreso — radios mundiales, 2026-10-28
+
+ONDA 0.7.0/code11 publicada con autorización del propietario. Se tomó `main` a97f976 y se añadió
+la preparación de producción en 180c737 (PR #3). Inicio, Mundo, Radar y Biblioteca; sin cuentas,
+salas, chat, video ni IA. Biblioteca local conservada al actualizar la beta con `install -r`.
+
+API `onda-api:20261028-070-radio`, web exportada y APK público de 117.248.287 bytes. SQL no se migró
+ni se borraron datos sociales. Respaldo cifrado con restauración independiente comprobada.
+Ollama de ONDA detenido, volumen preservado; otros servicios conservan su actividad anterior.
+
+69 pruebas backend SQL, 38 móviles, tipos/lint y CI correctos. API live/ready 200, CORS permitido
+solo al origen configurado, rutas sociales 404, HTML idéntico al export/no-store/Cloudflare DYNAMIC,
+bundles y APK públicos comparados. Catálogo: 69.768 registradas, 36.757 HTTPS, 220 países.
+Smoke real de búsqueda/paginación/mapa/facetas correcto; no se enviaron reportes artificiales.
+
+Emulador: actualización sin borrar datos, favorito RTL conservado, inicio mundial y reproducción
+observada de Radio La Zona Urbana; web con mapa y Radio Oxígeno en vivo. No afirmar pruebas físicas
+ni reproducción de todas las emisoras. Ver [despliegue](DEPLOYMENT.md) y [Play Store](PLAY_STORE_READINESS.md).
+Las notas de abajo son históricas, no el estado de la publicación actual.
+
 # Progreso — 2026-10-12
 
 ## Actualización 2026-10-13: logo, diseño del modelo, segundo plano y APK
