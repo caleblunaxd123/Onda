@@ -92,7 +92,9 @@ export const useLibrary = create<Library>()(persist((set) => ({
   merge: (persisted, current) => {
     const saved = (persisted ?? {}) as Partial<Library>;
     const existing = !!saved.favorites?.length || !!saved.history?.length || !!saved.collections?.length;
-    return {...current, ...saved, onboarded: saved.onboarded ?? existing};
+    // The previous social beta also offered "soft". Keep its light appearance without an invalid setting.
+    const theme = saved.theme === 'dark' || saved.theme === 'light' || saved.theme === 'system' ? saved.theme : 'light';
+    return {...current, ...saved, theme: saved.theme ? theme : current.theme, onboarded: saved.onboarded ?? existing};
   },
 }));
 

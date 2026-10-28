@@ -1,15 +1,26 @@
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Onda.Api;
 using Onda.Application;
 using Onda.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 1_000_000);
+// Production mounts the SQL credential as a read-only file, never in the image or public env.
+if (builder.Configuration["ConnectionStringFile"] is {Length: > 0} connectionFile)
+    builder.Configuration["ConnectionStrings:Onda"] = File.ReadAllText(connectionFile).Trim();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    ProxyHeaders.Configure(options, builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? []));
 builder.Logging.AddJsonConsole();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options => options.AddPolicy("LocalWebPreview", policy =>
     policy.WithOrigins("http://localhost:8081", "http://127.0.0.1:8081")
+        .WithMethods("GET", "POST").AllowAnyHeader()));
+builder.Services.AddCors(options => options.AddPolicy("AppWeb", policy =>
+    policy.WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [])
         .WithMethods("GET", "POST").AllowAnyHeader()));
 builder.Services.AddDbContext<OndaDbContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("Onda")
     ?? throw new InvalidOperationException("Configure ConnectionStrings__Onda."), sql => sql.EnableRetryOnFailure(3)));
@@ -28,8 +39,10 @@ builder.Services.AddRateLimiter(o =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new() { PermitLimit = 10, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
 });
 var app = builder.Build();
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 if (app.Environment.IsDevelopment()) app.UseCors("LocalWebPreview");
+else app.UseCors("AppWeb");
 app.UseRateLimiter();
 app.UseOutputCache();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
@@ -79,6 +92,25 @@ api.MapPost("/stations/{id:guid}/reports", async (Guid id, ReportRequest body, I
         : Results.Created($"/api/v1/reports/{reportId}", new { id = reportId, status = "received" });
 }).RequireRateLimiting("reports");
 api.MapGet("/moods", () => Recommendations.Moods);
+
+if (builder.Configuration["PublicAssetsPath"] is { } assets && Directory.Exists(assets))
+{
+    var files = new StaticFileOptions {FileProvider = new PhysicalFileProvider(assets), OnPrepareResponse = context =>
+    {
+        if (context.File.Name.Equals("index.html", StringComparison.OrdinalIgnoreCase))
+            context.Context.Response.Headers.CacheControl = "no-store, max-age=0";
+    }};
+    app.UseStaticFiles(files);
+    app.MapGet("/downloads/ONDA-beta.apk", () => File.Exists(Path.Combine(assets, "downloads", "ONDA-beta.apk"))
+        ? Results.File(Path.Combine(assets, "downloads", "ONDA-beta.apk"), "application/vnd.android.package-archive", "ONDA-beta.apk", enableRangeProcessing: true)
+        : Results.Problem("La descarga se está preparando.", statusCode: 503)).CacheOutput(p => p.NoCache());
+    // Retired API routes must never return the SPA HTML, including requests on the web hostname.
+    app.MapMethods("/api/{**path}", ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], () => Results.NotFound());
+    app.MapMethods("/hubs/{**path}", ["GET", "POST", "OPTIONS"], () => Results.NotFound());
+    foreach (var retired in new[] {"/room", "/rooms", "/create-room", "/account", "/verify-email", "/ai"})
+        app.MapGet(retired, () => Results.Redirect("/"));
+    app.MapFallbackToFile("index.html", files).RequireHost("onda.lunalav.pe");
+}
 
 if (args.Contains("--migrate"))
 {
