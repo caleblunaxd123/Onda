@@ -6,6 +6,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.4" />
+    <!-- Patch the SQL client's transitive PKCS dependency without changing the database model. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.22" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

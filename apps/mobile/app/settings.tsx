@@ -25,11 +25,11 @@ export default function Settings() {
   };
   const synced = status.data?.lastCompletedSync ? new Date(status.data.lastCompletedSync).toLocaleString('es', {dateStyle: 'medium', timeStyle: 'short'}) : null;
   return <View style={{flex: 1, backgroundColor: c.bg}}>
-    <ScreenHeader title="Perfil y ajustes" back/>
+    <ScreenHeader title="Ajustes" back/>
     <Page>
       <Card style={{flexDirection: 'row', alignItems: 'center', gap: 14}}>
         <View style={{width: 54, height: 54, borderRadius: 27, backgroundColor: c.primary + '1C', alignItems: 'center', justifyContent: 'center'}}><Ionicons name="person" size={26} color={c.primaryText}/></View>
-        <View style={{flex: 1}}><Label style={{fontWeight: '800', fontSize: 17}}>Modo invitado</Label><Muted>Tu biblioteca vive solo en este dispositivo. Las cuentas y la sincronización aún no están disponibles.</Muted></View>
+        <View style={{flex: 1}}><Label style={{fontWeight: '800', fontSize: 17}}>Tu radio, a tu ritmo</Label><Muted>Tus favoritos, colecciones e historial se guardan en este dispositivo.</Muted></View>
       </Card>
       <View style={[cardStyle(c), {paddingHorizontal: 16, paddingVertical: 4}]}>
         <Row icon="flag-outline" label="País" value={`${flag(library.country)} ${countryName}${library.countryMode === 'auto' ? ' · auto' : ''}`} onPress={() => setSheet('country')}/>
@@ -50,7 +50,7 @@ export default function Settings() {
         <Muted style={{fontSize: 14, lineHeight: 20}}>ONDA no solicita tu ubicación GPS ni graba transmisiones. Al escuchar, la emisora recibe tu conexión. Los reportes de problemas se guardan en el servidor de ONDA sin datos de cuenta.</Muted>
         <Button title="Borrar biblioteca local" icon="trash-outline" secondary onPress={clear}/>
       </View>
-      <Muted style={{textAlign: 'center', fontSize: 12}}>ONDA · El mundo suena aquí · Versión {Constants.expoConfig?.version ?? 'dev'} (desarrollo)</Muted>
+      <Muted style={{textAlign: 'center', fontSize: 12}}>ONDA · El mundo suena aquí · Versión {Constants.expoConfig?.version ?? 'dev'} · Beta</Muted>
     </Page>
     {sheet === 'country' && <OptionPicker title="País de tus radios" selected={library.countryMode === 'auto' ? 'auto' : library.country} onClose={() => setSheet(null)}
       onSelect={value => value === 'auto' && detected ? library.followDeviceCountry(detected.code) : library.setCountry(value)}

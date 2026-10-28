@@ -3,7 +3,11 @@
 
 Aplicación móvil de radios con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: implementación funcional en desarrollo; **MVP todavía no aceptado** (faltan pruebas físicas).
+Estado: **beta 0.7.0 de radios publicada en Contabo y Cloudflare**. Web/API/APK verificados; pruebas físicas y preparación de Google Play pendientes.
+
+Web: https://onda.lunalav.pe · [APK Android 0.7.0](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.0&build=11.1).
+Actualiza la beta anterior conservando la biblioteca; no requiere Metro. Firma beta, todavía no de tiendas.
+[Despliegue y rollback](docs/DEPLOYMENT.md) · [Preparación de Play Store](docs/PLAY_STORE_READINESS.md).
 
 ## Enfoque
 Solo radios mundiales: escuchar, buscar, explorar el mapa y guardar favoritos.
@@ -11,7 +15,8 @@ El inicio abre directamente, sin exigir elegir país ni géneros, y muestra radi
 El país sigue disponible como filtro; no limita el catálogo de inicio. Sin salas, chat ni IA.
 
 ## Qué incluye
-- Catálogo de ~68.000 emisoras de Radio Browser sincronizado en SQL Server (solo se reproducen streams HTTPS),
+- Catálogo de Radio Browser sincronizado en SQL Server: 69.768 registradas y 36.757 variantes HTTPS disponibles
+  en 220 países al publicar el 2026-10-28 (el catálogo y la disponibilidad cambian),
   con paginación por cursor, recuentos reales, variantes y fuentes alternativas, y disponibilidad sin falsas «caídas».
 - Inicio con descubrimiento mundial y populares globales, búsqueda con filtros
   (país, ciudad, idioma, género), mapa por área visible con clusters, Radio Radar con carga progresiva,
@@ -56,8 +61,8 @@ Servidor `.\SQLEXPRESS`, autenticación Windows, base `Onda`. Tablas y consultas
 Las migraciones se aplican explícitamente, nunca al iniciar la API.
 
 ## Verificación
-- `npm run check:mobile` — TypeScript, ESLint y 37 pruebas.
-- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 62 pruebas, incluidas 10 con SQL Server real.
+- `npm run check:mobile` — TypeScript, ESLint y 38 pruebas.
+- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 69 pruebas, incluidas integraciones con SQL Server real y alojamiento de producción.
 - `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1` — catálogo real de extremo a extremo.
 - `curl http://localhost:5080/api/v1/catalog/status`
 

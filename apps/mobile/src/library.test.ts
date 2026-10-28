@@ -5,6 +5,13 @@ const storage = vi.hoisted(() => ({getItem:vi.fn(async (_key:string):Promise<str
 vi.mock('@react-native-async-storage/async-storage',()=>({default:storage}));
 const station:Station={id:'a',name:'Fixture',country:'Peru',countryCode:'PE',language:'spanish',tags:[],streamUrl:'https://example.com/test',artworkUrl:null,codec:'MP3',bitrate:128,votes:0,latitude:null,longitude:null};
 beforeEach(()=>{useLibrary.getState().clear();vi.clearAllMocks();});
+it('keeps radio favorites and collections when upgrading from the social beta soft theme',async()=>{
+ storage.getItem.mockResolvedValueOnce(JSON.stringify({state:{theme:'soft',favorites:[station],history:[],collections:[{id:'saved',name:'Viajes',stations:[station]}]},version:0}));
+ await useLibrary.persist.rehydrate();
+ expect(useLibrary.getState().theme).toBe('light');
+ expect(useLibrary.getState().favorites[0].id).toBe(station.id);
+ expect(useLibrary.getState().collections[0].name).toBe('Viajes');
+});
 it('toggles favorites without duplicates and persists locally',()=>{
  useLibrary.getState().toggle(station);expect(useLibrary.getState().favorites).toHaveLength(1);
  expect(storage.setItem).toHaveBeenCalled();

@@ -1,8 +1,8 @@
 # Pruebas
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
-  con `ONDA_TEST_SQL` definido). 62 pruebas: 52 unitarias/API + 10 de integración con SQL Server real.
-- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 37 pruebas.
+  con `ONDA_TEST_SQL` definido). 69 pruebas: catálogo/API/SQL real, proxy y alojamiento de producción.
+- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 38 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
 - Compatibilidad: en apps/mobile `npx expo install --check`; bundling `npx expo export --platform android`.
@@ -63,3 +63,23 @@ ni segundo plano prolongado.
 7. Cerrar/reabrir la app: conservar colecciones y favoritos.
 8. Rehidratar almacenamiento anterior sin colecciones: conservar biblioteca previa.
 9. Probar formulario, teclado y hojas inferiores en tema claro/oscuro y con texto grande.
+
+## Publicación de radios 0.7.0 — 2026-10-28
+
+- Backend 69/69, cero omitidas; móvil 38/38, TypeScript/ESLint sin errores.
+- Pruebas de producción: orígenes CORS, confianza de proxy, index sin caché, APK con rangos
+  y rutas retiradas404 en vez de HTML. Regresión de favoritos/colecciones y tema soft de la beta social.
+- `smoke-api.ps1` público: 200 IDs únicos en cuatro páginas de Perú, total 257; mapa 115 en 13 celdas;
+  42 lugares, facetas de géneros/idiomas, descubrimiento 20 y emisoras sin coordenadas 197.
+- Publicación pública: API live/ready 200, catálogo SQL, CORS permitido/denegado, rutas sociales 404,
+  redirección de enlace antiguo de sala al inicio, index y tres assets idénticos al export, Cloudflare DYNAMIC.
+- APK público descargado completo: 117.248.287 bytes y SHA256 igual al local. Versión0.7.0/code11,
+  misma firma beta, tres ABI, sin permiso de micrófono/GPS, HTTP claro desactivado, bundle sin salas/auth.
+- zipalign de 16 KB y segmentos LOAD de 44 bibliotecas nativas de 64 bits alineados a 16 KB. No es ejecución en 16 KB.
+- Android: instalación `-r`, favorito RTL retenido, pantalla de inicio y biblioteca sin funciones sociales;
+  reproducción de Radio La Zona Urbana observada en UI y sesión multimedia. El propietario también
+  interactuó durante la revisión; no atribuir todas esas selecciones a un script autónomo.
+- Web: mapa renderizado con tiles, clusters, 82 emisoras en área visible y reproducción de Radio Oxígeno.
+- Evidencia: `android-070-radio-home.png`, `android-070-radio-playback.png`, `web-070-radio-world.jpg`.
+- Teléfonos físicos, redes móviles, llamadas, auriculares/Bluetooth, pantalla bloqueada y consumo siguen pendientes.
+- Logs privados en `.tools/radio-070-*`; no se versionan claves, sesiones ni respaldos.

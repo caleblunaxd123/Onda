@@ -1,6 +1,6 @@
 {
   "name": "@onda/mobile",
-  "version": "0.1.0",
+  "version": "0.7.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -54,6 +54,9 @@
   },
   "private": true,
   "overrides": {
+    "query-string": {
+      "decode-uri-component": "0.5.1"
+    },
     "xcode": {
       "uuid": "^11.1.1"
     }
