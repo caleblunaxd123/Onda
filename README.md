@@ -5,10 +5,15 @@ Aplicación móvil de radios con Expo / React Native (SDK 57) y API ASP.NET Core
 Base de datos: **SQL Server**, por decisión del propietario.
 Estado: implementación funcional en desarrollo; **MVP todavía no aceptado** (faltan pruebas físicas).
 
+## Enfoque
+Solo radios mundiales: escuchar, buscar, explorar el mapa y guardar favoritos.
+El inicio abre directamente, sin exigir elegir país ni géneros, y muestra radios de todo el mundo.
+El país sigue disponible como filtro; no limita el catálogo de inicio. Sin salas, chat ni IA.
+
 ## Qué incluye
 - Catálogo de ~68.000 emisoras de Radio Browser sincronizado en SQL Server (solo se reproducen streams HTTPS),
   con paginación por cursor, recuentos reales, variantes y fuentes alternativas, y disponibilidad sin falsas «caídas».
-- Inicio personalizado por el país detectado (zona horaria del dispositivo, sin GPS), búsqueda con filtros
+- Inicio con descubrimiento mundial y populares globales, búsqueda con filtros
   (país, ciudad, idioma, género), mapa por área visible con clusters, Radio Radar con carga progresiva,
   reproductor global con reintentos y fuentes alternativas, reportes de problemas, biblioteca local con colecciones.
 - Diseño según docs/design-reference.png, tema claro/oscuro/automático. Capturas: docs/screenshots.

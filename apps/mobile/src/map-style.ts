@@ -37,5 +37,5 @@ export function useMapStyle(dark: boolean): string | StyleSpecification | null {
       .finally(() => clearTimeout(fallback));
     return () => {clearTimeout(fallback); controller.abort();};
   }, [url]);
-  return style?.url === url ? style.value : null;
+  return style && style.url === url ? style.value : null;
 }
