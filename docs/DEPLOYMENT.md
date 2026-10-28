@@ -1,3 +1,28 @@
+# Publicación actual — 0.7.1/code12, 2026-10-28
+
+Web y APK publicados desde `b439759` en PR #4. Cambio de interfaz, sin reiniciar API,
+reemplazar su imagen, modificar Compose/secrets ni aplicar migraciones.
+
+- Web: https://onda.lunalav.pe (escritorio y móvil, Inmersivo ONDA).
+- APK: https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.1&build=12.1
+- SHA256 APK: `753a8efa18a25da374750915fdd2c2e44ac6b158abfa4c56e7fa1e3e2ac47c43`;
+  117.284.423 bytes. Firma beta anterior conservada; no es firma de tienda.
+- API conserva `onda-api:20261028-070-radio` y el mismo contenedor activo.
+- Export web con `EXPO_NO_DOTENV=1`, `APP_VARIANT=preview` y `EXPO_PUBLIC_API_URL` definido
+  como cadena vacía: usa `/api/v1/` en el mismo origen, atendido por el proxy existente.
+  Para reproducir el export puede usarse Node `spawnSync` con esa variable vacía en `env`;
+  evitar que `.env.local` sustituya el destino. APK usa URL HTTPS absoluta de la API.
+- Assets publicados primero, conservando bundles anteriores. Index/APK sustituidos atómicamente;
+  copias privadas anteriores verificadas por hash en `/opt/onda/releases/desktop-071-before-index.bak`
+  y `desktop-071-before-apk.bak`. Registro privado: `desktop-071-release.json`.
+- Rollback 0.7.1: restaurar únicamente esas dos copias mediante reemplazo atómico y permisos 0644.
+  No tocar API, SQL ni otros servicios. No restaurar el Compose de 0.6.x para revertir una interfaz.
+- Comprobar HTML/bundle público y hash APK por la URL nueva a través de Cloudflare, además de ready
+  y consulta por país. El HTML lleva `no-store`; Cloudflare puede inyectar su beacon existente:
+  comparar el contenido de la app excluyendo solo ese script, además de verificar bytes del bundle.
+
+El procedimiento siguiente documenta la transición inicial 0.7.0 y su rollback separado.
+
 # ONDA radios: Contabo y Cloudflare
 
 Revisión 2026-10-28. La base de esta entrega es `main` en `a97f976`; la preparación

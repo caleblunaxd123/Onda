@@ -1,3 +1,36 @@
+# Progreso — ONDA Experience 0.7.1, 2026-10-28
+
+Web y APK 0.7.1/code12 publicados desde `b439759` (PR #4, apilada sobre #3).
+La API conserva `onda-api:20261028-070-radio`, sin reinicios ni cambios de SQL/migraciones.
+
+- Web de escritorio desde 1000 px: navegación lateral, tarjetas compactas en columnas, búsqueda
+  con filtros, mapa con panel derecho, biblioteca, Radar y reproductor fijo con volumen real.
+- Inmersivo ONDA restaurado en Android/web: ondas estáticas cian, azul y violeta, superficies
+  coherentes y navegación transparente. Actualización de antiguos temas oscuros una vez;
+  las elecciones explícitas nuevas de claro/oscuro/automático se conservan.
+- Inicio: destacada del país, favoritas de acceso rápido, emisoras nacionales, historial y
+  descubrimiento mundial. País sugerido por zona horaria/idioma o elegido en Ajustes, sin GPS.
+  Es una sugerencia de país; no detecta la ciudad ni acredita dónde vive una persona.
+- Corregidos adaptador de iconos web, pestañas inactivas visibles tras fondos transparentes y
+  desplazamiento del mapa por avisos de error. Colecciones conservan altas, renombrado y retiro de radios.
+- 41 pruebas del cliente, TypeScript/ESLint y export web correctos. CI de código `b439759`:
+  [push](https://github.com/caleblunaxd123/Onda/actions/runs/40780518853) y
+  [PR](https://github.com/caleblunaxd123/Onda/actions/runs/40780586048), backend y móvil correctos.
+- QA visual a 390/768/1440/1920 px, mapa real, búsqueda, reproducción de Radio Oxígeno,
+  volumen/silencio, temporizador, favoritas persistentes y creación de colección local.
+  Emulador actualizado sobre code11: favoritos Radio La Zona Urbana/RTL conservados, país
+  modificado en Ajustes e inicio correspondiente, reproducción nativa observada EN VIVO.
+- Copias de index/APK anteriores verificadas en `/opt/onda/releases/desktop-071-before-*`;
+  sustitución atómica y API sin cambios. No se alteró ninguna otra aplicación del VPS.
+- Comprobación pública: HTML de la app coincide al excluir el beacon existente de Cloudflare,
+  CSS/bundle coinciden byte a byte, worker servido como JavaScript, consulta por país y ready 200;
+  APK descargado de Cloudflare coincide en tamaño y SHA256. Captura `web-071-desktop-production.jpg`.
+
+APK: [0.7.1 build12.1](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.1&build=12.1),
+117.284.423 bytes, SHA256 `753a8efa18a25da374750915fdd2c2e44ac6b158abfa4c56e7fa1e3e2ac47c43`.
+Firma beta compatible, tres ABI, HTTPS, sin GPS/micrófono. Pruebas físicas y publicación en tienda pendientes.
+Las notas siguientes son históricas.
+
 # Progreso — radios mundiales, 2026-10-28
 
 ONDA 0.7.0/code11 publicada con autorización del propietario. Se tomó `main` a97f976 y se añadió
