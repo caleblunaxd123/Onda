@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { AppState, Platform, View } from 'react-native';
-import { Stack } from 'expo-router';
+import { AppState, View } from 'react-native';
+import {DarkTheme, DefaultTheme, Stack, ThemeProvider} from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,8 @@ import { libraryIds, useLibrary } from '../src/library';
 import { useTheme } from '../src/theme';
 import { deviceCountry } from '../src/region';
 import { Label } from '../src/ui';
+import WebShell from '../src/web/shell';
+import {OndaAmbientBackground} from '../src/ambient';
 const queryClient = new QueryClient();
 const REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;
 
@@ -48,17 +50,17 @@ export default function RootLayout() {
     return () => {network(); app.remove(); hydration();};
   }, []);
   return <GestureHandlerRootView style={{flex: 1, backgroundColor: c.bg}}>
-    <View style={[{flex: 1}, Platform.OS === 'web' && {width: '100%', maxWidth: 480, alignSelf: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: c.border}]}>
+    <View style={{flex: 1, width: '100%'}}>
       <SafeAreaProvider><QueryClientProvider client={queryClient}><SafeAreaView edges={['top']} style={{flex: 1, backgroundColor: c.bg}}>
-        <StatusBar style={c.isDark ? 'light' : 'dark'}/>
+        <OndaAmbientBackground/><ThemeProvider value={{...(c.isDark ? DarkTheme : DefaultTheme), colors: {...(c.isDark ? DarkTheme : DefaultTheme).colors, background: 'transparent', card: c.bg, text: c.text, border: c.border, primary: c.primary}}}><WebShell><StatusBar style={c.isDark ? 'light' : 'dark'}/>
         {error ? <View style={{padding: 16}}><Label>{error}</Label></View> : null}
-        <Stack screenOptions={{headerShown: false, contentStyle: {backgroundColor: c.bg}, animation: 'slide_from_right'}}>
+        <Stack screenOptions={{headerShown: false, contentStyle: {backgroundColor: 'transparent'}, animation: 'slide_from_right'}}>
           <Stack.Screen name="(tabs)"/>
           <Stack.Screen name="player" options={{presentation: 'modal', animation: 'slide_from_bottom'}}/>
           <Stack.Screen name="search"/>
           <Stack.Screen name="settings"/>
           <Stack.Screen name="onboarding" options={{animation: 'fade', gestureEnabled: false}}/>
-        </Stack>
+        </Stack></WebShell></ThemeProvider>
       </SafeAreaView></QueryClientProvider></SafeAreaProvider>
     </View>
   </GestureHandlerRootView>;

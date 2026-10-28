@@ -4,27 +4,28 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { sendReport, useStationFeed, type ReportKind } from '../src/catalog';
 import { isActive, player, usePlayer } from '../src/player';
-import { useTheme } from '../src/theme';
+import { gradientStyle, useTheme } from '../src/theme';
 import { Ionicons } from '../src/icons';
 import { ActionRow, Artwork, Button, Card, CollectionPicker, EmptyState, Favorite, IconButton, Label, LiveBadge, Muted, PlayButton, SectionTitle, Sheet, StationRow, flag, stateLabels, tagLabel } from '../src/ui';
 import type { Station } from '../src/types';
 import { Equalizer, SoundWaves } from '../src/waves';
+import {useDesktop} from '../src/web/layout';
 
 export default function FullPlayer() {
-  const c = useTheme(); const s = usePlayer();
+  const c = useTheme(); const s = usePlayer(); const desktop = useDesktop();
   const station = s.station;
   const similar = useStationFeed({tag: station?.tags[0], order: 'discover', exclude: station ? [station.id] : []}, {limit: 8, enabled: !!station?.tags[0]});
   const [sheet, setSheet] = useState<'timer' | 'report' | 'collection' | null>(null);
   const close = () => router.canGoBack() ? router.back() : router.replace('/');
-  if (!station) return <View style={{flex: 1, backgroundColor: c.bg, padding: 20}}>
+  if (!station) return <View style={{flex: 1, backgroundColor: 'transparent', padding: 20}}>
     <IconButton icon="chevron-down" plain label="Cerrar reproductor" onPress={close}/>
     <EmptyState icon="radio-outline" title="Tu mundo, en directo" body="Elige una emisora en Inicio, Mundo o Radar para empezar."><Button title="Explorar emisoras" onPress={() => router.replace('/')}/></EmptyState>
   </View>;
   const active = isActive(s.state);
   const status = s.state === 'playing' && !s.error ? null : s.error ?? stateLabels[s.state];
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
-    <ScrollView contentContainerStyle={{paddingBottom: 32}}>
-      <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 30, gap: 14, alignItems: 'center', borderBottomLeftRadius: 32, borderBottomRightRadius: 32, backgroundColor: c.featuredFallback, experimental_backgroundImage: c.featured} as ViewStyle}>
+  return <View style={{flex: 1, backgroundColor: 'transparent'}}>
+    <ScrollView contentContainerStyle={{paddingBottom: 32, ...(desktop ? {flexDirection: 'row', alignItems: 'flex-start', gap: 28, padding: 28, maxWidth: 1400, width: '100%', alignSelf: 'center'} : {})}}>
+      <View style={{paddingHorizontal: 20, paddingTop: 8, paddingBottom: 30, gap: 14, alignItems: 'center', borderBottomLeftRadius: 32, borderBottomRightRadius: 32, ...gradientStyle(c.featured, c.featuredFallback), ...(desktop ? {flex: 1, minWidth: 350, borderRadius: 28} : {})} as ViewStyle}>
         <View style={{flexDirection: 'row', alignSelf: 'stretch', alignItems: 'center'}}>
           <IconButton icon="chevron-down" plain tint="#FFFFFF" label="Cerrar reproductor" onPress={close}/>
           <Label style={{flex: 1, textAlign: 'center', color: '#D7DEF2', fontSize: 12, letterSpacing: 2, fontWeight: '700'}}>AHORA SUENA</Label>
@@ -57,7 +58,7 @@ export default function FullPlayer() {
         {s.sources > 1 && <Label style={{color: '#B9C3DE', fontSize: 12}}>Fuente {s.source} de {s.sources}{s.state === 'connecting' && s.attempt > 1 ? ` · intento ${s.attempt}` : ''}</Label>}
       </View>
 
-      <View style={{paddingHorizontal: 20, paddingTop: 18, gap: 18}}>
+      <View style={{paddingHorizontal: 20, paddingTop: 18, gap: 18, ...(desktop ? {flex: 1, paddingHorizontal: 0, paddingTop: 0} : {})}}>
         <Card style={{flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 14}}>
           <Option icon="timer-outline" label="Temporizador" value={s.sleepAt ? new Date(s.sleepAt).toLocaleTimeString('es', {hour: '2-digit', minute: '2-digit'}) : 'Apagado'} onPress={() => setSheet('timer')}/>
           <Option icon="pulse-outline" label="Calidad" value={[station.codec, station.bitrate > 0 ? station.bitrate + ' kbps' : ''].filter(Boolean).join(' · ') || 'Sin datos'}/>

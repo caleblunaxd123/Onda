@@ -69,9 +69,9 @@ export function MapCountBadge({explorer: e}: {explorer: WorldExplorer}) {
 }
 
 /** Bottom panel shared by the native and web maps: filters, real counts, selection and the synced list. */
-export function WorldPanel({explorer: e, onFocusStation, onFocusCountry, onFocusPlace, onReset}: {
+export function WorldPanel({explorer: e, onFocusStation, onFocusCountry, onFocusPlace, onReset, desktop = false}: {
   explorer: WorldExplorer; onFocusStation: (station: Station) => void; onFocusCountry: (bounds: Bounds | null) => void;
-  onFocusPlace: (lat: number, lon: number) => void; onReset: () => void;
+  onFocusPlace: (lat: number, lon: number) => void; onReset: () => void; desktop?: boolean;
 }) {
   const c = useTheme(); const playback = usePlayer();
   const [picker, setPicker] = useState<'country' | 'place' | 'more' | null>(null);
@@ -85,8 +85,8 @@ export function WorldPanel({explorer: e, onFocusStation, onFocusCountry, onFocus
     if (index >= 0) listRef.current?.scrollToIndex({index, viewPosition: 0, animated: true});
   }, [e.selectedId, e.list.items]);
   const fetching = e.area.isFetching || e.list.isFetching;
-  return <View style={[cardStyle(c), {flex: 1, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 8, paddingHorizontal: 14, backgroundColor: c.bg}]}>
-    <View style={{alignSelf: 'center', width: 44, height: 5, borderRadius: 4, backgroundColor: c.border, marginBottom: 10}}/>
+  return <View style={[cardStyle(c), {flex: 1, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderTopLeftRadius: desktop ? 0 : 28, borderTopRightRadius: desktop ? 0 : 28, marginTop: desktop ? 0 : -24, paddingTop: desktop ? 20 : 8, paddingHorizontal: 14, backgroundColor: c.bg}]}>
+    {!desktop && <View style={{alignSelf: 'center', width: 44, height: 5, borderRadius: 4, backgroundColor: c.border, marginBottom: 10}}/>}
     <View style={{flexDirection: 'row', alignItems: 'center', gap: 12}}>
       <View style={{width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', backgroundColor: c.primary + '1A'}}>
         <Label style={{fontSize: 28, lineHeight: 34}}>{e.country ? flag(e.country) : '🌍'}</Label>

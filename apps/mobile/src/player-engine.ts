@@ -1,8 +1,8 @@
 import type { PlaybackState, Station } from './types';
 export type NativeStatus = {playing: boolean; loaded: boolean; buffering: boolean; error?: boolean; finished?: boolean};
-export type Handle = {play(): void; pause(): void; dispose(): void};
+export type Handle = {play(): void; pause(): void; dispose(): void; setVolume?(value: number): void};
 export type Snapshot = {
-  station: Station | null; state: PlaybackState; error: string | null; sleepAt: number | null;
+  station: Station | null; state: PlaybackState; error: string | null; sleepAt: number | null; volume: number;
   /** Stream currently tried and its position among the station's HTTPS sources. */
   streamUrl: string | null; source: number; sources: number; attempt: number;
 };
@@ -25,7 +25,7 @@ const idle = {streamUrl: null, source: 0, sources: 0, attempt: 0};
  * generation counter discards late events from released handles, so only one stream can be active.
  */
 export class PlayerEngine {
-  snapshot: Snapshot = {station: null, state: 'idle', error: null, sleepAt: null, ...idle};
+  snapshot: Snapshot = {station: null, state: 'idle', error: null, sleepAt: null, volume: 1, ...idle};
   private listeners = new Set<() => void>();
   private handle?: Handle;
   private generation = 0;
@@ -88,6 +88,7 @@ export class PlayerEngine {
           if (this.snapshot.state !== 'paused') this.update({state: 'paused'});
         }
       });
+      this.handle.setVolume?.(this.snapshot.volume);
       this.armWatchdog(); this.handle.play();
     } catch {this.fail();}
   }
@@ -122,6 +123,11 @@ export class PlayerEngine {
     this.online = online;
     if (!online && this.wanted) {this.release(); this.watchdog = undefined; this.update({state: 'error', error: 'Sin conexión. Se retomará cuando vuelva internet.'});}
     else if (online && this.wanted) {this.sourceAttempts = 0; this.totalAttempts = 0; this.connect();}
+  };
+  setVolume = (value: number) => {
+    if (!Number.isFinite(value)) return;
+    const volume = Math.max(0, Math.min(1, value));
+    this.handle?.setVolume?.(volume); this.update({volume});
   };
   setSleep = (minutes: number) => {
     clearTimeout(this.sleep);

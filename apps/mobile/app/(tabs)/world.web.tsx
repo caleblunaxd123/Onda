@@ -1,3 +1,4 @@
+import {FocusedRoute} from '../../src/web/focused-route.web';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Map as BrowserMap, NavigationControl, setWorkerUrl, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
@@ -7,9 +8,10 @@ import { BrandHeader, IconButton, Muted } from '../../src/ui';
 import { router } from 'expo-router';
 import { MapCountBadge, WorldPanel, clusterColor, clusterRadius, useWorldExplorer, type Bounds } from '../../src/world';
 import { useMapStyle } from '../../src/map-style';
+import {useDesktop} from '../../src/web/layout';
 
 export default function WorldWeb() {
-  const c = useTheme(); const explorer = useWorldExplorer();
+  const c = useTheme(); const explorer = useWorldExplorer(); const desktop = useDesktop();
   const [error, setError] = useState('');
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<BrowserMap | null>(null);
@@ -42,7 +44,7 @@ export default function WorldWeb() {
       report();
       const {countries, preferred} = latest.current;
       const bounds = countries.data?.find(x => x.code === preferred)?.bounds;
-      if (!centered.current && bounds) {centered.current = true; instance.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: 40, duration: 900});}
+      if (!desktop && !centered.current && bounds) {centered.current = true; instance.fitBounds([[bounds[0], bounds[1]], [bounds[2], bounds[3]]], {padding: 40, duration: 900});}
     });
     instance.on('moveend', report);
     const onPoint = (event: MapMouseEvent & {features?: GeoJSON.Feature[]}) => {
@@ -60,36 +62,36 @@ export default function WorldWeb() {
     instance.on('error', () => setError('Algunas capas del mapa no se pudieron cargar. La lista sigue disponible.'));
     const observer = new ResizeObserver(() => instance.resize()); observer.observe(container.current);
     return () => {observer.disconnect(); instance.remove(); map.current = null;};
-  }, [style]);
+  }, [style, desktop]);
 
   useEffect(() => {(map.current?.getSource('stations') as GeoJSONSource | undefined)?.setData(explorer.features);}, [explorer.features]);
   useEffect(() => {if (map.current?.getLayer('selected')) map.current.setFilter('selected', ['==', ['get', 'stationId'], explorer.selectedId ?? '-']);}, [explorer.selectedId]);
   // Start on the preferred country (from settings or time zone, never GPS) once both the map and the bounds are ready.
   useEffect(() => {
-    if (centered.current || !explorer.countries.data || !map.current?.loaded()) return;
+    if (desktop || centered.current || !explorer.countries.data || !map.current?.loaded()) return;
     centered.current = true;
     fit(explorer.countries.data.find(x => x.code === explorer.preferred)?.bounds ?? null);
-  }, [explorer.countries.data, explorer.preferred]);
+  }, [desktop, explorer.countries.data, explorer.preferred]);
 
-  return <View style={{flex: 1, backgroundColor: c.bg}}>
-    <BrandHeader title="Explorar el mundo" emoji="🌍" subtitle="Toca un grupo para acercarte o una emisora para oírla.">
+  return <FocusedRoute><View style={{flex: 1, backgroundColor: c.bg}}>
+    {!desktop && <BrandHeader title="Explorar el mundo" emoji="🌍" subtitle="Toca un grupo para acercarte o una emisora para oírla.">
       <IconButton icon="settings-outline" label="Ajustes" onPress={() => router.push('/settings')}/>
-    </BrandHeader>
-    <View style={{flex: 1, minHeight: 220}}>
+    </BrandHeader>}
+    <View style={{flex: 1, flexDirection: desktop ? 'row' : 'column'}}><View style={{flex: 1, minWidth: 0, minHeight: 220}}>
       <div ref={container} aria-label="Mapa de emisoras" style={{position: 'absolute', inset: 0}}/>
       <View style={{position: 'absolute', right: 12, top: 110, gap: 10}}>
         <IconButton icon="globe-outline" label="Ver todo el mundo" onPress={() => map.current?.flyTo({center: [-30, 10], zoom: 1})}/>
         <IconButton icon="navigate" label="Centrar en mi país (sin GPS)" onPress={() => fit(explorer.countries.data?.find(x => x.code === explorer.preferred)?.bounds ?? null)}/>
       </View>
       <MapCountBadge explorer={explorer}/>
+      {!!error && <View style={{position: 'absolute', top: 12, left: 12, right: 60, backgroundColor: c.surface, padding: 10, borderRadius: 12}}><Muted style={{color: c.live}}>{error}</Muted></View>}
     </View>
-    {!!error && <Muted style={{color: c.live, paddingHorizontal: 20, paddingTop: 4}}>{error}</Muted>}
-    <View style={{flex: 1.15}}>
-      <WorldPanel explorer={explorer}
+    <View style={desktop ? {width: 380, flexShrink: 0, borderLeftWidth: 1, borderColor: c.border} : {flex: 1.15}}>
+      <WorldPanel desktop={desktop} explorer={explorer}
         onFocusStation={s => {if (s.latitude !== null && s.longitude !== null) map.current?.flyTo({center: [s.longitude, s.latitude], zoom: Math.max(map.current.getZoom(), 7)});}}
         onFocusCountry={fit}
         onFocusPlace={(lat, lon) => map.current?.flyTo({center: [lon, lat], zoom: 8})}
         onReset={() => map.current?.flyTo({center: [-30, 10], zoom: 1})}/>
-    </View>
-  </View>;
+    </View></View>
+  </View></FocusedRoute>;
 }
