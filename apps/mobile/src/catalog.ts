@@ -92,7 +92,7 @@ export function useMapArea(viewport: {bbox: string; zoom: number} | null, filter
   return useQuery({
     queryKey: ['map', viewport, filters], enabled: !!viewport, staleTime: 5 * 60_000, retry: 1,
     placeholderData: keepPreviousData,
-    queryFn: ({signal}) => request<MapArea>('/api/v1/map?' + query({...filters, bbox: viewport!.bbox, zoom: viewport!.zoom.toFixed(2)}), {signal}),
+    queryFn: ({signal}) => request<MapArea>('/api/v1/map?' + query({...filters, bbox: viewport!.bbox, zoom: Math.min(20, viewport!.zoom + 1.5).toFixed(2)}), {signal}),
   });
 }
 

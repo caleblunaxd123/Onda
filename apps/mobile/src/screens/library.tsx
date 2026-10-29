@@ -37,7 +37,7 @@ export default function Library() {
     Keyboard.dismiss(); setEditing(false); setQuery('');
   };
   return <View style={{flex: 1, backgroundColor: 'transparent'}}>
-    <BrandHeader title="Tu biblioteca" emoji="💜" subtitle="Las radios que hacen tu día."><IconButton icon="add" label="Crear colección" onPress={() => {setSection('collections'); setSelectedId(null); setName(''); setError(''); setEditing(true); setDeleting(false);}}/><IconButton icon="settings-outline" label="Ajustes" onPress={() => router.push('/settings')}/></BrandHeader>
+    <BrandHeader title="Tu biblioteca" emoji="💜" subtitle="Las radios que hacen tu día."><IconButton icon="add" label="Crear colección" onPress={() => {setSection('collections'); setSelectedId(null); setName(''); setError(''); setEditing(true); setDeleting(false);}}/><IconButton icon="download-outline" label="Respaldo de favoritas" onPress={() => router.push('/backup')}/><IconButton icon="settings-outline" label="Ajustes" onPress={() => router.push('/settings')}/></BrandHeader>
     <Page>
     <View accessibilityRole="tablist" style={{flexDirection: 'row', padding: 4, borderRadius: 99, backgroundColor: c.surface, gap: 4, borderWidth: 1, borderColor: c.border, marginTop: -6}}>
       {sections.map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{selected: section === item.id}} onPress={() => {setSection(item.id); setSelectedId(null); setQuery(''); setEditing(false); setDeleting(false);}} style={{flex: 1, minHeight: 44, borderRadius: 99, alignItems: 'center', justifyContent: 'center', backgroundColor: section === item.id ? c.primary : 'transparent'}}><Label style={{fontSize: 12, fontWeight: '700', color: section === item.id ? c.onPrimary : c.muted}}>{item.label}</Label></Pressable>)}

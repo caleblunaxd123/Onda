@@ -40,9 +40,9 @@ export function useWorldExplorer() {
     queryFn: async ({signal}) => (await lookupStations([selectedId!], signal))[0] ?? null});
   const selected = fromList ?? lookup.data ?? null;
   const features = useMemo(() => cellsToFeatures(area.data), [area.data]);
-  const total = missingGeo ? list.total : area.data?.total ?? null;
+  const total = missingGeo ? (list.isPlaceholderData ? null : list.total) : area.isPlaceholderData ? null : area.data?.total ?? null;
   return {
-    viewport, onViewport, zoom, area, list, features, countries, places, preferred, total,
+    viewport, onViewport, zoom, area, list: {...list, items: list.isPlaceholderData ? [] : list.items, isPending: list.isPending || list.isPlaceholderData}, features, countries, places, preferred, total,
     country, setCountry: (code: string) => {setCountry(code); setRegion(''); setSelectedId(null);},
     region, setRegion: (name: string) => {setRegion(name); setSelectedId(null);},
     tag, setTag: (value: string) => {setTag(value); setSelectedId(null);},
@@ -76,7 +76,7 @@ export function WorldPanel({explorer: e, onFocusStation, onFocusCountry, onFocus
   const c = useTheme(); const playback = usePlayer();
   const [picker, setPicker] = useState<'country' | 'place' | 'more' | null>(null);
   const countryInfo = e.countries.data?.find(x => x.code === e.country);
-  const scope = e.region || countryInfo?.name || 'Zona visible';
+  const scope = e.region || countryInfo?.name || 'Zona explorada';
   const extra = (e.tag ? 1 : 0) + (e.language ? 1 : 0);
   const listRef = useRef<FlatList<Station>>(null);
   useEffect(() => {
@@ -93,7 +93,7 @@ export function WorldPanel({explorer: e, onFocusStation, onFocusCountry, onFocus
       </View>
       <View style={{flex: 1}}>
         <Label numberOfLines={1} style={{fontSize: 20, lineHeight: 26, fontWeight: '900'}}>{e.missingGeo ? `${countryInfo?.name ?? 'Todo el mundo'} · sin ubicación` : scope}</Label>
-        <Muted accessibilityLiveRegion="polite" style={{fontSize: 14}}>{e.total === null ? (fetching ? 'Buscando emisoras…' : 'Mueve el mapa para explorar') : `${formatCount(e.total)} ${e.total === 1 ? 'emisora' : 'emisoras'}${e.missingGeo ? '' : ' en el área visible'}`}</Muted>
+        <Muted accessibilityLiveRegion="polite" style={{fontSize: 14}}>{e.total === null ? (fetching ? 'Buscando emisoras…' : 'Mueve el mapa para explorar') : `${formatCount(e.total)} ${e.total === 1 ? 'emisora' : 'emisoras'}${e.missingGeo ? '' : ' en esta selección'}`}</Muted>
       </View>
       <View style={{position: 'absolute', right: 54, top: 0}} pointerEvents="none"><Waveform active={playback.state === 'playing'} height={34} bars={14} opacity={0.3}/></View>
       <IconButton icon="refresh" label="Actualizar emisoras de la zona" onPress={e.refresh}/>
@@ -157,7 +157,7 @@ function FilterRow({icon, label, value, onPress, onClear}: {icon: React.Componen
   </View>;
 }
 
-function SelectedStation({station, onClose}: {station: Station; onClose: () => void}) {
+export function SelectedStation({station, onClose}: {station: Station; onClose: () => void}) {
   const c = useTheme(); const playback = usePlayer();
   const current = playback.station?.id === station.id; const active = current && isActive(playback.state);
   return <View style={{flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 20, backgroundColor: c.primary + '12', marginBottom: 10, borderWidth: 1, borderColor: c.primary + '40', experimental_backgroundImage: c.isDark ? undefined : 'linear-gradient(120deg, #E3F7FB 0%, #EEE9FE 100%)'} as ViewStyle}>

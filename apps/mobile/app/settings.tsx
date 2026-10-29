@@ -1,3 +1,5 @@
+import {BackupCard} from '../src/backup-card';
+import {QuickAccessCard} from '../src/quick-access-card';
 import { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, View } from 'react-native';
 import Constants from 'expo-constants';
@@ -36,6 +38,7 @@ export default function Settings() {
         <Row icon="musical-notes-outline" label="Géneros favoritos" value={tagLabels.length ? tagLabels.slice(0, 2).join(', ') + (tagLabels.length > 2 ? '…' : '') : 'Sin elegir'} onPress={() => setSheet('genres')}/>
         <Row icon="contrast-outline" label="Tema" value={themes[library.theme]} onPress={() => setSheet('theme')} last/>
       </View>
+      <BackupCard/><QuickAccessCard/>
       <View style={[cardStyle(c), {padding: 16, gap: 8}]}>
         <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}><Ionicons name="server-outline" size={20} color={c.primaryText}/><Label style={{fontWeight: '800', flex: 1}}>Catálogo de radios</Label></View>
         {status.isPending ? <Muted>Consultando…</Muted> : status.isError ? <Muted>No se pudo consultar el estado del catálogo.</Muted> : <>
