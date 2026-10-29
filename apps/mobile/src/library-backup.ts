@@ -64,6 +64,7 @@ export function mergeBackup(current: Lists, incoming: Lists, newId = () => `c-${
 export function serializeBackup(lists: Lists, now = new Date()) {
   const raw = JSON.stringify({format: 'onda-library', version: 1, exportedAt: now.toISOString(), favorites: lists.favorites, collections: lists.collections});
   // Enforce the same contract on export and import so every downloaded backup is restorable.
-  const pretty = JSON.stringify(parseBackup(raw), null, 2);
-  return utf8Size(pretty) <= MAX_BACKUP_BYTES ? pretty : raw;
+  const clean = parseBackup(raw);
+  const pretty = JSON.stringify(clean, null, 2);
+  return utf8Size(pretty) <= MAX_BACKUP_BYTES ? pretty : JSON.stringify(clean);
 }

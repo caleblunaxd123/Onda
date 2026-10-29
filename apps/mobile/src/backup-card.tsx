@@ -14,7 +14,9 @@ export function BackupCard() {
   const restore = () => {
     if (!preview) return;
     try {const result = mergeBackup(useLibrary.getState(), preview); library.restoreBackup(result); setPreview(null);
-      feedback(`Biblioteca combinada: ${result.addedFavorites} favoritas, ${result.addedCollections} colecciones y ${result.addedStations} radios en colecciones añadidas.`);
+      const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+      feedback(!result.addedFavorites && !result.addedCollections && !result.addedStations ? 'Tu biblioteca ya contenía este respaldo. No se han añadido duplicados.' :
+        `Respaldo combinado: ${count(result.addedFavorites, 'favorita', 'favoritas')}, ${count(result.addedCollections, 'colección', 'colecciones')} y ${count(result.addedStations, 'emisora en colecciones', 'emisoras en colecciones')} añadidas.`);
     } catch (e) {setPreview(null); feedback((e as Error).message, true);}
   };
   return <Card>
@@ -26,7 +28,7 @@ export function BackupCard() {
     </View>
     {message ? <Label accessibilityRole={error ? 'alert' : undefined} accessibilityLiveRegion="polite" style={{fontSize: 13}}>{message}</Label> : null}
     {preview && <Sheet title="Combinar biblioteca" onClose={() => setPreview(null)}>
-      <Label>{preview.favorites.length} favoritas · {preview.collections.length} colecciones</Label>
+      <Label>{preview.favorites.length} {preview.favorites.length === 1 ? 'favorita' : 'favoritas'} · {preview.collections.length} {preview.collections.length === 1 ? 'colección' : 'colecciones'}</Label>
       <Muted>Se añadirán a las de este dispositivo. Las colecciones con el mismo nombre se combinan y las emisoras repetidas se omiten. El historial y tus ajustes se conservan.</Muted>
       <Button title="Combinar con mi biblioteca" onPress={restore}/><Button title="Cancelar" secondary onPress={() => setPreview(null)}/>
     </Sheet>}
