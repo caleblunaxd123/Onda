@@ -2,7 +2,7 @@
   "expo": {
     "name": "ONDA",
     "slug": "onda",
-    "version": "0.7.3",
+    "version": "0.7.4",
     "scheme": "onda",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -28,7 +28,7 @@
         "backgroundColor": "#FFFFFF",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "versionCode": 14
+      "versionCode": 15
     },
     "plugins": [
       "expo-router",

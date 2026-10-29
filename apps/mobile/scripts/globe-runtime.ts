@@ -1,4 +1,4 @@
-import {Map, setWorkerUrl, setWorkerCount, type GeoJSONSource} from 'maplibre-gl';
+import {Map, setWorkerUrl, setWorkerCount, type GeoJSONSource, type ExpressionSpecification} from 'maplibre-gl';
 import {earthStyle} from '../src/earth-style';
 import type {FeatureCollection, Point} from 'geojson';
 declare const ONDA_MAP_WORKER: string;
@@ -17,6 +17,13 @@ try {
   const report = () => {const b = map.getBounds(); send({type: 'viewport', bounds: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], zoom: map.getZoom()});};
   map.on('style.load', () => {
     map.setProjection({type: 'globe'});
+    // Keep names in Spanish in the street view too, retaining the provider's fallback expressions.
+    for (const layer of map.getStyle().layers) {
+      if (layer.type === 'symbol' && layer.layout?.['text-field'] && layer.id.startsWith('label_')) {
+        const field = layer.layout['text-field'];
+        if (Array.isArray(field) && JSON.stringify(field).includes('name')) map.setLayoutProperty(layer.id, 'text-field', ['coalesce', ['get', 'name:es'], field as ExpressionSpecification]);
+      }
+    }
     map.addSource('stations', {type: 'geojson', data: features});
     map.addLayer({id: 'radio-glow', type: 'circle', source: 'stations', paint: {'circle-color': '#25EAB1', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 4, 6, 7], 'circle-opacity': 0.18, 'circle-blur': 0.6}});
     map.addLayer({id: 'radio-points', type: 'circle', source: 'stations', paint: {'circle-color': '#34F0BB', 'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 1.8, 6, 3.3, 12, 4], 'circle-stroke-width': 0.5, 'circle-stroke-color': '#D3FFF0'}});
