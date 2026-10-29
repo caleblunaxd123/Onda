@@ -67,6 +67,18 @@ api.MapGet("/stations/lookup", async (string? ids, ICatalogQueries catalog, Canc
     if (parsed is null || parsed.Count == 0) return Results.Problem("Indica entre 1 y 100 identificadores válidos.", statusCode: 400);
     return Results.Ok(new { items = await catalog.LookupAsync(parsed, ct) });
 });
+api.MapGet("/stations/{id:guid}/now-playing", async (Guid id, HttpRequest request, HttpResponse response, INowPlaying metadata, CancellationToken ct) =>
+{
+    if (!int.TryParse(request.Query["source"].FirstOrDefault() ?? "1", out var source) || source is < 1 or > 5)
+        return Results.Problem("Fuente inválida.", statusCode: 400);
+    response.Headers.CacheControl = "no-store";
+    try
+    {
+        var result = await metadata.GetAsync(id, source, ct);
+        return result is null ? Results.NotFound() : Results.Ok(result);
+    }
+    catch (HttpRequestException) {return Results.Problem("Metadatos no disponibles.", statusCode: 503);}
+}).CacheOutput(policy => policy.NoCache());
 api.MapGet("/map", async (HttpRequest request, ICatalogQueries catalog, CancellationToken ct) =>
 {
     if (!StationQueryParser.TryParse(request.Query, out var query, out var error)) return Results.Problem(error, statusCode: 400);

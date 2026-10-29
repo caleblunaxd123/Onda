@@ -14,6 +14,8 @@ import { deviceCountry } from '../src/region';
 import { Label } from '../src/ui';
 import WebShell from '../src/web/shell';
 import {OndaAmbientBackground} from '../src/ambient';
+import {watchNowPlaying, type MetadataReply} from '../src/now-playing';
+import {request} from '../src/api';
 const queryClient = new QueryClient();
 const REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;
 
@@ -43,11 +45,12 @@ export default function RootLayout() {
   useLibraryRefresh();
   useEffect(() => {
     prepareAudio().catch(() => setError('No se pudo configurar el audio. Reinicia la aplicación.'));
+    const metadata = watchNowPlaying(player, (path, signal) => request<MetadataReply>(path, {signal, timeoutMs: 12000}));
     const network = NetInfo.addEventListener(s => {const connected = s.isConnected !== false && s.isInternetReachable !== false; onlineManager.setOnline(connected); player.setOnline(connected);});
     if (useLibrary.persist.hasHydrated()) syncCountry();
     const hydration = useLibrary.persist.onFinishHydration(syncCountry);
     const app = AppState.addEventListener('change', state => {player.checkSleep(); if (state === 'active') syncCountry();});
-    return () => {network(); app.remove(); hydration();};
+    return () => {metadata(); network(); app.remove(); hydration();};
   }, []);
   return <GestureHandlerRootView style={{flex: 1, backgroundColor: c.bg}}>
     <View style={{flex: 1, width: '100%'}}>

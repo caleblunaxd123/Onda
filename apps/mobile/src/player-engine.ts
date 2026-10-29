@@ -1,8 +1,8 @@
 import type { PlaybackState, Station } from './types';
 export type NativeStatus = {playing: boolean; loaded: boolean; buffering: boolean; error?: boolean; finished?: boolean};
-export type Handle = {play(): void; pause(): void; dispose(): void; setVolume?(value: number): void};
+export type Handle = {play(): void; pause(): void; dispose(): void; setVolume?(value: number): void; setMetadata?(title: string | null): void};
 export type Snapshot = {
-  station: Station | null; state: PlaybackState; error: string | null; sleepAt: number | null; volume: number;
+  station: Station | null; state: PlaybackState; error: string | null; sleepAt: number | null; volume: number; nowPlaying: string | null; metadataState: 'idle' | 'available' | 'unavailable' | 'unsupported';
   /** Stream currently tried and its position among the station's HTTPS sources. */
   streamUrl: string | null; source: number; sources: number; attempt: number;
 };
@@ -25,7 +25,7 @@ const idle = {streamUrl: null, source: 0, sources: 0, attempt: 0};
  * generation counter discards late events from released handles, so only one stream can be active.
  */
 export class PlayerEngine {
-  snapshot: Snapshot = {station: null, state: 'idle', error: null, sleepAt: null, volume: 1, ...idle};
+  snapshot: Snapshot = {station: null, state: 'idle', error: null, sleepAt: null, volume: 1, nowPlaying: null, metadataState: 'idle', ...idle};
   private listeners = new Set<() => void>();
   private handle?: Handle;
   private generation = 0;
@@ -45,11 +45,12 @@ export class PlayerEngine {
   private release() {
     this.generation++; clearTimeout(this.retry); clearTimeout(this.watchdog); this.watchdog = undefined;
     this.handle?.dispose(); this.handle = undefined;
+    if (this.snapshot.nowPlaying || this.snapshot.metadataState !== 'idle') this.update({nowPlaying: null, metadataState: 'idle'});
   }
   select = (station: Station) => {
     this.release(); this.wanted = true;
     this.sourceList = streamSources(station); this.sourceIndex = 0; this.sourceAttempts = 0; this.totalAttempts = 0;
-    this.update({station, error: null, sources: this.sourceList.length, source: 0, attempt: 0, streamUrl: this.sourceList[0] ?? null});
+    this.update({station, nowPlaying: null, metadataState: 'idle', error: null, sources: this.sourceList.length, source: 0, attempt: 0, streamUrl: this.sourceList[0] ?? null});
     if (this.sourceList.length === 0) {this.wanted = false; this.update({state: 'error', error: 'Esta emisora no ofrece una transmisión HTTPS compatible.'}); return;}
     this.connect();
   };
@@ -64,7 +65,7 @@ export class PlayerEngine {
     if (!this.online) {this.update({state: 'error', error: 'Sin conexión. Se retomará cuando vuelva internet.'}); return;}
     const streamUrl = this.sourceList[this.sourceIndex];
     this.totalAttempts++;
-    this.update({state: 'connecting', streamUrl, source: this.sourceIndex + 1, attempt: this.sourceAttempts + 1});
+    this.update({state: 'connecting', streamUrl, source: this.sourceIndex + 1, attempt: this.sourceAttempts + 1, nowPlaying: null, metadataState: 'idle'});
     const generation = this.generation;
     try {
       this.handle = this.factory(station, streamUrl, status => {
@@ -123,6 +124,14 @@ export class PlayerEngine {
     this.online = online;
     if (!online && this.wanted) {this.release(); this.watchdog = undefined; this.update({state: 'error', error: 'Sin conexión. Se retomará cuando vuelva internet.'});}
     else if (online && this.wanted) {this.sourceAttempts = 0; this.totalAttempts = 0; this.connect();}
+  };
+  /** Reject delayed metadata from an old station/source, including after pause or failover. */
+  setMetadata = (stationId: string, source: number, title: string | null, status: Snapshot['metadataState']) => {
+    if (this.snapshot.station?.id !== stationId || this.snapshot.source !== source || this.snapshot.state !== 'playing') return;
+    const clean = typeof title === 'string' && title.trim().length <= 240 ? title.trim() || null : null;
+    const nowPlaying = status === 'available' ? clean : null;
+    try {this.handle?.setMetadata?.(nowPlaying);} catch { /* OS metadata must never interrupt radio playback. */ }
+    this.update({nowPlaying, metadataState: nowPlaying ? 'available' : status === 'available' ? 'unavailable' : status});
   };
   setVolume = (value: number) => {
     if (!Number.isFinite(value)) return;

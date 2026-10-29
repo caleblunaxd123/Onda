@@ -33,6 +33,10 @@ public class ApiTests
         public Task<CatalogStatus> StatusAsync(CancellationToken ct) => Task.FromResult(new CatalogStatus("catalog", 1, 1, null, null, null, "Radio Browser"));
     }
 
+    private sealed class FakeMetadata : INowPlaying
+    {
+        public Task<NowPlaying?> GetAsync(Guid id, int source, CancellationToken ct) => Task.FromResult<NowPlaying?>(id == Fixture.Id ? new(id,source,"available","Artist - Song",DateTimeOffset.UtcNow) : null);
+    }
     private sealed class FakeReports : IStationReports
     {
         public List<(Guid, ReportInput)> Saved { get; } = [];
@@ -56,8 +60,26 @@ public class ApiTests
             {
                 s.AddScoped<ICatalogQueries>(_ => catalog ?? new FakeCatalog(false));
                 s.AddScoped<IStationReports>(_ => reports ?? new FakeReports());
+                s.AddScoped<INowPlaying>(_ => new FakeMetadata());
             });
         });
+
+    [Theory] [InlineData("0")] [InlineData("6")] [InlineData("not-a-number")]
+    public async Task MetadataRejectsInvalidSource(string source)
+    {
+        await using var app=Factory();using var client=app.CreateClient();
+        Assert.Equal(HttpStatusCode.BadRequest,(await client.GetAsync($"/api/v1/stations/{Fixture.Id}/now-playing?source={source}")).StatusCode);
+    }
+    [Fact] public async Task MetadataReturnsStationIdentityAndNeverCachesAtTheHttpLayer()
+    {
+        await using var app=Factory();using var client=app.CreateClient();
+        var response=await client.GetAsync($"/api/v1/stations/{Fixture.Id}/now-playing?source=1");
+        var result=await response.Content.ReadFromJsonAsync<NowPlaying>();Assert.Equal("Artist - Song",result!.Title);Assert.Equal(Fixture.Id,result.StationId);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+        var fresh = await client.GetFromJsonAsync<NowPlaying>($"/api/v1/stations/{Fixture.Id}/now-playing?source=1");
+        Assert.NotEqual(result.ObservedAt, fresh!.ObservedAt);
+        Assert.Equal(HttpStatusCode.NotFound,(await client.GetAsync($"/api/v1/stations/{Guid.NewGuid()}/now-playing")).StatusCode);
+    }
 
     [Theory]
     [InlineData("limit=0")] [InlineData("limit=101")] [InlineData("offset=-1")] [InlineData("country=PER")] [InlineData("country=12")]

@@ -1,3 +1,28 @@
+# Publicación actual — 0.7.2/code13, 2026-10-28
+
+Fuente `a11779c`, PR #5. API `onda-api:20261028-072-metadata`; web y APK publicados.
+Sin migraciones SQL, servicios nuevos, claves nuevas ni cambios de Compose/DNS/otros proyectos.
+
+- [APK](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.2&build=13.1):
+  117.288.967 bytes, SHA256 `acb3a62700cde744ebb6bdf4890196386aa85c17234250c4ee5b6ac1c5ce9a0f`.
+- Respaldo previo cifrado `Onda-20261029T013714Z.bak.enc` y adjuntos; descifrado/restauración
+  y catálogo comprobados en base separada. No se restauró sobre la base de producción.
+- Imagen etiquetada con revisión exacta, probada primero sin puertos públicos y sync desactivada,
+  en las redes existentes data/web (esta última para sondeos HTTPS salientes).
+- Fase API: copia privada y verificada de env/index/APK, cambio solo de ONDA_IMAGE, compose
+  `up -d --no-deps api`, ready y metadatos reales. Sin tocar el overlay de correo ni Ollama.
+- Fase assets: assets primero conservando los hashes anteriores; index/APK sustituidos atómicamente.
+  Registro privado `/opt/onda/releases/metadata-072-release.json`, fase complete.
+- Rollback: copias `/opt/onda/releases/metadata-072-before-env.bak`, `...-index.bak`, `...-apk.bak`.
+  Restaurar atómicamente con permisos 0600/0644/0644, respectivamente, y recrear solo `api` con
+  `docker compose --env-file compose.env -f compose.yaml up -d --no-deps api`. No revertir SQL.
+- Metadatos sin caché HTTP: NoCache + no-store; la caché específica comparte sondeos durante 20 s
+  y resultados incompatibles durante 120 s. Requiere salida HTTPS/DNS pública de la red web.
+- Verificados desde Cloudflare: HTML de la app (excepto beacon existente), CSS/JS, consulta por país,
+  ready y hash/tamaño del APK. Logo fallback `/brand/onda-radio.png` público.
+
+Las publicaciones y procedimientos siguientes son históricos, con rollback independiente.
+
 # Publicación actual — 0.7.1/code12, 2026-10-28
 
 Web y APK publicados desde `b439759` en PR #4. Cambio de interfaz, sin reiniciar API,

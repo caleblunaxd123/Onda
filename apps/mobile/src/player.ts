@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { PlayerEngine } from './player-engine';
 import { useLibrary } from './library';
+import {lockScreenMetadata} from './now-playing';
 
 /**
  * One native player at a time. Lock screen controls are required on Android for sustained background playback
@@ -15,9 +16,10 @@ export const player = new PlayerEngine((station, streamUrl, onStatus) => {
     if (status.playing && !remembered) {useLibrary.getState().remember(station); remembered = true;}
     onStatus({playing: status.playing, loaded: status.isLoaded, buffering: status.isBuffering, finished: status.didJustFinish, error: !!status.error});
   });
-  audio.setActiveForLockScreen(true, {title: station.name, artist: [station.region, station.country].filter(Boolean).join(' · '), artworkUrl: station.artworkUrl ?? undefined}, {isLiveStream: true});
+  audio.setActiveForLockScreen(true, lockScreenMetadata(station, null), {isLiveStream: true});
   return {
     setVolume: value => {audio.volume = value;},
+    setMetadata: title => audio.updateLockScreenMetadata(lockScreenMetadata(station, title)),
     play: () => audio.play(), pause: () => audio.pause(),
     dispose: () => {listener.remove(); audio.pause(); audio.clearLockScreenControls(); audio.remove();},
   };

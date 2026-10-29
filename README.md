@@ -3,9 +3,9 @@
 
 Aplicación móvil de radios con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: **beta 0.7.1 de radios publicada en Contabo y Cloudflare**. Web/API/APK verificados; pruebas físicas y preparación de Google Play pendientes.
+Estado: **beta 0.7.2 de radios publicada en Contabo y Cloudflare**. Web/API/APK verificados; pruebas físicas y preparación de Google Play pendientes.
 
-Web: https://onda.lunalav.pe · [APK Android 0.7.1](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.1&build=12.1).
+Web: https://onda.lunalav.pe · [APK Android 0.7.2](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.2&build=13.1).
 Actualiza la beta anterior conservando la biblioteca; no requiere Metro. Firma beta, todavía no de tiendas.
 [Despliegue y rollback](docs/DEPLOYMENT.md) · [Preparación de Play Store](docs/PLAY_STORE_READINESS.md).
 
@@ -25,6 +25,8 @@ mundial. Sin salas, chat ni IA.
 - Diseño Inmersivo ONDA con ondas cian, azul y violeta; también claro, oscuro y automático.
   Web de escritorio desde 1000 px: menú lateral, emisoras en columnas, mapa amplio y reproductor fijo
   con volumen/temporizador. Móvil conserva navegación táctil. Capturas: docs/screenshots.
+- Título publicado por emisoras ICY compatibles en reproductor y barra inferior; canción, estación
+  y logo en controles multimedia del sistema. [Compatibilidad y límites](docs/NOW_PLAYING.md).
 - Sin cuentas, sincronización de biblioteca ni IA.
 
 ## Inicio en Windows
@@ -64,8 +66,8 @@ Servidor `.\SQLEXPRESS`, autenticación Windows, base `Onda`. Tablas y consultas
 Las migraciones se aplican explícitamente, nunca al iniciar la API.
 
 ## Verificación
-- `npm run check:mobile` — TypeScript, ESLint y 41 pruebas.
-- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 69 pruebas, incluidas integraciones con SQL Server real y alojamiento de producción.
+- `npm run check:mobile` — TypeScript, ESLint y 47 pruebas.
+- `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 107 pruebas, incluidas integraciones con SQL Server real y alojamiento de producción.
 - `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1` — catálogo real de extremo a extremo.
 - `curl http://localhost:5080/api/v1/catalog/status`
 
