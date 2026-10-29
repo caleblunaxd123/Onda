@@ -44,6 +44,13 @@ no satélite en directo ni fotografía de calles. Resolución máxima zoom 8; al
 perder detalle. El botón Mapa cambia a OpenFreeMap Liberty, con calles y nombres. Ambos conservan
 la cámara y la esfera. Atribución visible. No usa claves Google, GPS ni activa facturación.
 
+Desde 0.7.4, el globo incluye nombres de países de OpenFreeMap/OpenMapTiles, priorizando `name:es`
+y después nombre latino/local. Los textos blancos llevan halo y control de colisiones; países pequeños
+aparecen según zoom para mantener legibilidad. Fuente vectorial acotada a zoom 5 y etiquetas hasta zoom 10.
+La alternativa de calles también prioriza español cuando sus datos contienen traducción. No todos los
+accidentes geográficos tienen traducción; se conserva el nombre disponible. Los nombres son cartografía,
+no se derivan de coordenadas de emisoras. Datos/glifos se solicitan a OpenFreeMap con atribución visible.
+
 - [NASA: acceso a GIBS](https://nasa-gibs.github.io/gibs-api-docs/access-basics/)
 - [NASA: uso con bibliotecas de mapas](https://nasa-gibs.github.io/gibs-api-docs/map-library-usage/)
 - [MapLibre: globo y atmósfera](https://maplibre.org/maplibre-gl-js/docs/examples/display-a-globe-with-an-atmosphere/)

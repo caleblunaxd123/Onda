@@ -1,3 +1,29 @@
+# Progreso — nombres de países, ONDA 0.7.4, 2026-10-29
+
+Web y APK 0.7.4/code15 publicados desde `c3906b6` en la [PR #6](https://github.com/caleblunaxd123/Onda/pull/6),
+apilada sobre #5. Conserva respaldo, widget y globo de 0.7.3.
+
+- Nombres de países sobre las imágenes de la Tierra: español preferido y nombre local/latino como
+  alternativa si no existe traducción. Tamaño progresivo, halo y colisiones evitan textos superpuestos;
+  países pequeños aparecen al acercarse. Datos OpenFreeMap/OpenMapTiles/OSM, fuente vectorial hasta zoom 5.
+- La vista alternativa de calles también prioriza español en las capas de etiquetas compatibles.
+- Tipos/lint, 62 pruebas cliente, export web y APK correctos. CI backend/móvil de `c3906b6` correcta:
+  [push](https://github.com/caleblunaxd123/Onda/actions/runs/40972714198) y
+  [PR](https://github.com/caleblunaxd123/Onda/actions/runs/40972720397).
+- QA visual en navegador de escritorio y 390×844: globo, nombres, zoom y cambio a calles, sin errores
+  de consola. Capturas `web-074-countries-mobile.png` y `web-074-countries-production.png` en screenshots.
+- Publicación estática con copias verificadas y rollback. API conserva su contenedor e imagen
+  `onda-api:20261028-072-metadata`; sin cambios SQL/Compose/DNS ni reinicio.
+- HTML (excluyendo solo beacon Cloudflare), JS/CSS y APK públicos coinciden con los artefactos locales.
+  Ready 200 y feed Perú correctos. Registro privado `/opt/onda/releases/library-074-release.json`.
+- APK: [0.7.4 build15.1](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.4&build=15.1),
+  119.676.648 bytes, SHA256 `c12f9a006f6e85628ceb33985eaf664c15c2727832c43847e136eedf28236080`.
+  Firma beta anterior y tres ABI conservadas, sin GPS/micrófono ni permisos nuevos.
+- No se repitió QA física para 0.7.4. Sigue pendiente probar el widget con proceso cerrado en teléfono:
+  los cierres de QEMU descritos abajo impiden declararlo aprobado. Reconocimiento de audio sigue como propuesta.
+
+Las notas siguientes son históricas.
+
 # Progreso — biblioteca portátil y Tierra ONDA 0.7.3, 2026-10-29
 
 Web y APK 0.7.3/code14 publicados desde `f370570` en la [PR #6](https://github.com/caleblunaxd123/Onda/pull/6),

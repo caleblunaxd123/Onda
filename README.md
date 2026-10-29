@@ -3,9 +3,9 @@
 
 Aplicación móvil de radios con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: **beta 0.7.3 de radios publicada en Contabo y Cloudflare**. Artefactos web/APK y API verificados; apertura fría del widget en teléfono y preparación de Google Play pendientes.
+Estado: **beta 0.7.4 de radios publicada en Contabo y Cloudflare**. Artefactos web/APK y API verificados; apertura fría del widget en teléfono y preparación de Google Play pendientes.
 
-Web: https://onda.lunalav.pe · [APK Android 0.7.3](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.3&build=14.1).
+Web: https://onda.lunalav.pe · [APK Android 0.7.4](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.4&build=15.1).
 Actualiza la beta anterior conservando la biblioteca; no requiere Metro. Firma beta, todavía no de tiendas.
 [Despliegue y rollback](docs/DEPLOYMENT.md) · [Preparación de Play Store](docs/PLAY_STORE_READINESS.md).
 
@@ -20,7 +20,7 @@ mundial. Sin salas, chat ni IA.
   en 220 países al publicar el 2026-10-28 (el catálogo y la disponibilidad cambian),
   con paginación por cursor, recuentos reales, variantes y fuentes alternativas, y disponibilidad sin falsas «caídas».
 - Inicio con radios del país, favoritas y descubrimiento mundial; búsqueda con filtros
-  (país, ciudad, idioma, género), globo terráqueo NASA con puntos pequeños y vista de calles, Radio Radar con carga progresiva,
+  (país, ciudad, idioma, género), globo terráqueo NASA con nombres de países en español, puntos pequeños y vista de calles, Radio Radar con carga progresiva,
   reproductor global con reintentos y fuentes alternativas, reportes de problemas, biblioteca local con colecciones.
 - Diseño Inmersivo ONDA con ondas cian, azul y violeta; también claro, oscuro y automático.
   Web de escritorio desde 1000 px: menú lateral, emisoras en columnas, mapa amplio y reproductor fijo

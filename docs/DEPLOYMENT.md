@@ -1,4 +1,28 @@
-# Publicación actual — 0.7.3/code14, 2026-10-29
+# Publicación actual — 0.7.4/code15, 2026-10-29
+
+Fuente `c3906b6`, PR #6. Nombres de países en el globo y prioridad de español en calles.
+Web/APK publicados, sin modificar API/SQL/Compose/DNS ni otros proyectos.
+
+- [APK](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.4&build=15.1): 119.676.648 bytes,
+  SHA256 `c12f9a006f6e85628ceb33985eaf664c15c2727832c43847e136eedf28236080`.
+- Firma beta anterior, tres ABI, HTTPS; sin GPS/micrófono ni permisos nuevos.
+- JS `entry-daaba216ad98c86d4c91b3342413b88c.js`; datos y glifos de nombres OpenFreeMap,
+  imágenes NASA. Renderizador/worker empaquetados localmente.
+- Copias verificadas de index/APK 0.7.3; assets primero y sustitución atómica, preservando hashes anteriores.
+  Registro privado `/opt/onda/releases/library-074-release.json`.
+- Rollback: `/opt/onda/releases/library-074-before-index.bak` y `library-074-before-apk.bak`.
+  Verificar hashes; copiar cada uno a un temporal de su destino con modo 0644 y renombrar atómicamente
+  a `/opt/onda/public/index.html` y `/opt/onda/public/downloads/ONDA-beta.apk`. No reiniciar API ni revertir SQL.
+- API `onda-api:20261028-072-metadata` conserva ID de contenedor. Ready 200 antes/después.
+  Sin cambios de datos; se conserva el respaldo SQL cifrado y restaurado de 0.7.2.
+- Comprobados HTML normalizado excluyendo solo beacon Cloudflare, JS/CSS exactos, worker JavaScript,
+  feed Perú y hash completo del APK a través del dominio público. HTML no-store, Cloudflare DYNAMIC.
+- QA visual pública del globo y etiquetas; desktop/móvil comprobados en navegador. No equivale a QA física.
+  Sigue pendiente apertura fría del widget en teléfono; ver TESTING.
+
+Las publicaciones siguientes son históricas.
+
+# Publicación — 0.7.3/code14, 2026-10-29
 
 Fuente `f370570`, PR #6, web/APK publicados y hashes públicos comprobados.
 API `onda-api:20261028-072-metadata` conservó ID de contenedor y tiempo de inicio.

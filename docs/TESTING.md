@@ -1,4 +1,14 @@
 # Pruebas
+
+## Candidata publicada 0.7.4
+
+Fuente `c3906b6`: tipos/lint, 62 pruebas cliente, export web y APK code15 correctos; CI backend/móvil correcta.
+Nombres en español sobre la Tierra comprobados visualmente en escritorio y 390×844, aparición al acercarse,
+modo calles y vuelta a NASA. Sin errores de consola en QA. Capturas `docs/screenshots/*074*`.
+Web pública renderiza nombres; HTML/JS/CSS y APK verificados contra export/build, ready 200 y feed Perú.
+API/SQL sin cambios. Firma beta anterior, tres ABI, HTTPS y permisos acotados verificados en el APK.
+No se declara QA Android física de 0.7.4; se conserva el pendiente de widget frío documentado en 0.7.3.
+
 ## Candidata publicada 0.7.3
 
 Tipos, lint, 62 pruebas cliente y export web correctos. CI backend/móvil de `f370570` correcta.
