@@ -96,7 +96,7 @@ class OndaRadioWidget : AppWidgetProvider() {
       val uri = Uri.Builder().scheme("onda").authority(path).apply { if (stationId != null) appendQueryParameter("id", stationId) }.build()
       return context.packageManager.getLaunchIntentForPackage(context.packageName)!!.apply {
         action = Intent.ACTION_VIEW; data = uri
-        // A launcher category makes Android restore a task's original home intent after process death.
+        // Content links must be delivered even when Android restores an existing launcher task.
         // This is a content deep link, including when reached from a launcher shortcut or widget.
         removeCategory(Intent.CATEGORY_LAUNCHER)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
