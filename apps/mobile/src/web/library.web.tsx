@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {TextInput} from 'react-native';
-import {Link} from 'expo-router';
+import {Link, router} from 'expo-router';
 import {Ionicons} from '../icons';
 import {uniqueBroadcasts, useLibrary} from '../library';
 import {Button, Label, Sheet} from '../ui';
@@ -24,7 +24,7 @@ export default function DesktopLibrary() {
     else {const id = library.createCollection(name); if (!id) {setError('Escribe un nombre para tu colección.'); return;} setSelectedId(id);}
     setEditing(false); setQuery('');
   };
-  return <div className="onda-page"><div className="onda-page-inner"><span className="onda-eyebrow">TU RINCÓN EN EL MUNDO</span><div className="onda-page-toolbar"><div><h1 className="onda-page-title">{selected?.name ?? 'Tu biblioteca.'}</h1><p className="onda-page-description" style={{marginBottom:0}}>Las frecuencias a las que siempre quieres volver.</p></div><button className="onda-button secondary" onClick={create}><Ionicons name="add-outline" size={19}/>Crear colección</button></div>
+  return <div className="onda-page"><div className="onda-page-inner"><span className="onda-eyebrow">TU RINCÓN EN EL MUNDO</span><div className="onda-page-toolbar"><div><h1 className="onda-page-title">{selected?.name ?? 'Tu biblioteca.'}</h1><p className="onda-page-description" style={{marginBottom:0}}>Las frecuencias a las que siempre quieres volver.</p></div><div style={{display:'flex', gap:8, flexWrap:'wrap'}}><button className="onda-button secondary" onClick={() => router.push('/backup')}><Ionicons name="download-outline" size={19}/>Respaldo</button><button className="onda-button secondary" onClick={create}><Ionicons name="add-outline" size={19}/>Crear colección</button></div></div>
     <div className="onda-filter-tabs" aria-label="Secciones de biblioteca">{([{id:'favorites',name:'Favoritos'}, {id:'history',name:'Historial'}, {id:'collections',name:'Colecciones'}] as const).map(item => <button key={item.id} aria-pressed={tab === item.id} onClick={() => {setTab(item.id); setSelectedId(null); setQuery('');}}>{item.name} <span>· {library[item.id].length}</span></button>)}</div>
     <div className="onda-filterbar"><input aria-label="Buscar en tu biblioteca" placeholder="Encuentra una emisora guardada…" value={query} onChange={event => setQuery(event.target.value)}/>{selected && <><button onClick={() => setSelectedId(null)}>Todas las colecciones</button><button onClick={() => {setName(selected.name); setError(''); setEditing(true);}}>Renombrar</button><button onClick={() => setDeleting(true)}>Eliminar colección</button></>}</div>
     {tab === 'collections' && !selected ? collections.length ? <div className="onda-card-grid">{collections.map(item => <button className="onda-collection-card" key={item.id} aria-label={'Abrir colección ' + item.name} onClick={() => {setSelectedId(item.id); setQuery('');}}><Ionicons name="albums-outline" size={30}/><strong>{item.name}</strong><small>{item.stations.length} emisoras</small></button>)}</div> : <div className="onda-empty"><Ionicons name="albums-outline" size={35}/><h2>{needle ? 'Sin coincidencias' : 'Una colección para cada momento'}</h2><p>Agrupa tus emisoras para trabajar, viajar o desconectar.</p>{!needle && <button className="onda-button" onClick={create}>Crear mi primera colección</button>}</div>

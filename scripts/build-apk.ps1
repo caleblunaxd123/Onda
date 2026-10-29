@@ -23,6 +23,8 @@ foreach ($ondaCacheTarget in $ondaCacheTargets) {
 }
 if (-not $env:ANDROID_HOME) { $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
 # SDK 57 recreates the native project by default; the package id differs between variants.
+node scripts/prepare-globe.cjs
+if ($LASTEXITCODE -ne 0) { throw 'Globe packaging failed' }
 $env:CI = '1'
 npx expo prebuild --platform android --no-install
 if ($LASTEXITCODE -ne 0) { throw 'Prebuild failed' }

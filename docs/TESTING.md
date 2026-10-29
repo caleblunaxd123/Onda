@@ -1,8 +1,39 @@
 # Pruebas
+
+## Candidata publicada 0.7.4
+
+Fuente `c3906b6`: tipos/lint, 62 pruebas cliente, export web y APK code15 correctos; CI backend/móvil correcta.
+Nombres en español sobre la Tierra comprobados visualmente en escritorio y 390×844, aparición al acercarse,
+modo calles y vuelta a NASA. Sin errores de consola en QA. Capturas `docs/screenshots/*074*`.
+Web pública renderiza nombres; HTML/JS/CSS y APK verificados contra export/build, ready 200 y feed Perú.
+API/SQL sin cambios. Firma beta anterior, tres ABI, HTTPS y permisos acotados verificados en el APK.
+No se declara QA Android física de 0.7.4; se conserva el pendiente de widget frío documentado en 0.7.3.
+
+## Candidata publicada 0.7.3
+
+Tipos, lint, 62 pruebas cliente y export web correctos. CI backend/móvil de `f370570` correcta.
+Respaldo: validación de versión, tamaños/listas, HTTPS, Unicode, whitelist, combinación sin pérdidas,
+IDs nuevos de colección e idempotencia; puente del globo rechaza selección de IDs ausentes y coordenadas no finitas.
+
+QA en navegador real: desktop y 390×844, exportación y reimportación, respaldo Android → web,
+selección Perú → Lima, vista de calles, zoom, lista desplegable. Producción muestra el nuevo globo
+tras recargar; HTML/rutas/JS/CSS/APK verificados contra artefactos locales, API ready 200.
+Android: biblioteca previa conservada, exportación/selección de archivo/reimportación idempotente,
+globo y widget real 4×2. Reproducción RTL desde widget observada con el proceso existente.
+
+**No dar por aprobada la apertura desde widget con proceso cerrado:** el emulador QEMU terminó con
+excepción Windows `0xc0000005` repetidamente, también con GPU por software. El enlace directo frío
+sí llegó a PLAYING. El APK incorpora las correcciones de categorías e intent inicial mediante config
+plugin, pero aún falta esa prueba en teléfono físico. No se afirma un fallo en teléfonos ni se sustituye
+esta prueba por el reporte previo del usuario de tres teléfonos funcionando correctamente.
+No se borraron datos del emulador; se conservó el respaldo exportado durante la QA.
+
+Capturas: `docs/screenshots/*073*`. Documentación: LIBRARY_BACKUP_AND_GLOBE.md.
+
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
   con `ONDA_TEST_SQL` definido). 107 pruebas: catálogo/API/SQL real y metadatos, proxy y alojamiento de producción.
-- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 47 pruebas.
+- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 62 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
 - Compatibilidad: en apps/mobile `npx expo install --check`; bundling `npx expo export --platform android`.

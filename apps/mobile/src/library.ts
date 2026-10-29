@@ -1,26 +1,10 @@
-import { useEffect, useState } from 'react';
+import {useSyncExternalStore} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Station } from './types';
-const fold = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-const streamKey = (url: string) => url.replace(/^https?:\/\//i, '').replace(/[?#].*$/, '').replace(/\/+$/, '').toLowerCase();
-
-/**
- * Same broadcast even when the catalog lists it twice: same id, same stream URL, or same name in the same country.
- * Radio Browser contains such duplicates under different ids.
- */
-export const sameBroadcast = (a: Station, b: Station) =>
-  a.id === b.id || streamKey(a.streamUrl) === streamKey(b.streamUrl) ||
-  (fold(a.name) === fold(b.name) && a.countryCode === b.countryCode);
-
-/** Keeps the first occurrence of each broadcast, preserving order. */
-export const uniqueBroadcasts = (items: Station[]) =>
-  items.filter((station, index) => items.findIndex(other => sameBroadcast(other, station)) === index);
-
-export const prependUnique = (items: Station[], station: Station, limit = 100) =>
-  [station, ...items.filter(s => !sameBroadcast(s, station))].slice(0, limit);
-
+import {prependUnique} from './broadcast';
+export {sameBroadcast, uniqueBroadcasts, prependUnique} from './broadcast';
 export type Collection = { id: string; name: string; stations: Station[] };
 
 /**
@@ -45,6 +29,7 @@ type Library = {
   onboarded: boolean; likedTags: string[]; refreshedAt: number;
   finishOnboarding: (country: string, tags: string[], mode?: 'auto' | 'manual') => void; setLikedTags: (tags: string[]) => void;
   refreshStations: (updated: Station[]) => void;
+  restoreBackup: (lists: {favorites: Station[]; collections: Collection[]}) => void;
   toggle: (station: Station) => void; remember: (station: Station) => void;
   setCountry: (country: string) => void; setTheme: (theme: Library['theme']) => void;
   rememberSearch: (text: string) => void; clear: () => void;
@@ -62,6 +47,7 @@ export const useLibrary = create<Library>()(persist((set) => ({
   finishOnboarding: (country, tags, mode = 'manual') => set({country, countryMode: mode, likedTags: tags.slice(0, 8), onboarded: true}),
   setLikedTags: tags => set({likedTags: tags.slice(0, 8)}),
   refreshStations: updated => set(x => ({...refreshSnapshots(x, updated), refreshedAt: Date.now()})),
+  restoreBackup: lists => set({favorites: lists.favorites, collections: lists.collections}),
   toggle: s => set(x => ({ favorites: x.favorites.some(f => f.id === s.id) ? x.favorites.filter(f => f.id !== s.id) : prependUnique(x.favorites, s, 500) })),
   remember: s => set(x => ({ history: prependUnique(x.history, s) })),
   setCountry: country => set({country, countryMode: 'manual'}), setTheme: theme => set({theme}),
@@ -100,11 +86,11 @@ export const useLibrary = create<Library>()(persist((set) => ({
 }));
 
 /** True once the persisted library has been loaded from device storage. */
-export function useLibraryHydrated() {
-  const [hydrated, setHydrated] = useState(useLibrary.persist.hasHydrated());
-  useEffect(() => useLibrary.persist.onFinishHydration(() => setHydrated(true)), []);
-  return hydrated;
-}
+const subscribeHydration = (listener: () => void) => {
+  const start = useLibrary.persist.onHydrate(listener); const end = useLibrary.persist.onFinishHydration(listener);
+  return () => {start(); end();};
+};
+export const useLibraryHydrated = () => useSyncExternalStore(subscribeHydration, useLibrary.persist.hasHydrated, () => false);
 
 /** Ids played recently, captured once when a screen opens so playing a station does not reshuffle its lists. */
 export const recentIdsSnapshot = (limit = 30) => useLibrary.getState().history.slice(0, limit).map(s => s.id);

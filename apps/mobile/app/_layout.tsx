@@ -16,6 +16,7 @@ import WebShell from '../src/web/shell';
 import {OndaAmbientBackground} from '../src/ambient';
 import {watchNowPlaying, type MetadataReply} from '../src/now-playing';
 import {request} from '../src/api';
+import {watchQuickAccess} from '../src/quick-access';
 const queryClient = new QueryClient();
 const REFRESH_EVERY_MS = 24 * 60 * 60 * 1000;
 
@@ -45,12 +46,13 @@ export default function RootLayout() {
   useLibraryRefresh();
   useEffect(() => {
     prepareAudio().catch(() => setError('No se pudo configurar el audio. Reinicia la aplicación.'));
+    const quickAccess = watchQuickAccess();
     const metadata = watchNowPlaying(player, (path, signal) => request<MetadataReply>(path, {signal, timeoutMs: 12000}));
     const network = NetInfo.addEventListener(s => {const connected = s.isConnected !== false && s.isInternetReachable !== false; onlineManager.setOnline(connected); player.setOnline(connected);});
     if (useLibrary.persist.hasHydrated()) syncCountry();
     const hydration = useLibrary.persist.onFinishHydration(syncCountry);
     const app = AppState.addEventListener('change', state => {player.checkSleep(); if (state === 'active') syncCountry();});
-    return () => {metadata(); network(); app.remove(); hydration();};
+    return () => {quickAccess(); metadata(); network(); app.remove(); hydration();};
   }, []);
   return <GestureHandlerRootView style={{flex: 1, backgroundColor: c.bg}}>
     <View style={{flex: 1, width: '100%'}}>
@@ -62,6 +64,8 @@ export default function RootLayout() {
           <Stack.Screen name="player" options={{presentation: 'modal', animation: 'slide_from_bottom'}}/>
           <Stack.Screen name="search"/>
           <Stack.Screen name="settings"/>
+          <Stack.Screen name="backup"/>
+          <Stack.Screen name="quick-play" options={{animation: 'none'}}/>
           <Stack.Screen name="onboarding" options={{animation: 'fade', gestureEnabled: false}}/>
         </Stack></WebShell></ThemeProvider>
       </SafeAreaView></QueryClientProvider></SafeAreaProvider>

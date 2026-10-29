@@ -1,3 +1,71 @@
+# Progreso — nombres de países, ONDA 0.7.4, 2026-10-29
+
+Web y APK 0.7.4/code15 publicados desde `c3906b6` en la [PR #6](https://github.com/caleblunaxd123/Onda/pull/6),
+apilada sobre #5. Conserva respaldo, widget y globo de 0.7.3.
+
+- Nombres de países sobre las imágenes de la Tierra: español preferido y nombre local/latino como
+  alternativa si no existe traducción. Tamaño progresivo, halo y colisiones evitan textos superpuestos;
+  países pequeños aparecen al acercarse. Datos OpenFreeMap/OpenMapTiles/OSM, fuente vectorial hasta zoom 5.
+- La vista alternativa de calles también prioriza español en las capas de etiquetas compatibles.
+- Tipos/lint, 62 pruebas cliente, export web y APK correctos. CI backend/móvil de `c3906b6` correcta:
+  [push](https://github.com/caleblunaxd123/Onda/actions/runs/40972714198) y
+  [PR](https://github.com/caleblunaxd123/Onda/actions/runs/40972720397).
+- QA visual en navegador de escritorio y 390×844: globo, nombres, zoom y cambio a calles, sin errores
+  de consola. Capturas `web-074-countries-mobile.png` y `web-074-countries-production.png` en screenshots.
+- Publicación estática con copias verificadas y rollback. API conserva su contenedor e imagen
+  `onda-api:20261028-072-metadata`; sin cambios SQL/Compose/DNS ni reinicio.
+- HTML (excluyendo solo beacon Cloudflare), JS/CSS y APK públicos coinciden con los artefactos locales.
+  Ready 200 y feed Perú correctos. Registro privado `/opt/onda/releases/library-074-release.json`.
+- APK: [0.7.4 build15.1](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.4&build=15.1),
+  119.676.648 bytes, SHA256 `c12f9a006f6e85628ceb33985eaf664c15c2727832c43847e136eedf28236080`.
+  Firma beta anterior y tres ABI conservadas, sin GPS/micrófono ni permisos nuevos.
+- No se repitió QA física para 0.7.4. Sigue pendiente probar el widget con proceso cerrado en teléfono:
+  los cierres de QEMU descritos abajo impiden declararlo aprobado. Reconocimiento de audio sigue como propuesta.
+
+Las notas siguientes son históricas.
+
+# Progreso — biblioteca portátil y Tierra ONDA 0.7.3, 2026-10-29
+
+Web y APK 0.7.3/code14 publicados desde `f370570` en la [PR #6](https://github.com/caleblunaxd123/Onda/pull/6),
+apilada sobre #5. La API sigue en `onda-api:20261028-072-metadata`, mismo contenedor y tiempo de inicio.
+Sin migraciones SQL, reinicios de API, servicios nuevos, DNS ni suscripciones.
+
+- Respaldo JSON de favoritas/colecciones en Biblioteca y Ajustes; selector de guardado Android,
+  descarga web, validación y confirmación antes de combinar. Conserva lo existente y evita duplicados.
+  No sube archivos a ONDA ni exporta historial/ajustes/cuentas. Límite de 5 MiB.
+- Widget Android 4×2, redimensionable, y accesos de launcher a las tres primeras favoritas.
+  Abre el único reproductor; sin motor de audio adicional ni actualizaciones periódicas.
+  IDs guardados exclusivamente. Corregidos categoría launcher e intent inicial al restaurar una tarea.
+- Globo MapLibre esférico en web/Android, imágenes NASA Blue Marble, puntos pequeños y sin números
+  sobre el territorio; vista alternativa de calles OpenFreeMap. Lista móvil desplegable, país/ciudad,
+  hitbox mayor que el punto y filtros conservados. Son imágenes compuestas, no satélite en directo.
+- Quitados del manifest permisos heredados de almacenamiento general, overlay y biometría;
+  continúan HTTPS, tres ABI y misma firma beta, sin GPS/micrófono.
+- 62 pruebas del cliente, tipos/lint, export web y APK correctos. CI de `f370570` correcta:
+  [push](https://github.com/caleblunaxd123/Onda/actions/runs/40897293795) y
+  [PR](https://github.com/caleblunaxd123/Onda/actions/runs/40897305999).
+- QA web: exportar/reimportar, combinación idempotente, importar el respaldo real de Android,
+  móvil 390×844, búsqueda Perú/Lima, calles y controles del globo. La web pública carga el globo nuevo
+  tras recargar; HTML de todas las rutas principales y assets coinciden con el export.
+- QA Android: instalación sobre la biblioteca anterior conservó Radio La Zona Urbana, RTL y su colección.
+  Guardado mediante selector del sistema, reimportación sin duplicados, globo real y widget 4×2 comprobados.
+  El widget abrió RTL y MediaSession indicó PLAYING durante la prueba con el proceso existente.
+- **Pendiente:** confirmar el widget con el proceso cerrado en un teléfono físico. QEMU se cerró repetidamente
+  con excepción Windows `0xc0000005` durante esta prueba, incluso con renderizado por software; no se
+  declara aprobada. El enlace directo frío se reprodujo, pero no sustituye esa prueba del widget.
+  Las correcciones de entrega de intents están compiladas; no se atribuye el fallo del emulador a teléfonos.
+- El usuario reportó funcionamiento perfecto en tres teléfonos de la app previa; no constan modelos/versión
+  exactos y no equivale a validación física de este nuevo widget/globo.
+- Publicación con copias verificadas de index/APK anteriores y sustitución atómica. Registro privado
+  `/opt/onda/releases/library-073-release.json`. Ready 200, API sin cambio de contenedor,
+  APK público y JS/CSS coinciden con los artefactos locales. Capturas `docs/screenshots/*073*`.
+
+APK: [0.7.3 build14.1](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.3&build=14.1),
+119.674.440 bytes, SHA256 `82cb274fe0c2aa91ec15cfbbc99812282b5832ae5cd42a965a9e7717bfa02eff`.
+Sigue siendo beta con firma de depuración, no publicación en tiendas. Reconocimiento musical bajo demanda
+solicitado por el usuario: propuesta documentada, sin proveedor configurado ni reconocimiento simulado.
+Ver [funcionamiento y límites](LIBRARY_BACKUP_AND_GLOBE.md). Las notas siguientes son históricas.
+
 # Progreso — canción actual y MediaSession 0.7.2, 2026-10-28
 
 API, web y APK 0.7.2/code13 publicados desde `a11779c` (PR #5, apilada sobre #4).

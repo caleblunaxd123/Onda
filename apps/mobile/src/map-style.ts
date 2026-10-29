@@ -5,8 +5,8 @@ import type { StyleSpecification } from 'maplibre-gl';
  * Map style. Default: OpenFreeMap (OpenStreetMap data, no API key, attribution shown by the style).
  * Set EXPO_PUBLIC_MAP_STYLE to use another provider; review its terms and usage limits before release.
  */
-export const mapStyle = (dark: boolean) =>
-  process.env.EXPO_PUBLIC_MAP_STYLE || (dark ? 'https://tiles.openfreemap.org/styles/dark' : 'https://tiles.openfreemap.org/styles/liberty');
+export const mapStyle = (_dark: boolean) =>
+  process.env.EXPO_PUBLIC_MAP_STYLE || 'https://tiles.openfreemap.org/styles/liberty';
 
 /** Prefers the Spanish name (OSM `name:es`) in every label, falling back to the style's original expression. */
 export function spanishLabels(style: StyleSpecification): StyleSpecification {

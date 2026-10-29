@@ -1,3 +1,4 @@
+require('./prepare-globe.cjs');
 /* global __dirname */
 const fs = require('node:fs');
 const path = require('node:path');

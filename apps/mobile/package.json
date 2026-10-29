@@ -1,6 +1,6 @@
 {
   "name": "@onda/mobile",
-  "version": "0.7.2",
+  "version": "0.7.4",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -14,15 +14,20 @@
     "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.21",
     "expo-dev-client": "~57.0.20",
+    "expo-document-picker": "~57.0.3",
+    "expo-file-system": "~57.0.7",
     "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
     "expo-linking": "~57.0.12",
+    "expo-modules-core": "~57.0.24",
     "expo-router": "~57.0.26",
     "expo-secure-store": "~57.0.4",
+    "expo-sharing": "~57.0.24",
     "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "maplibre-gl": "^6.14.0",
+    "onda": "file:../..",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -31,12 +36,14 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.2",
+    "react-native-webview": "13.16.1",
     "react-native-worklets": "0.10.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@types/geojson": "^7946.0.16",
     "@types/react": "~19.2.2",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
     "eslint-config-expo": "^57.0.2",
     "typescript": "~6.0.3",
@@ -50,7 +57,9 @@
     "test": "vitest run",
     "web": "expo start --web --port 8081",
     "preweb": "node scripts/prepare-web.cjs",
-    "export:web": "node scripts/prepare-web.cjs && expo export --platform web"
+    "export:web": "node scripts/prepare-web.cjs && expo export --platform web",
+    "postinstall": "node scripts/prepare-globe.cjs",
+    "prepare:globe": "node scripts/prepare-globe.cjs"
   },
   "private": true,
   "overrides": {
