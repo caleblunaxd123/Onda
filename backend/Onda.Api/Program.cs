@@ -78,7 +78,7 @@ api.MapGet("/stations/{id:guid}/now-playing", async (Guid id, HttpRequest reques
         return result is null ? Results.NotFound() : Results.Ok(result);
     }
     catch (HttpRequestException) {return Results.Problem("Metadatos no disponibles.", statusCode: 503);}
-});
+}).CacheOutput(policy => policy.NoCache());
 api.MapGet("/map", async (HttpRequest request, ICatalogQueries catalog, CancellationToken ct) =>
 {
     if (!StationQueryParser.TryParse(request.Query, out var query, out var error)) return Results.Problem(error, statusCode: 400);

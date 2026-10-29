@@ -76,6 +76,8 @@ public class ApiTests
         var response=await client.GetAsync($"/api/v1/stations/{Fixture.Id}/now-playing?source=1");
         var result=await response.Content.ReadFromJsonAsync<NowPlaying>();Assert.Equal("Artist - Song",result!.Title);Assert.Equal(Fixture.Id,result.StationId);
         Assert.True(response.Headers.CacheControl?.NoStore);
+        var fresh = await client.GetFromJsonAsync<NowPlaying>($"/api/v1/stations/{Fixture.Id}/now-playing?source=1");
+        Assert.NotEqual(result.ObservedAt, fresh!.ObservedAt);
         Assert.Equal(HttpStatusCode.NotFound,(await client.GetAsync($"/api/v1/stations/{Guid.NewGuid()}/now-playing")).StatusCode);
     }
 
