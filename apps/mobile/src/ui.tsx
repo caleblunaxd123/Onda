@@ -233,7 +233,7 @@ export function MiniPlayer() {
       <Artwork key={s.station.id} station={s.station} size={42}/>
       <View style={{flex: 1}}>
         <Label numberOfLines={1} style={{fontWeight: '700', fontSize: 14}}>{s.station.name}</Label>
-        <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>{s.state === 'playing' && !s.error ? <><Equalizer color={c.live} active height={12}/><LiveBadge small/></> : null}<Muted numberOfLines={1} style={{fontSize: 12, color: s.state === 'error' ? c.live : c.muted, flex: 1}}>{s.error ?? (s.state === 'playing' ? [s.station.country, s.station.region].filter(Boolean).join(' · ') : stateLabels[s.state])}</Muted></View>
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>{s.state === 'playing' && !s.error ? <><Equalizer color={c.live} active height={12}/><LiveBadge small/></> : null}<Muted numberOfLines={1} style={{fontSize: 12, color: s.state === 'error' ? c.live : c.muted, flex: 1}}>{s.error ?? (s.state === 'playing' ? s.nowPlaying ?? [s.station.country, s.station.region].filter(Boolean).join(' · ') : stateLabels[s.state])}</Muted></View>
       </View>
     </Pressable>
     <Favorite station={s.station}/>

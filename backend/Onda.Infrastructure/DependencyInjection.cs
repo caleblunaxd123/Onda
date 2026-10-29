@@ -38,6 +38,10 @@ public static class DependencyInjection
         {
             AllowAutoRedirect = false, AutomaticDecompression = DecompressionMethods.All, PooledConnectionLifetime = TimeSpan.FromMinutes(10),
         });
+        services.AddHttpClient<IMetadataReader, IcyMetadataReader>(c => c.Timeout = Timeout.InfiniteTimeSpan)
+            .ConfigurePrimaryHttpMessageHandler(MetadataNetwork.Handler);
+        services.AddSingleton<MetadataCache>();
+        services.AddScoped<INowPlaying, NowPlayingService>();
         services.AddScoped<CatalogStore>();
         services.AddScoped<CatalogQueryService>();
         services.AddScoped<ICatalogQueries>(sp => sp.GetRequiredService<CatalogQueryService>());

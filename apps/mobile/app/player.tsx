@@ -49,6 +49,10 @@ export default function FullPlayer() {
           <Label style={{color: '#D7DEF2', fontSize: 14}}>{flag(station.countryCode)} {[station.country, station.region].filter(Boolean).join(' · ')}</Label>
           {station.tags.length > 0 && <Label style={{color: '#B9C3DE', fontSize: 13}}>{station.tags.slice(0, 3).map(tagLabel).join(' · ')}</Label>}
         </View>
+        <View style={{alignItems: 'center', paddingHorizontal: 12, minHeight: 52, gap: 3}}>
+          <Label style={{color: '#CEDAF5', fontSize: 10, letterSpacing: 1.5, fontWeight: '700'}}>AHORA SUENA</Label>
+          <Label numberOfLines={2} accessibilityLiveRegion="polite" style={{color: '#FFFFFF', fontSize: s.nowPlaying ? 18 : 12, lineHeight: 24, textAlign: 'center', fontWeight: s.nowPlaying ? '700' : '400'}}>{s.nowPlaying ?? (s.state !== 'playing' ? 'Disponible mientras escuchas' : s.metadataState === 'idle' ? 'Consultando información de la emisora…' : s.metadataState === 'unsupported' ? 'Esta emisora no comparte el título de la canción' : 'Título no disponible en este momento')}</Label>
+        </View>
         <View style={{flexDirection: 'row', alignItems: 'center', gap: 34}}>
           <IconButton icon="share-social-outline" plain tint="#FFFFFF" label="Compartir emisora" onPress={() => {void Share.share({message: `${station.name} — ${station.homepage ?? station.streamUrl}`}).catch(() => {});}}/>
           <View style={{borderRadius: 50, boxShadow: '0px 8px 24px rgba(0,0,0,0.35)'} as ViewStyle}><PlayButton size={80} active={active} label={active ? 'Pausar transmisión' : 'Reproducir transmisión'} onPress={player.toggle}/></View>
@@ -66,7 +70,7 @@ export default function FullPlayer() {
         </Card>
         <Card>
           <Label style={{fontWeight: '800', fontSize: 17}}>Sobre la emisora</Label>
-          <Muted style={{fontSize: 14, lineHeight: 20}}>Transmisión en directo desde {[station.region, station.country].filter(Boolean).join(', ') || 'el mundo'}{station.language ? `, en ${station.language.toLowerCase()}` : ''}. ONDA no recibe información fiable de la canción que suena.</Muted>
+          <Muted style={{fontSize: 14, lineHeight: 20}}>Transmisión en directo desde {[station.region, station.country].filter(Boolean).join(', ') || 'el mundo'}{station.language ? `, en ${station.language.toLowerCase()}` : ''}. El título, cuando está disponible, lo publica la emisora; puede corresponder también a un programa o anuncio.</Muted>
           {station.availability === 'unstable' && <Muted style={{color: c.live}}>Radio Browser registró fallos recientes en esta emisora; puede tardar en conectar.</Muted>}
           {station.homepage ? <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(station.homepage!)}><Label style={{color: c.primaryText, fontWeight: '600'}}>Visitar la web de la emisora</Label></Pressable> : null}
           <Muted style={{fontSize: 11}}>Datos del catálogo comunitario Radio Browser.</Muted>
