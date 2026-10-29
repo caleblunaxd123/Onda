@@ -1,8 +1,8 @@
 # Pruebas
 ## Automatizadas
 - Backend: `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` (o `dotnet test backend/Onda.slnx -c Release`
-  con `ONDA_TEST_SQL` definido). 69 pruebas: catálogo/API/SQL real, proxy y alojamiento de producción.
-- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 41 pruebas.
+  con `ONDA_TEST_SQL` definido). 107 pruebas: catálogo/API/SQL real y metadatos, proxy y alojamiento de producción.
+- Móvil: `npm run check:mobile` (TypeScript, ESLint y Vitest). 47 pruebas.
 - Catálogo real de extremo a extremo con la API en marcha: `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1`
   (`-Report` también guarda un reporte de prueba).
 - Compatibilidad: en apps/mobile `npx expo install --check`; bundling `npx expo export --platform android`.
@@ -18,6 +18,22 @@
 | API | validación de filtros/cursor/bbox, sobre con cursor y total, 503, mapa, reportes 400/404/201, lookup, CORS (ApiTests) |
 | Reproductor | un solo stream con 20 cambios rápidos, eventos tardíos, «conectando» ≠ «reproduciendo», reintentos acotados, failover entre fuentes HTTPS, tope total, temporizador también con JS retrasado, interrupciones/lockscreen respetadas, reintento manual (player-engine.test.ts) |
 | Biblioteca y región | actualización de instantáneas sin perder datos, compatibilidad con almacenamiento antiguo, país automático/manual, detección por zona horaria (library/region tests) |
+
+## Verificación 0.7.2 — 2026-10-28
+
+- 107 backend con SQL real, cero omitidas; 47 cliente; tipos/lint. Nuevas pruebas de bloques ICY,
+  Unicode, vacíos/truncados, intervalos/límites, redirecciones, IPs privadas/reservadas, caché
+  breve y exclusión del OutputCache general. HLS sin ICY no descarga segmentos.
+- Cliente: aborto y descarte de respuestas tardías, identidad fuente/estación, caducidad,
+  pause, backoff, metadata nativa sin interrumpir audio y branding fallback.
+- Servicio real: SomaFM MP3 devuelve canciones; Oxígeno/La Zona HLS consultadas devuelven unsupported.
+  Verificado en API local y contenedor candidato con SQL de Contabo, sin migraciones.
+- Android: code13 instalado con install -r, biblioteca conservada, MediaSession con título/estación,
+  artwork y cambios de canción. Panel del sistema revisado y Pausa real → PAUSED. Captura
+  `android-072-system-media.png`. Es el panel multimedia de ajustes rápidos; el emulador no mostró
+  keyguard al dormir/despertar. Bloqueo real/Doze/Bluetooth en teléfonos físicos e iOS pendientes.
+- Publicación: image/source fijadas, restore-check, ready, HTML/CSS/JS y APK comparados por Cloudflare.
+  Catálogo y restantes rutas mantienen compatibilidad; servicios ajenos conservados.
 
 ## Verificación 0.7.1 — 2026-10-28
 

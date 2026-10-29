@@ -1,3 +1,33 @@
+# Progreso — canción actual y MediaSession 0.7.2, 2026-10-28
+
+API, web y APK 0.7.2/code13 publicados desde `a11779c` (PR #5, apilada sobre #4).
+API `onda-api:20261028-072-metadata`, sin migraciones SQL ni cambios de otros servicios del VPS.
+
+- Texto ICY real, efímero, solo para la emisora/fuente activa; sin reconocimiento musical ni IA.
+  Aparece en reproductor y barra inferior de web/Android. Fuentes sin ICY muestran título no disponible.
+- MediaSession: canción como título, emisora como artista, logo o marca ONDA. El sistema controla
+  apariencia/colores; no se impone una interfaz sobre el bloqueo. Ver `docs/NOW_PLAYING.md`.
+- 107 pruebas backend con SQL real, 47 cliente, tipos/lint, export y APK correctos. CI `a11779c`:
+  [push](https://github.com/caleblunaxd123/Onda/actions/runs/40802390154) y
+  [PR](https://github.com/caleblunaxd123/Onda/actions/runs/40802511935), backend/móvil correctos.
+- Candidata en Contabo contra SQL actual: ready, catálogo y canción de SomaFM correctos;
+  rutas sociales siguen 404. Sondeos con DNS/IP pública fijada, HTTPS y presupuesto acotado.
+- Corregida la caché HTTP general de cinco minutos: esta ruta usa NoCache/no-store y solo la
+  caché breve específica de metadatos. Prueba de regresión incluida.
+- Emulador: code13 instalado sobre code12 sin borrar favoritos. SomaFM publicó varios títulos;
+  MediaSession y panel de ajustes rápidos mostraron canción, estación y artwork; el botón del
+  sistema Pausa dejó la sesión PAUSED. No se afirma QA de bloqueo en teléfonos físicos ni de iOS.
+- Respaldo cifrado `Onda-20261029T013714Z.bak.enc`, restauración en base separada y catálogo
+  comprobados, además de archivo cifrado de adjuntos. Timestamp del archivo en UTC.
+  Copias privadas env/index/APK en `/opt/onda/releases/metadata-072-before-*`; rollback documentado.
+- HTML de la app comprobado excluyendo solo el beacon existente de Cloudflare; CSS/JS y APK públicos
+  coinciden con el build. Marca ONDA de fallback devuelve 200 también con User-Agent Android.
+
+APK: [0.7.2 build13.1](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.2&build=13.1),
+117.288.967 bytes, SHA256 `acb3a62700cde744ebb6bdf4890196386aa85c17234250c4ee5b6ac1c5ce9a0f`.
+Firma beta compatible, tres ABI, HTTPS, sin GPS/micrófono. Pruebas físicas y tienda siguen pendientes.
+Las notas siguientes son históricas.
+
 # Progreso — ONDA Experience 0.7.1, 2026-10-28
 
 Web y APK 0.7.1/code12 publicados desde `b439759` (PR #4, apilada sobre #3).

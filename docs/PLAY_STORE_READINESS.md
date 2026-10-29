@@ -6,11 +6,11 @@ cuenta de desarrollador, ficha ni lanzamiento en Google Play.
 
 ## Comprobado
 
-- Aplicación radio-only 0.7.1/code12, sin registro, salas, chat, video ni IA.
-- Backend 69/69 con SQL real, móvil 41/41, TypeScript/ESLint y CI correctos.
+- Aplicación radio-only 0.7.2/code13, sin registro, salas, chat, video ni IA.
+- Backend 107/107 con SQL real, móvil 47/47, TypeScript/ESLint y CI correctos.
 - Web/API/APK públicos comprobados, catálogo real de220 países, favoritos locales conservados.
 - Target Android 16/API 36, consistente con el requisito vigente desde 31/08/2026 para nuevas apps/updates.
-- APK con empaquetado ZIP de 16 KB y44 bibliotecas nativas de 64 bits cuyos segmentos LOAD tienen alineación de 16 KB.
+- Comprobación previa 0.7.0: APK con empaquetado ZIP de 16 KB y44 bibliotecas nativas de 64 bits cuyos segmentos LOAD tienen alineación de 16 KB.
   Esto no sustituye ejecución en un entorno de 16 KB ni la inspección del AAB final en Play Console.
 - Sin permisos de GPS o micrófono; audio de emisoras directo, sin grabación/retransmisión de ONDA.
 
