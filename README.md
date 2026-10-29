@@ -3,9 +3,9 @@
 
 Aplicación móvil de radios con Expo / React Native (SDK 57) y API ASP.NET Core 10.
 Base de datos: **SQL Server**, por decisión del propietario.
-Estado: **beta 0.7.2 de radios publicada en Contabo y Cloudflare**. Web/API/APK verificados; pruebas físicas y preparación de Google Play pendientes.
+Estado: **beta 0.7.3 de radios publicada en Contabo y Cloudflare**. Artefactos web/APK y API verificados; apertura fría del widget en teléfono y preparación de Google Play pendientes.
 
-Web: https://onda.lunalav.pe · [APK Android 0.7.2](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.2&build=13.1).
+Web: https://onda.lunalav.pe · [APK Android 0.7.3](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.3&build=14.1).
 Actualiza la beta anterior conservando la biblioteca; no requiere Metro. Firma beta, todavía no de tiendas.
 [Despliegue y rollback](docs/DEPLOYMENT.md) · [Preparación de Play Store](docs/PLAY_STORE_READINESS.md).
 
@@ -20,18 +20,20 @@ mundial. Sin salas, chat ni IA.
   en 220 países al publicar el 2026-10-28 (el catálogo y la disponibilidad cambian),
   con paginación por cursor, recuentos reales, variantes y fuentes alternativas, y disponibilidad sin falsas «caídas».
 - Inicio con radios del país, favoritas y descubrimiento mundial; búsqueda con filtros
-  (país, ciudad, idioma, género), mapa por área visible con clusters, Radio Radar con carga progresiva,
+  (país, ciudad, idioma, género), globo terráqueo NASA con puntos pequeños y vista de calles, Radio Radar con carga progresiva,
   reproductor global con reintentos y fuentes alternativas, reportes de problemas, biblioteca local con colecciones.
 - Diseño Inmersivo ONDA con ondas cian, azul y violeta; también claro, oscuro y automático.
   Web de escritorio desde 1000 px: menú lateral, emisoras en columnas, mapa amplio y reproductor fijo
   con volumen/temporizador. Móvil conserva navegación táctil. Capturas: docs/screenshots.
 - Título publicado por emisoras ICY compatibles en reproductor y barra inferior; canción, estación
   y logo en controles multimedia del sistema. [Compatibilidad y límites](docs/NOW_PLAYING.md).
-- Sin cuentas, sincronización de biblioteca ni IA.
+- Respaldo portátil de favoritas/colecciones y widget Android con las tres primeras favoritas.
+  [Funcionamiento, privacidad y límites](docs/LIBRARY_BACKUP_AND_GLOBE.md). Sin sincronización automática ni cuentas.
+- Reconocimiento musical de audio todavía no implementado; sí metadatos ICY cuando existen.
 
 ## Inicio en Windows
 Requisitos: Node 22+, .NET SDK 10 (se usa `.tools/dotnet` si existe), SQL Server (por defecto `.\SQLEXPRESS`,
-autenticación Windows), JDK 17 y Android SDK para compilar Android. No usar Expo Go: MapLibre requiere Development Build.
+autenticación Windows), JDK 17 y Android SDK para compilar Android. Usar Development Build para probar los módulos locales de widget y guardado Android.
 
 1. `npm --prefix apps/mobile ci`
 2. `powershell -ExecutionPolicy Bypass -File scripts/init-db.ps1` (crea y migra la base `Onda`)
@@ -66,7 +68,7 @@ Servidor `.\SQLEXPRESS`, autenticación Windows, base `Onda`. Tablas y consultas
 Las migraciones se aplican explícitamente, nunca al iniciar la API.
 
 ## Verificación
-- `npm run check:mobile` — TypeScript, ESLint y 47 pruebas.
+- `npm run check:mobile` — TypeScript, ESLint y 62 pruebas.
 - `powershell -ExecutionPolicy Bypass -File scripts/test-api.ps1` — 107 pruebas, incluidas integraciones con SQL Server real y alojamiento de producción.
 - `powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1` — catálogo real de extremo a extremo.
 - `curl http://localhost:5080/api/v1/catalog/status`
@@ -79,5 +81,5 @@ OpenAPI: `/openapi/v1.json` en Development.
 - scripts: base de datos, API, pruebas y smoke test.
 - docs: arquitectura, decisiones, progreso, roadmap, pruebas, diseño, SQL Server, dependencias.
 
-Catálogo: [Radio Browser](https://www.radio-browser.info) (comunitario). Mapa de desarrollo: OpenFreeMap / OpenStreetMap.
+Catálogo: [Radio Browser](https://www.radio-browser.info) (comunitario). Globo: NASA GIBS Blue Marble; calles: OpenFreeMap / OpenStreetMap.
 Consultar [estado](docs/PROGRESS.md), [pruebas](docs/TESTING.md), [arquitectura](docs/ARCHITECTURE.md) y [roadmap](docs/ROADMAP.md).

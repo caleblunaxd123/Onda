@@ -28,7 +28,8 @@ Los enlaces solo contienen un ID; únicamente reproducen una favorita guardada e
 Un acceso obsoleto muestra un mensaje y permite volver a Biblioteca. Las favoritas eliminadas
 se retiran de accesos dinámicos y se deshabilitan en accesos fijados.
 
-Implementación: módulo Expo local `modules/onda-quick-access`; no editar Android generado.
+Implementación: módulo Expo local `modules/onda-quick-access`; no editar Android generado. El config plugin `plugins/withOndaDeepLinks.cjs`
+conserva el intent más reciente en MainActivity para restauraciones de tarea.
 También integra ACTION_CREATE_DOCUMENT para guardar JSON con un destino elegido por el usuario.
 
 ## Globo y exploración
@@ -75,4 +76,5 @@ ni guardar grabaciones de forma continua. No confundir ausencia de ICY con recon
 combinación sin pérdidas, idempotencia y mensajes del puente. API y SQL no cambian.
 El propietario reportó funcionamiento correcto de la versión anterior en tres teléfonos físicos;
 no es una prueba física realizada por el agente ni valida todavía este nuevo widget/globo.
-Completar resultados de la candidata y despliegue en PROGRESS/TESTING/DEPLOYMENT.
+Resultados y límites de la candidata publicados en PROGRESS/TESTING/DEPLOYMENT;
+el widget con proceso cerrado requiere validación física por cierres del emulador QEMU.

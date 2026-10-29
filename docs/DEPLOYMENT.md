@@ -1,3 +1,31 @@
+# Publicación actual — 0.7.3/code14, 2026-10-29
+
+Fuente `f370570`, PR #6, web/APK publicados y hashes públicos comprobados.
+API `onda-api:20261028-072-metadata` conservó ID de contenedor y tiempo de inicio.
+Sin cambios de SQL, Compose, secretos, DNS ni otros proyectos del VPS.
+
+- [APK](https://onda.lunalav.pe/downloads/ONDA-beta.apk?v=0.7.3&build=14.1): 119.674.440 bytes,
+  SHA256 `82cb274fe0c2aa91ec15cfbbc99812282b5832ae5cd42a965a9e7717bfa02eff`.
+- Firma beta compatible, tres ABI, HTTPS; sin micrófono/GPS, almacenamiento general, overlay ni biometría.
+- Export web: JS `entry-d361e0e809e103a84f876c63813fae1e.js`, renderizador y worker empaquetados;
+  recursos geográficos externos de NASA/OpenFreeMap. HTML no-store, Cloudflare DYNAMIC.
+- Se copiaron y verificaron index/APK anteriores antes de publicar assets nuevos y sustituir ambos
+  atómicamente. Se conservaron assets anteriores para clientes abiertos y rollback.
+- Registro privado: `/opt/onda/releases/library-073-release.json`.
+  Rollback: `/opt/onda/releases/library-073-before-index.bak` y `library-073-before-apk.bak`.
+  Copiar primero a un temporal en el directorio de destino con modo 0644 y renombrar atómicamente
+  a `/opt/onda/public/index.html` y `/opt/onda/public/downloads/ONDA-beta.apk`, respectivamente.
+  Verificar hashes de las copias y ready antes/después. No reiniciar API ni revertir SQL para este rollback.
+- No se hizo otro respaldo SQL: no hay escrituras/migraciones ni cambios de API. Se conserva el respaldo
+  cifrado y restaurado de 0.7.2 documentado abajo.
+- Verificación pública: HTML normalizado excluyendo solo el beacon existente de Cloudflare, JS/CSS exactos,
+  feed Perú, ready y descarga completa del APK. También comprobadas rutas /world, /backup, /library, /settings.
+  Una pestaña ya abierta puede necesitar recarga para abandonar el shell anterior.
+- CI correcta; la prueba física del widget con proceso cerrado sigue pendiente por cierres de QEMU.
+  Esta publicación beta no declara certificación para tiendas. Ver TESTING y PROGRESS.
+
+Las publicaciones siguientes son históricas.
+
 # Publicación actual — 0.7.2/code13, 2026-10-28
 
 Fuente `a11779c`, PR #5. API `onda-api:20261028-072-metadata`; web y APK publicados.
